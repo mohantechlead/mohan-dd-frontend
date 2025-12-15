@@ -31,19 +31,4 @@ export const columns: ColumnDef<DN>[] = [
     accessorKey: "sales_no",
     header: "Sales No",
   },
-  {accessorKey: "items",
-    header: "Items",
-    cell: ({ row }) => {
-      const items = row.original.items; // row.original is your full data object
-      return (
-        <ul className="list-disc ml-5">
-          {items.map((item, idx) => (
-            <li key={idx}>
-              {item.item_name} - {item.quantity} {item.unit_measurement}
-            </li>
-          ))}
-        </ul>
-      );
-    },
-  }
 ]
