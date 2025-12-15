@@ -1,25 +1,30 @@
 "use client";
 
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, FieldValues, Path } from "react-hook-form";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
-interface Field {
-  name: string;
+interface Field<T extends FieldValues> {
+  name: Path<T>; // key of the form data type
   label: string;
   type?: string;
   placeholder?: string;
 }
 
-interface FormProps<T> {
-  fields: Field[];
+interface FormProps<T extends FieldValues> {
+  fields: Field<T>[];
   onSubmit: (values: T) => void;
   submitText: string;
   children?: React.ReactNode;
 }
 
-export function Form<T>({ fields, onSubmit, submitText, children }: FormProps<T>) {
+export function Form<T extends FieldValues>({
+  fields,
+  onSubmit,
+  submitText,
+  children,
+}: FormProps<T>) {
   const methods = useForm<T>();
 
   return (
@@ -34,7 +39,7 @@ export function Form<T>({ fields, onSubmit, submitText, children }: FormProps<T>
             <Input
               type={field.type || "text"}
               placeholder={field.placeholder}
-              {...methods.register(field.name as any)}
+              {...methods.register(field.name)}
             />
           </div>
         ))}
@@ -46,4 +51,3 @@ export function Form<T>({ fields, onSubmit, submitText, children }: FormProps<T>
     </FormProvider>
   );
 }
-
