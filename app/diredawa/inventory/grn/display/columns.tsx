@@ -14,7 +14,7 @@ export type GRN = {
   grn_no: string
   supplier_name: number
   purchase_no: string
-  items: GRNItem
+  items: GRNItem[]
 }
 
 export const columns: ColumnDef<GRN>[] = [
