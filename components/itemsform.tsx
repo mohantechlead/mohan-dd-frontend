@@ -1,6 +1,7 @@
 "use client"
 
-import { useFieldArray, useFormContext, FormProvider } from "react-hook-form"
+import { useFieldArray, useFormContext } from "react-hook-form"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,11 +11,24 @@ export function ItemsForm() {
   // Access parent form context
   const { control, register } = useFormContext()
 
+  const ITEMS_API_URL = "/api/inventory/items"
+  
   // Dynamic fields (field array)
   const { fields, append, remove } = useFieldArray({
     name: "items",   // ⭐ parent form will collect values as form.items
     control,
   })
+
+  useEffect(() => {
+    async function loadItems() {
+      const res = await fetch(ITEMS_API_URL)
+      const data = await res.json()
+
+
+    }
+    loadItems()
+  }, []);
+
 
   return (
     <div className="flex flex-col gap-4 border p-4 rounded-xl mt-4">

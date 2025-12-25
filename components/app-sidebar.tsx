@@ -61,11 +61,11 @@ const data = {
       items: [
         {
           title: "Create Customers",
-          url: "#",
+          url: "/diredawa/partners/customers/create",
         },
         {
           title: "Display Customers",
-          url: "#",
+          url: "/diredawa/partners/customers/display",
         },
       ],
     },
@@ -76,11 +76,11 @@ const data = {
       items: [
         {
           title: "Create Suppliers",
-          url: "#",
+          url: "/diredawa/partners/suppliers/create",
         },
         {
           title: "Display Suppliers",
-          url: "#",
+          url: "/diredawa/partners/suppliers/display",
         },
       ],
     },
