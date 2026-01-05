@@ -4,7 +4,7 @@ import { DJANGO_API_ENDPOINT } from "@/config/defaults";
 
 const DJANGO_API_DN = `${DJANGO_API_ENDPOINT}/inventory/dn`;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { data, status } = await ApiProxy.get(DJANGO_API_DN, true);
   return NextResponse.json(data, { status });
 }

@@ -46,7 +46,6 @@ export default function DN() {
       invoice_no: values.invoice_no,
       despathcher_name: values.despathcher_name,
       receiver_name: values.receiver_name,
-      receiver_phone: values.receiver_phone,
       authorized_by: values.authorized_by,
       items: values.items.map(item => ({
         item_name: item.item_name,
@@ -104,7 +103,6 @@ export default function DN() {
           { name: "invoice_no", label: "Invoice Number", placeholder: "Enter Invoice Number" },
           { name: "despathcher_name", label: "Despatcher Name", placeholder: "Enter Despatcher Name" },
           { name: "receiver_name", label: "Reciever Name", placeholder: "Enter Reciever Name" },
-          { name: "receiver_phone", label: "Receiver Name", placeholder: "Enter Receiver Name" },
           { name: "authorized_by", label: "Authorized By", placeholder: "Enter Authorized By" },
         ]}
         onSubmit={handleSubmit}
