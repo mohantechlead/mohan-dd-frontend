@@ -1,9 +1,10 @@
-"use client";
+ "use client";
 
 import { Form } from "@/components/form";
 import { ItemsForm } from "@/components/itemsform";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 interface GrnFormValues {
   date: string;
@@ -27,6 +28,7 @@ const GRN_API_URL = "/api/inventory/grn"
 
 export default function HomePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const handleSubmit = async (values: GrnFormValues) => {
     
     console.log("Form submitted:", values);
@@ -63,15 +65,27 @@ export default function HomePage() {
   
       if (!res.ok) {
         console.error("Error creating GRN:", data);
-        alert("Failed to submit");
+        showToast({
+          title: "Failed to create GRN",
+          description: (data as any)?.detail || "Please check the form and try again.",
+          variant: "error",
+        });
         return;
       }
   
       console.log("GRN created successfully:", data);
-      alert("GRN created successfully");
+      showToast({
+        title: "GRN created",
+        description: "The GRN has been created successfully.",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error creating GRN:", error);
-      alert("Failed to submit");
+      showToast({
+        title: "Failed to create GRN",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
     }
   };
 

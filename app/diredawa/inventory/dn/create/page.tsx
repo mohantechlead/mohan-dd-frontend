@@ -1,9 +1,10 @@
-"use client";
+ "use client";
 
 import { Form } from "@/components/form";
 import { ItemsForm } from "@/components/itemsform";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 interface DnFormValues {
   date: string;
@@ -31,6 +32,7 @@ const DN_API_URL = "/api/inventory/dn"
 
 export default function DN() {
   const router = useRouter();
+  const { showToast } = useToast();
   const handleSubmit = async (values: DnFormValues) => {
     console.log("Form submitted:", values);
   
@@ -69,15 +71,27 @@ export default function DN() {
   
       if (!res.ok) {
         console.error("Error creating DN:", data);
-        alert("Failed to submit");
+        showToast({
+          title: "Failed to create DN",
+          description: (data as any)?.detail || "Please check the form and try again.",
+          variant: "error",
+        });
         return;
       }
   
       console.log("DN created successfully:", data);
-      alert("DN created successfully");
+      showToast({
+        title: "DN created",
+        description: "The DN has been created successfully.",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error creating DN:", error);
-      alert("Failed to submit");
+      showToast({
+        title: "Failed to create DN",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
     }
   };
   

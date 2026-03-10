@@ -1,8 +1,9 @@
-"use client";
+ "use client";
 
 import { Form } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 interface ItemFormValues {
   item_name: string;
@@ -14,6 +15,7 @@ const GRN_API_URL = "/api/inventory/items"
 
 export default function HomePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const handleSubmit = async (values: ItemFormValues) => {
     
     console.log("Form submitted:", values);
@@ -37,16 +39,28 @@ export default function HomePage() {
       const data = await res.json();
   
       if (!res.ok) {
-        console.error("Error creating GRN:", data);
-        alert("Failed to submit");
+        console.error("Error creating item:", data);
+        showToast({
+          title: "Failed to create item",
+          description: (data as any)?.detail || "Please check the form and try again.",
+          variant: "error",
+        });
         return;
       }
   
       console.log("GRN created successfully:", data);
-      alert("GRN created successfully");
+      showToast({
+        title: "Item created",
+        description: "The item has been created successfully.",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error creating GRN:", error);
-      alert("Failed to submit");
+      showToast({
+        title: "Failed to create item",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
     }
   };
 

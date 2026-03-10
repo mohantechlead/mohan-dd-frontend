@@ -1,8 +1,9 @@
-"use client";
+ "use client";
 
 import { Form } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 interface SupplierFormValues {
   name: string;
@@ -16,6 +17,7 @@ const SUPPLIER_API_URL = "/api/partners/suppliers";
 
 export default function HomePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const handleSubmit = async (values: SupplierFormValues) => {
     
     console.log("Form submitted:", values);
@@ -43,15 +45,27 @@ export default function HomePage() {
   
       if (!res.ok) {
         console.error("Error creating Supplier:", data);
-        alert("Failed to submit");
+        showToast({
+          title: "Failed to create supplier",
+          description: (data as any)?.detail || "Please check the form and try again.",
+          variant: "error",
+        });
         return;
       }
   
       console.log("Supplier created successfully:", data);
-      alert("Supplier created successfully");
+      showToast({
+        title: "Supplier created",
+        description: "The supplier has been created successfully.",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error creating Supplier:", error);
-      alert("Failed to submit");
+      showToast({
+        title: "Failed to create supplier",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
     }
   };
 

@@ -91,11 +91,11 @@ const data = {
       items: [
         {
           title: "Create Sales",
-          url: "#",
+          url: "/diredawa/orders/create",
         },
         {
           title: "Display Sales",
-          url: "#",
+          url: "/diredawa/orders/display",
         },
       ],
     },
@@ -106,11 +106,11 @@ const data = {
       items: [
         {
           title: "Create Purchase",
-          url: "#",
+          url: "/diredawa/purchase/create",
         },
         {
           title: "Display Purchase",
-          url: "#",
+          url: "/diredawa/purchase/display",
         },
       ],
     },
@@ -134,6 +134,21 @@ const data = {
         {
           title: "Stock",
           url: "/diredawa/inventory/stock",
+        },
+      ],
+    },
+    {
+      title: "Approvals",
+      url: "#",
+      icon: Settings2,
+      items: [
+        {
+          title: "Order Approval",
+          url: "/diredawa/approvals/orders",
+        },
+        {
+          title: "Purchase Approval",
+          url: "#",
         },
       ],
     },

@@ -63,7 +63,13 @@ module.exports = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+  			},
+  			success: '#16a34a',
+  			successBorder: '#15803d',
+  			error: '#dc2626',
+  			errorBorder: '#b91c1c',
+  			warning: '#f59e0b',
+  			warningBorder: '#b45309'
   		},
   		keyframes: {
   			'accordion-down': {

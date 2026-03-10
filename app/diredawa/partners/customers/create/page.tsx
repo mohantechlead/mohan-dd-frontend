@@ -1,8 +1,9 @@
-"use client";
+ "use client";
 
 import { Form } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 interface CustomerFormValues {
   name: string;
@@ -16,6 +17,7 @@ const CUSTOMER_API_URL = "/api/partners/customers";
 
 export default function HomePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const handleSubmit = async (values: CustomerFormValues) => {
     
     console.log("Form submitted:", values);
@@ -43,15 +45,27 @@ export default function HomePage() {
   
       if (!res.ok) {
         console.error("Error creating Customer:", data);
-        alert("Failed to submit");
+        showToast({
+          title: "Failed to create customer",
+          description: (data as any)?.detail || "Please check the form and try again.",
+          variant: "error",
+        });
         return;
       }
   
       console.log("Customer created successfully:", data);
-      alert("Customer created successfully");
+      showToast({
+        title: "Customer created",
+        description: "The customer has been created successfully.",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error creating Customer:", error);
-      alert("Failed to submit");
+      showToast({
+        title: "Failed to create customer",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
     }
   };
 
