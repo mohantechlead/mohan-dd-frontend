@@ -6,17 +6,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
 
-interface Order {
+interface Purchase {
   id: string;
-  order_number: string;
+  purchase_number: string;
   status: string;
 }
 
-interface ApproveResponse extends Order {}
+const PURCHASES_API_URL = "/api/purchases";
 
-const ORDERS_API_URL = "/api/orders";
-
-export default function OrderApprovalsPage() {
+export default function PurchaseApprovalsPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const auth = useAuth();
@@ -26,48 +24,50 @@ export default function OrderApprovalsPage() {
       router.replace("/");
     }
   }, [auth, router]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [approvingOrderNumber, setApprovingOrderNumber] = useState<
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [approvingPurchaseNumber, setApprovingPurchaseNumber] = useState<
     string | null
   >(null);
 
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchPurchases = async () => {
       try {
-        const res = await fetch(ORDERS_API_URL, {
+        const res = await fetch(PURCHASES_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
-        const data = await res.json();
+        const data: unknown = await res.json();
         if (!res.ok) {
-          const detail = (data as any)?.detail;
+          const detail = (data as { detail?: string | unknown })?.detail;
           const message =
             Array.isArray(detail)
-              ? detail.map((d: any) => d.msg ?? JSON.stringify(d)).join(", ")
+              ? (detail as { msg?: string }[])
+                  .map((d) => d.msg ?? JSON.stringify(d))
+                  .join(", ")
               : typeof detail === "string"
-              ? detail
-              : (data as any)?.message;
+                ? detail
+                : (data as { message?: string })?.message;
           showToast({
-            title: "Failed to load orders",
-            description: message || "Please try again.",
+            title: "Failed to load purchases",
+            description: (message as string) || "Please try again.",
             variant: "error",
           });
           return;
         }
-        const pending = (data as any[]).filter(
-          (o) => (o as any).status === "pending"
+        const list = (data as Purchase[]).filter(
+          (p) => (p as Purchase).status === "pending"
         );
-        setOrders(
-          pending.map((o) => ({
-            id: o.id,
-            order_number: o.order_number,
-            status: o.status,
+        setPurchases(
+          list.map((p) => ({
+            id: (p as Purchase).id,
+            purchase_number: (p as Purchase).purchase_number,
+            status: (p as Purchase).status,
           }))
         );
       } catch {
         showToast({
-          title: "Failed to load orders",
+          title: "Failed to load purchases",
           description: "Something went wrong. Please try again.",
           variant: "error",
         });
@@ -76,10 +76,10 @@ export default function OrderApprovalsPage() {
       }
     };
 
-    fetchOrders();
+    fetchPurchases();
   }, [showToast]);
 
-  const handleApprove = async (orderNumber: string) => {
+  const handleApprove = async (purchaseNumber: string) => {
     if (!auth?.userId) {
       showToast({
         title: "Login required",
@@ -89,54 +89,53 @@ export default function OrderApprovalsPage() {
       return;
     }
     try {
-      setApprovingOrderNumber(orderNumber);
-      const res = await fetch(`/api/orders/${orderNumber}/approve`, {
+      setApprovingPurchaseNumber(purchaseNumber);
+      const res = await fetch(`/api/purchases/${encodeURIComponent(purchaseNumber)}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          order_number: orderNumber,
-          approved_by_id: auth.userId,
-        }),
+        body: JSON.stringify({ approved_by_id: auth.userId }),
       });
-      const data: ApproveResponse = await res.json();
+      const data: unknown = await res.json();
       if (!res.ok) {
-        const detail = (data as any)?.detail;
+        const detail = (data as { detail?: string | unknown })?.detail;
         const message =
           Array.isArray(detail)
-            ? detail.map((d: any) => d.msg ?? JSON.stringify(d)).join(", ")
+            ? (detail as { msg?: string }[])
+                .map((d) => d.msg ?? JSON.stringify(d))
+                .join(", ")
             : typeof detail === "string"
-            ? detail
-            : (data as any)?.message;
+              ? detail
+              : (data as { message?: string })?.message;
         showToast({
-          title: "Failed to approve order",
-          description: message || "Please try again.",
+          title: "Failed to approve purchase",
+          description: (message as string) || "Please try again.",
           variant: "error",
         });
         return;
       }
-      setOrders((prev) =>
-        prev.filter((o) => o.order_number !== orderNumber)
+      setPurchases((prev) =>
+        prev.filter((p) => p.purchase_number !== purchaseNumber)
       );
       showToast({
-        title: "Order approved",
-        description: `Order ${data.order_number} has been approved.`,
+        title: "Purchase approved",
+        description: `Purchase ${(data as Purchase).purchase_number} has been approved.`,
         variant: "success",
       });
     } catch {
       showToast({
-        title: "Failed to approve order",
+        title: "Failed to approve purchase",
         description: "Something went wrong. Please try again.",
         variant: "error",
       });
     } finally {
-      setApprovingOrderNumber(null);
+      setApprovingPurchaseNumber(null);
     }
   };
 
   return (
     <div className="max-w-5xl mx-auto mt-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Order Approvals</h1>
+        <h1 className="text-2xl font-bold">Purchase Approvals</h1>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium">Approved By:</label>
           <input
@@ -153,7 +152,7 @@ export default function OrderApprovalsPage() {
           <thead className="bg-muted/60">
             <tr>
               <th className="px-4 py-2 text-left">Select</th>
-              <th className="px-4 py-2 text-left">Order ID</th>
+              <th className="px-4 py-2 text-left">Purchase Number</th>
               <th className="px-4 py-2 text-left">Status</th>
               <th className="px-4 py-2 text-left">Actions</th>
             </tr>
@@ -162,30 +161,32 @@ export default function OrderApprovalsPage() {
             {loading ? (
               <tr>
                 <td colSpan={4} className="px-4 py-4 text-center text-sm">
-                  Loading pending orders...
+                  Loading pending purchases...
                 </td>
               </tr>
-            ) : orders.length === 0 ? (
+            ) : purchases.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-4 text-center text-sm">
-                  No pending orders for approval.
+                  No pending purchases for approval.
                 </td>
               </tr>
             ) : (
-              orders.map((order) => (
-                <tr key={order.id} className="border-t">
+              purchases.map((purchase) => (
+                <tr key={purchase.id} className="border-t">
                   <td className="px-4 py-2">
                     <input type="checkbox" />
                   </td>
-                  <td className="px-4 py-2">{order.order_number}</td>
-                  <td className="px-4 py-2 capitalize">{order.status}</td>
+                  <td className="px-4 py-2">{purchase.purchase_number}</td>
+                  <td className="px-4 py-2 capitalize">{purchase.status}</td>
                   <td className="px-4 py-2">
                     <Button
                       size="sm"
-                      onClick={() => handleApprove(order.order_number)}
-                      disabled={approvingOrderNumber === order.order_number}
+                      onClick={() => handleApprove(purchase.purchase_number)}
+                      disabled={
+                        approvingPurchaseNumber === purchase.purchase_number
+                      }
                     >
-                      {approvingOrderNumber === order.order_number
+                      {approvingPurchaseNumber === purchase.purchase_number
                         ? "Approving..."
                         : "Approve"}
                     </Button>
@@ -199,4 +200,3 @@ export default function OrderApprovalsPage() {
     </div>
   );
 }
-

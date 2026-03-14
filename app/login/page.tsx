@@ -67,8 +67,7 @@ export function LoginForm({
 
     if (response.ok) {
       console.log("Logged in");
-      auth?.login(data?.username);
-      router.push('/diredawa/inventory/grn/create');
+      await auth?.login(data?.username, "/diredawa/inventory/grn/create", data?.role, data?.userId);
     } else {
       console.log("Login failed", data);
     }

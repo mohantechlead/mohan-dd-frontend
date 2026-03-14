@@ -14,3 +14,14 @@ export async function GET(
   return NextResponse.json(data, { status });
 }
 
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  const body = await request.json();
+  const endpoint = `${DJANGO_API_ORDERS}/${id}`;
+  const { data, status } = await ApiProxy.put(endpoint, body, true);
+  return NextResponse.json(data, { status });
+}
+

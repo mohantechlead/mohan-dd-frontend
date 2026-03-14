@@ -22,12 +22,15 @@ interface Order {
   proforma_ref_no: string;
   status: string;
   approved_by?: string | null;
+  completed_by?: string | null;
+  completed_date?: string | null;
+  status_remark?: string | null;
   items: OrderItem[];
 }
 
 const ORDERS_API_URL = "/api/orders";
 
-export default function DisplayOrdersPage() {
+export default function CompletedOrdersPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -54,7 +57,8 @@ export default function DisplayOrdersPage() {
           return;
         }
 
-        setOrders(data as Order[]);
+        const completed = (data as Order[]).filter((o) => o.status === "completed");
+        setOrders(completed);
       } catch (error) {
         showToast({
           title: "Failed to load orders",
@@ -72,19 +76,19 @@ export default function DisplayOrdersPage() {
   return (
     <div className="max-w-5xl mx-auto mt-4 space-y-6">
       <div className="flex justify-between items-center">
-        <Button onClick={() => router.push("/diredawa/orders/create")}>
-          Create Sales
+        <Button variant="outline" onClick={() => router.push("/diredawa/orders/display")}>
+          Back to Sales
         </Button>
         <h1 className="text-2xl font-bold text-center flex-1">
-          Sales Orders
+          Completed Orders
         </h1>
       </div>
 
       {loading ? (
-        <p>Loading orders...</p>
+        <p>Loading completed orders...</p>
       ) : orders.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">
-          No orders found.
+          No completed orders found.
         </p>
       ) : (
         <div className="border rounded-md overflow-hidden bg-white">
@@ -98,8 +102,8 @@ export default function DisplayOrdersPage() {
                 <th className="text-right px-4 py-2">Unit Price</th>
                 <th className="text-right px-4 py-2">Total Price</th>
                 <th className="text-left px-4 py-2">Customer Name</th>
-                <th className="text-left px-4 py-2">Approved By</th>
-                <th className="text-left px-4 py-2">Status</th>
+                <th className="text-left px-4 py-2">Completed By</th>
+                <th className="text-left px-4 py-2">Remark</th>
               </tr>
             </thead>
             <tbody>
@@ -139,15 +143,15 @@ export default function DisplayOrdersPage() {
                         </td>
                         <td className="px-4 py-2">{order.buyer}</td>
                         <td className="px-4 py-2">
-                          {order.approved_by ?? "—"}
+                          {order.completed_by ?? "—"}
                         </td>
-                        <td className="px-4 py-2 capitalize">
-                          {order.status ?? "—"}
+                        <td className="px-4 py-2 max-w-[200px] truncate" title={order.status_remark ?? ""}>
+                          {order.status_remark ?? "—"}
                         </td>
                       </tr>
                     ))
                   : [
-                      <tr key={order.id} className="border-t" >
+                      <tr key={order.id} className="border-t">
                         <td className="px-4 py-2">
                           <button
                             type="button"
@@ -164,16 +168,17 @@ export default function DisplayOrdersPage() {
                         <td className="px-4 py-2">
                           {new Date(order.order_date).toLocaleDateString()}
                         </td>
-                        <td className="px-4 py-2" colSpan={5}>
+                        <td className="px-4 py-2" colSpan={4}>
                           <span className="text-xs text-muted-foreground">
                             No items
                           </span>
                         </td>
+                        <td className="px-4 py-2">{order.buyer}</td>
                         <td className="px-4 py-2">
-                          {order.approved_by ?? "—"}
+                          {order.completed_by ?? "—"}
                         </td>
-                        <td className="px-4 py-2 capitalize">
-                          {order.status ?? "—"}
+                        <td className="px-4 py-2 max-w-[200px] truncate" title={order.status_remark ?? ""}>
+                          {order.status_remark ?? "—"}
                         </td>
                       </tr>,
                     ]
@@ -185,4 +190,3 @@ export default function DisplayOrdersPage() {
     </div>
   );
 }
-

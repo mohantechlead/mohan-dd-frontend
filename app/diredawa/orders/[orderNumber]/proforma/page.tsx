@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import Image from "next/image";
 
 interface OrderItem {
   item_name: string;
@@ -28,6 +29,7 @@ interface OrderDetail {
   final_destination: string;
   port_of_loading: string;
   port_of_discharge: string;
+  measurement_type?: string | null;
   payment_terms: string;
   mode_of_transport: string;
   freight: string;
@@ -91,7 +93,7 @@ export default function ProformaInvoicePage() {
 
   return (
     <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
           onClick={() => router.push(`/diredawa/orders/${orderNumber}`)}
@@ -114,98 +116,129 @@ export default function ProformaInvoicePage() {
           Order not found.
         </p>
       ) : (
-        <div className="space-y-8">
+        <div className="relative space-y-8">
+          {/* Stamp: right bottom corner */}
+          <div className="absolute right-0 bottom-0 print:right-0 print:bottom-0">
+            <Image
+              src="/stamp.png"
+              alt="Stamp"
+              width={120}
+              height={120}
+              className="object-contain"
+            />
+          </div>
           {/* Header / Company info */}
           <div className="text-center space-y-1">
-            {/* Logo placeholder */}
-            <div className="mx-auto mb-3 h-16 w-16 rounded-full border flex items-center justify-center text-xs tracking-[0.3em]">
-              MOHAN
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Mohan PLC logo"
+              width={80}
+              height={80}
+              className="mx-auto mb-3"
+            />
             <h1 className="text-2xl font-semibold tracking-wide">Mohan PLC</h1>
             <p className="text-xs text-muted-foreground">
               Dire Dawa Free Trade Zone Branch
             </p>
             <p className="text-xs text-muted-foreground">
-              Email: harsh@mohanint.com &nbsp; TEL:+251-11-6621849
+              Email: harsh@mohanint.com 
+            </p>
+            <p className="text-xs text-muted-foreground">
+               &nbsp; TEL:+251-11-6621849
             </p>
           </div>
 
-          <h2 className="text-xl font-semibold text-center tracking-wide">
+          <h2 className="text-xl font-semibold text-center tracking-wide mt-6">
             Proforma Invoice
           </h2>
 
-          {/* Seller / Buyer / Header columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
+          {/* Rows 1 & 2 with 3 columns each */}
+
+          {/* Row 1: Seller / Order / Proforma+Freight */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-xs mt-6">
+            {/* Row1 Col1: Seller Details */}
             <div className="space-y-2">
               <p className="font-semibold">Seller Details</p>
-              <p>Mohan PLC, Dire Dawa Free Trade Zone</p>
-              <p>Dire Dawa Free Trade Zone</p>
-
-              <div className="mt-4 space-y-1">
-                <p className="font-semibold">Buyer Details</p>
-                <p className="uppercase">{order.buyer}</p>
-                {order.add_consignee && <p>{order.add_consignee}</p>}
-              </div>
+              <p>MOHAN PLC DIRE DAWA FREE TRADE ZONE</p>
+              <p>DIRE DAWA FREE TRADE ZONE</p>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex justify-between">
-                <span className="font-semibold">Order No:</span>
-                <span>{order.order_number}</span>
+            {/* Row1 Col2: Order No + Invoice Date */}
+            <div className="space-y-2">
+              <div>
+                <p className="font-semibold">Order No:</p>
+                <p>{order.order_number}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="font-semibold">Invoice Date:</span>
-                <span>
+              <div>
+                <p className="font-semibold">Invoice Date:</p>
+                <p>
                   {new Date(order.order_date).toLocaleDateString(undefined, {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
                   })}
-                </span>
+                </p>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex justify-between">
-                <span className="font-semibold">Proforma Invoice No:</span>
-                <span>{order.proforma_ref_no}</span>
+            {/* Row1 Col3: Proforma Invoice No + Freight */}
+            <div className="space-y-2">
+              <div>
+                <p className="font-semibold">Proforma Invoice No:</p>
+                <p>{order.proforma_ref_no}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="font-semibold">Freight</span>
-                <span>{order.freight}</span>
+              <div>
+                <p className="font-semibold">Freight</p>
+                <p>{order.freight}</p>
               </div>
             </div>
           </div>
 
-          <hr className="border-t" />
+          <hr className="border-t my-4" />
 
-          {/* Shipment / route info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
+          {/* Row 2: Buyer / Ports / Country+Destination+Payment+Shipment */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-xs">
+            {/* Row2 Col1: Buyer Details */}
             <div className="space-y-1">
-              <p className="font-semibold">Port of Loading</p>
-              <p>{order.port_of_loading}</p>
-
-              <p className="font-semibold mt-3">Port Of Discharge</p>
-              <p>{order.port_of_discharge}</p>
-
-              <p className="font-semibold mt-3">Means of Transport</p>
-              <p>{order.mode_of_transport}</p>
+              <p className="font-semibold mb-1">Buyer Details</p>
+              <p className="uppercase">{order.buyer}</p>
+              {order.add_consignee && <p>{order.add_consignee}</p>}
             </div>
 
-            <div className="space-y-1">
-              <p className="font-semibold">Country of Origin</p>
-              <p>{order.country_of_origin}</p>
-
-              <p className="font-semibold mt-3">Final Destination</p>
-              <p>{order.final_destination}</p>
-
-              <p className="font-semibold mt-3">Payment Terms</p>
-              <p>{order.payment_terms}</p>
+            {/* Row2 Col2: Ports + Means of Transport */}
+            <div className="space-y-2">
+              <div>
+                <p className="font-semibold">Port of Loading</p>
+                <p>{order.port_of_loading}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Port Of Discharge</p>
+                <p>{order.port_of_discharge}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Means of Transport</p>
+                <p>{order.mode_of_transport}</p>
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <p className="font-semibold">Shipment Terms</p>
-              <p>{order.shipment_type}</p>
+            {/* Row2 Col3: Country / Final Destination / Payment / Shipment */}
+            <div className="space-y-2">
+              <div>
+                <p className="font-semibold">Country of Origin</p>
+                <p>{order.country_of_origin}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Final Destination</p>
+                <p>{order.final_destination}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Payment Terms</p>
+                <p>{order.payment_terms}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Shipment Terms</p>
+                <p>{order.shipment_type}</p>
+              </div>
             </div>
           </div>
 
@@ -214,12 +247,22 @@ export default function ProformaInvoicePage() {
             <p className="text-sm font-semibold mb-2">Order Summary</p>
             <table className="w-full text-xs border-t">
               <thead>
-                <tr className="border-b">
-                  <th className="px-2 py-2 text-left w-12">No.</th>
-                  <th className="px-2 py-2 text-left">Item</th>
-                  <th className="px-2 py-2 text-right">Price in USD</th>
+                <tr className="border-b text-left">
+                  <th className="px-2 py-2 w-10">No.</th>
+                  <th className="px-2 py-2">Item</th>
+
+                  <th className="px-2 py-2 text-right">
+                    <div>Price in</div>
+                    <div>USD</div>
+                  </th>
+
                   <th className="px-2 py-2 text-right">Quantity</th>
-                  <th className="px-2 py-2 text-left">Unit of Measurement</th>
+
+                  <th className="px-2 py-2">
+                    <div>Unit of</div>
+                    <div>Measurement{order.measurement_type ? ` (${order.measurement_type})` : ""}</div>
+                  </th>
+
                   <th className="px-2 py-2 text-right">Total</th>
                 </tr>
               </thead>
@@ -241,7 +284,7 @@ export default function ProformaInvoicePage() {
                       })}
                     </td>
                     <td className="px-2 py-2 text-right">{item.quantity}</td>
-                    <td className="px-2 py-2">{item.measurement}</td>
+                    <td className="px-2 py-2">{order.measurement_type ?? item.measurement}</td>
                     <td className="px-2 py-2 text-right">
                       ${item.total_price.toLocaleString(undefined, {
                         maximumFractionDigits: 2,

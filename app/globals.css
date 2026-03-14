@@ -88,3 +88,16 @@
     padding: 0; /* optional */
   }
 }
+
+/* Print: 95% scale (like Custom 95 in print dialog), preserve colors */
+@media print {
+  html,
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    transform: scale(0.95);
+    transform-origin: top center;
+    width: 100%;
+    min-height: 100%;
+  }
+}

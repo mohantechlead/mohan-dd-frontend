@@ -20,16 +20,19 @@ interface Purchase {
   buyer: string;
   proforma_ref_no: string;
   status: string;
+  cancelled_by?: string | null;
+  cancelled_date?: string | null;
+  status_remark?: string | null;
   items: PurchaseItem[];
 }
 
 const PURCHASES_API_URL = "/api/purchases";
 
-export default function DisplayPurchasesPage() {
+export default function RejectedPurchasesPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchPurchases = async () => {
@@ -38,22 +41,23 @@ export default function DisplayPurchasesPage() {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
-        const data: unknown = await res.json();
+        const data = await res.json();
 
         if (!res.ok) {
           showToast({
             title: "Failed to load purchases",
             description:
-              (data as { detail?: string; message?: string })?.detail ||
-              (data as { detail?: string; message?: string })?.message ||
+              (data as any)?.detail ||
+              (data as any)?.message ||
               "Please try again.",
             variant: "error",
           });
           return;
         }
 
-        setPurchases(data as Purchase[]);
-      } catch {
+        const cancelled = (data as Purchase[]).filter((p) => p.status === "cancelled");
+        setPurchases(cancelled);
+      } catch (error) {
         showToast({
           title: "Failed to load purchases",
           description: "Something went wrong. Please try again.",
@@ -70,19 +74,19 @@ export default function DisplayPurchasesPage() {
   return (
     <div className="max-w-5xl mx-auto mt-4 space-y-6">
       <div className="flex justify-between items-center">
-        <Button onClick={() => router.push("/diredawa/purchase/create")}>
-          Create Purchase
+        <Button variant="outline" onClick={() => router.push("/diredawa/purchase/display")}>
+          Back to Purchase
         </Button>
         <h1 className="text-2xl font-bold text-center flex-1">
-          Purchase Orders
+          Rejected Purchases
         </h1>
       </div>
 
       {loading ? (
-        <p>Loading purchases...</p>
+        <p>Loading rejected purchases...</p>
       ) : purchases.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">
-          No purchases found.
+          No rejected purchases found.
         </p>
       ) : (
         <div className="border rounded-md overflow-hidden bg-white">
@@ -93,7 +97,8 @@ export default function DisplayPurchasesPage() {
                 <th className="text-left px-4 py-2">Date</th>
                 <th className="text-right px-4 py-2">Total Price</th>
                 <th className="text-left px-4 py-2">Vendor Name</th>
-                <th className="text-left px-4 py-2">Status</th>
+                <th className="text-left px-4 py-2">Cancelled By</th>
+                <th className="text-left px-4 py-2">Remark</th>
               </tr>
             </thead>
             <tbody>
@@ -120,11 +125,7 @@ export default function DisplayPurchasesPage() {
                     <td className="px-4 py-2">
                       {new Date(purchase.order_date).toLocaleDateString(
                         undefined,
-                        {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        }
+                        { year: "numeric", month: "short", day: "numeric" }
                       )}
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -133,7 +134,12 @@ export default function DisplayPurchasesPage() {
                       })}
                     </td>
                     <td className="px-4 py-2">{purchase.buyer}</td>
-                    <td className="px-4 py-2 capitalize">{purchase.status}</td>
+                    <td className="px-4 py-2">
+                      {purchase.cancelled_by ?? "—"}
+                    </td>
+                    <td className="px-4 py-2 max-w-[200px] truncate" title={purchase.status_remark ?? ""}>
+                      {purchase.status_remark ?? "—"}
+                    </td>
                   </tr>
                 );
               })}
@@ -144,4 +150,3 @@ export default function DisplayPurchasesPage() {
     </div>
   );
 }
-

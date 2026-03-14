@@ -1,14 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
-  CreditCard,
   LogOut,
-  Sparkles,
 } from "lucide-react";
 
+import { useAuth } from "@/components/authProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
   DropdownMenu,
@@ -36,6 +36,11 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const auth = useAuth();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  // Use auth username only after mount so server and first client render match (avoids hydration mismatch)
+  const displayName = mounted && auth?.username ? auth.username : user.name;
 
   return (
     <SidebarMenu>
@@ -51,7 +56,7 @@ export function NavUser({
                 <AvatarFallback className="rounded-lg">CN</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-medium">{displayName}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -69,7 +74,7 @@ export function NavUser({
                   <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate font-medium">{displayName}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -87,7 +92,9 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => auth?.logout()}
+            >
               <LogOut />
               Log out
             </DropdownMenuItem>

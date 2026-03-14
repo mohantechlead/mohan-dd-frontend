@@ -62,9 +62,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 Close
               </button>
             </div>
-            {toast.description && (
+            {toast.description != null && toast.description !== "" && (
               <p className="text-sm opacity-90" style={{ color: "#ffffff" }}>
-                {toast.description}
+                {typeof toast.description === "string"
+                  ? toast.description
+                  : JSON.stringify(toast.description)}
               </p>
             )}
           </div>

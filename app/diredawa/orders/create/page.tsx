@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
@@ -119,6 +119,7 @@ export default function CreateOrderPage() {
   >([]);
   const [shipperQuery, setShipperQuery] = useState("");
   const [showShipperDropdown, setShowShipperDropdown] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -266,6 +267,16 @@ export default function CreateOrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const freightPrice = form.freight_price?.trim();
+    if (!freightPrice || Number.isNaN(parseFloat(freightPrice))) {
+      showToast({
+        title: "Freight price required",
+        description: "Please enter a valid freight price.",
+        variant: "error",
+      });
+      return;
+    }
+
     // Check for duplicate order number before submitting
     try {
       const existingRes = await fetch(ORDER_API_URL, {
@@ -302,12 +313,11 @@ export default function CreateOrderPage() {
     const payload = {
       ...form,
       order_date: form.order_date,
-      freight_price: form.freight_price
-        ? parseFloat(form.freight_price)
-        : undefined,
+      freight_price: parseFloat(form.freight_price),
       items,
     };
 
+    setIsSubmitting(true);
     try {
       const res = await fetch(ORDER_API_URL, {
         method: "POST",
@@ -342,6 +352,8 @@ export default function CreateOrderPage() {
         description: "Something went wrong. Please try again.",
         variant: "error",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -678,10 +690,13 @@ export default function CreateOrderPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Freight Price
+                  Freight Price *
                 </label>
                 <input
                   name="freight_price"
+                  type="number"
+                  step="0.01"
+                  required
                   value={form.freight_price}
                   onChange={handleHeaderChange}
                   className="w-full border rounded-md px-3 py-2"
@@ -886,8 +901,19 @@ export default function CreateOrderPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" className="px-10">
-              Submit
+            <Button
+              type="submit"
+              className="px-10"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit"
+              )}
             </Button>
           </div>
         </form>

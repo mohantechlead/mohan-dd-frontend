@@ -17,6 +17,7 @@ import {
 import { NavMain } from "@/components/nav-main";
 // import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
+import { useAuth } from "@/components/authProvider";
 
 import {
   Sidebar,
@@ -26,36 +27,21 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "",
-    avatar: "/avatars/shadcn.jpg",
+// Base nav data - Status and Approvals are admin-only
+const baseNavMain = [
+  {
+    title: "Status",
+    url: "#",
+    icon: SquareTerminal,
+    isActive: true,
+    adminOnly: true,
+    items: [
+      { title: "Order Status", url: "/diredawa/status/orders" },
+      { title: "Purchase Status", url: "/diredawa/status/purchases" },
+    ],
   },
-  navMain: [
-    {
-      title: "Status",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "Order Status",
-          url: "#",
-        },
-        {
-          title: "Purchase Status",
-          url: "#",
-        },
-        {
-          title: "Rejected Orders",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Customers",
+  {
+    title: "Customers",
       url: "#",
       icon: Bot,
       items: [
@@ -67,10 +53,10 @@ const data = {
           title: "Display Customers",
           url: "/diredawa/partners/customers/display",
         },
-      ],
-    },
-    {
-      title: "Suppliers",
+    ],
+  },
+  {
+    title: "Suppliers",
       url: "#",
       icon: BookOpen,
       items: [
@@ -82,10 +68,10 @@ const data = {
           title: "Display Suppliers",
           url: "/diredawa/partners/suppliers/display",
         },
-      ],
-    },
-    {
-      title: "Sales",
+    ],
+  },
+  {
+    title: "Sales",
       url: "#",
       icon: Settings2,
       items: [
@@ -97,10 +83,18 @@ const data = {
           title: "Display Sales",
           url: "/diredawa/orders/display",
         },
-      ],
-    },
-    {
-      title: "Purchase",
+        {
+          title: "Rejected Orders",
+          url: "/diredawa/sales/rejected",
+        },
+        {
+          title: "Completed Orders",
+          url: "/diredawa/sales/completed",
+        },
+    ],
+  },
+  {
+    title: "Purchase",
       url: "#",
       icon: Settings2,
       items: [
@@ -112,10 +106,18 @@ const data = {
           title: "Display Purchase",
           url: "/diredawa/purchase/display",
         },
-      ],
-    },
-    {
-      title: "Inventory",
+        {
+          title: "Rejected Purchases",
+          url: "/diredawa/purchase/rejected",
+        },
+        {
+          title: "Completed Purchases",
+          url: "/diredawa/purchase/completed",
+        },
+    ],
+  },
+  {
+    title: "Inventory",
       url: "#",
       icon: Settings2,
       items: [
@@ -135,32 +137,44 @@ const data = {
           title: "Stock",
           url: "/diredawa/inventory/stock",
         },
-      ],
-    },
-    {
-      title: "Approvals",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "Order Approval",
-          url: "/diredawa/approvals/orders",
-        },
-        {
-          title: "Purchase Approval",
-          url: "#",
-        },
-      ],
-    },
-  ],
+    ],
+  },
+  {
+    title: "Approvals",
+    url: "#",
+    icon: Settings2,
+    adminOnly: true,
+    items: [
+      { title: "Order Approval", url: "/diredawa/approvals/orders" },
+      { title: "Purchase Approval", url: "/diredawa/approvals/purchases" },
+    ],
+  },
+];
+
+const data = {
+  user: {
+    name: "shadcn",
+    email: "",
+    avatar: "/avatars/shadcn.jpg",
+  },
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const auth = useAuth();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  // Use isAdmin only after mount so server and first client render match (avoids hydration mismatch from localStorage)
+  const isAdmin = mounted ? (auth?.isAdmin ?? false) : false;
+
+  const navMain = React.useMemo(() => {
+    return baseNavMain.filter((item) => !(item as { adminOnly?: boolean }).adminOnly || isAdmin);
+  }, [isAdmin]);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader></SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMain} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

@@ -60,6 +60,9 @@ export default function OrderDetailPage() {
   const [shippingInvoices, setShippingInvoices] = useState<
     ShippingInvoiceSummary[]
   >([]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -68,14 +71,14 @@ export default function OrderDetailPage() {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
-        const data = await res.json();
+        const data: unknown = await res.json();
 
         if (!res.ok) {
           showToast({
             title: "Failed to load order",
             description:
-              (data as any)?.detail ||
-              (data as any)?.message ||
+              (data as { detail?: string; message?: string })?.detail ||
+              (data as { detail?: string; message?: string })?.message ||
               "Please try again.",
             variant: "error",
           });
@@ -194,17 +197,75 @@ export default function OrderDetailPage() {
               </Button>
               <Button
                 className="w-full justify-start"
+                disabled={!selectedInvoiceId}
                 onClick={() =>
                   router.push(
-                    `/diredawa/orders/${order.order_number}/commercial`
+                    selectedInvoiceId
+                      ? `/diredawa/orders/${order.order_number}/commercial?invoiceId=${selectedInvoiceId}`
+                      : `/diredawa/orders/${order.order_number}/commercial`
                   )
                 }
               >
                 Commercial Invoice
               </Button>
-              <Button className="w-full justify-start">Bill of Lading</Button>
-              <Button className="w-full justify-start">Truck Waybill</Button>
-              <Button className="w-full justify-start">Packing List</Button>
+              <Button
+                className="w-full justify-start"
+                disabled={!selectedInvoiceId}
+                onClick={() =>
+                  router.push(
+                    selectedInvoiceId
+                      ? `/diredawa/orders/${order.order_number}/bill-of-lading?invoiceId=${selectedInvoiceId}`
+                      : `/diredawa/orders/${order.order_number}/bill-of-lading`
+                  )
+                }
+              >
+                Bill of Lading
+              </Button>
+              <Button
+                className="w-full justify-start"
+                disabled={!selectedInvoiceId}
+                onClick={() =>
+                  router.push(
+                    selectedInvoiceId
+                      ? `/diredawa/orders/${order.order_number}/truck-waybill?invoiceId=${selectedInvoiceId}`
+                      : `/diredawa/orders/${order.order_number}/truck-waybill`
+                  )
+                }
+              >
+                Truck Waybill
+              </Button>
+              <Button
+                className="w-full justify-start"
+                disabled={!selectedInvoiceId}
+                onClick={() =>
+                  router.push(
+                    selectedInvoiceId
+                      ? `/diredawa/orders/${order.order_number}/packing-list?invoiceId=${selectedInvoiceId}`
+                      : `/diredawa/orders/${order.order_number}/packing-list`
+                  )
+                }
+              >
+                Packing List
+              </Button>
+              <Button
+                className="w-full justify-start"
+                disabled={!selectedInvoiceId}
+                onClick={() =>
+                  router.push(
+                    selectedInvoiceId
+                      ? `/diredawa/orders/${order.order_number}/certificate-of-origin?invoiceId=${selectedInvoiceId}`
+                      : `/diredawa/orders/${order.order_number}/certificate-of-origin`
+                  )
+                }
+              >
+                Certificate of Origin
+              </Button>
+              {/* <Button
+                className="w-full justify-start"
+                disabled={!selectedInvoiceId}
+              >
+                Certificate of Analysis
+              </Button> */}
               <Button
                 className="w-full justify-start"
                 onClick={() =>
@@ -234,13 +295,14 @@ export default function OrderDetailPage() {
                     <th className="px-4 py-2 text-left">Invoice Number</th>
                     <th className="px-4 py-2 text-left">Order Number</th>
                     <th className="px-4 py-2 text-left">Invoice Date</th>
+                    <th className="px-4 py-2 text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shippingInvoices.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-4 py-4 text-sm text-muted-foreground text-center"
                       >
                         No invoices added yet.
@@ -250,12 +312,33 @@ export default function OrderDetailPage() {
                     shippingInvoices.map((inv) => (
                       <tr key={inv.id} className="border-t">
                         <td className="px-4 py-2">
-                          <input type="checkbox" />
+                          <input
+                            type="checkbox"
+                            checked={selectedInvoiceId === inv.id}
+                            onChange={(e) =>
+                              setSelectedInvoiceId(
+                                e.target.checked ? inv.id : null
+                              )
+                            }
+                          />
                         </td>
                         <td className="px-4 py-2">{inv.invoice_number}</td>
                         <td className="px-4 py-2">{inv.order_number}</td>
                         <td className="px-4 py-2">
                           {new Date(inv.invoice_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2">
+                          <button
+                            type="button"
+                            className="text-blue-600 hover:underline text-xs"
+                            onClick={() =>
+                              router.push(
+                                `/diredawa/orders/${order.order_number}/shipping-invoice/${inv.id}/edit`
+                              )
+                            }
+                          >
+                            ✏️ Edit
+                          </button>
                         </td>
                       </tr>
                     ))
