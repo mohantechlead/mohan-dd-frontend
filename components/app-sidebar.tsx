@@ -12,6 +12,7 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  Users,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -153,6 +154,13 @@ const baseNavMain = [
       { title: "Order Approval", url: "/diredawa/approvals/orders" },
       { title: "Purchase Approval", url: "/diredawa/approvals/purchases" },
     ],
+  },
+  {
+    title: "Users",
+    url: "#",
+    icon: Users,
+    adminOnly: true,
+    items: [{ title: "User Management", url: "/diredawa/users" }],
   },
 ];
 

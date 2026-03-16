@@ -4,14 +4,16 @@ import { DJANGO_API_ENDPOINT } from "@/config/defaults";
 
 const DJANGO_API_USERS = `${DJANGO_API_ENDPOINT}/partners/users`;
 
-export async function GET() {
-  const { data, status } = await ApiProxy.get(DJANGO_API_USERS, true);
-  return NextResponse.json(data, { status });
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const body = await request.json();
-  const { data, status } = await ApiProxy.post(DJANGO_API_USERS, body, true);
+  const { data, status } = await ApiProxy.post(
+    `${DJANGO_API_USERS}/${id}/change-password`,
+    body,
+    true
+  );
   return NextResponse.json(data, { status });
 }
-
