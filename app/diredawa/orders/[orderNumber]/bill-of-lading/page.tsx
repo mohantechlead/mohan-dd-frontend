@@ -19,9 +19,11 @@ interface OrderDetail {
   order_number: string;
   order_date: string;
   buyer: string;
+  buyer_address?: string | null;
   add_consignee?: string | null;
   proforma_ref_no: string;
   shipper: string;
+  shipper_address?: string | null;
   notify_party?: string | null;
   add_notify_party?: string | null;
   country_of_origin: string;
@@ -168,7 +170,7 @@ export default function BillOfLadingPage() {
   }, [invoice, order]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white">
+    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -223,10 +225,14 @@ export default function BillOfLadingPage() {
               </p>
             </div>
 
-            {/* R1C3: Customer Ref. No */}
+            {/* R1C3: Customer Ref. No, Freight, Shipment Type */}
             <div className="space-y-1">
               <p className="font-semibold">Customer Ref. no</p>
               <p>{invoice.customer_order_number}</p>
+              <p className="font-semibold mt-2">Freight</p>
+              <p>{order.freight}</p>
+              <p className="font-semibold mt-2">Shipment Type</p>
+              <p>{order.shipment_type}</p>
             </div>
           </div>
 
@@ -236,6 +242,7 @@ export default function BillOfLadingPage() {
             <div className="space-y-1">
               <p className="font-semibold">Buyer Details</p>
               <p className="uppercase">{order.buyer}</p>
+              {order.buyer_address && <p>{order.buyer_address}</p>}
               {order.add_consignee && <p>{order.add_consignee}</p>}
             </div>
 
@@ -279,6 +286,7 @@ export default function BillOfLadingPage() {
             <div className="space-y-1">
               <p className="font-semibold">Consignee</p>
               <p className="uppercase">{order.buyer}</p>
+              {order.buyer_address && <p>{order.buyer_address}</p>}
               {order.add_consignee && <p>{order.add_consignee}</p>}
             </div>
             <div className="space-y-1">

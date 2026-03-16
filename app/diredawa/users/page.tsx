@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { KeyRound, Pencil, Plus, UserPlus } from "lucide-react";
+import { KeyRound, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 
 const USERS_API = "/api/users";
 const ROLES = ["admin", "viewer"] as const;
@@ -48,6 +48,7 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -223,6 +224,53 @@ export default function UsersPage() {
     setPasswordOpen(true);
   };
 
+  const openRemove = (user: User) => {
+    setSelectedUser(user);
+    setRemoveOpen(true);
+  };
+
+  const handleRemove = async () => {
+    if (!selectedUser) return;
+    if (selectedUser.id === auth?.userId) {
+      showToast({
+        title: "Cannot remove",
+        description: "You cannot delete your own account.",
+        variant: "error",
+      });
+      setRemoveOpen(false);
+      setSelectedUser(null);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${USERS_API}/${selectedUser.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to remove user",
+          description: (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({ title: "User removed", variant: "success" });
+      setRemoveOpen(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch {
+      showToast({
+        title: "Failed to remove user",
+        description: "Something went wrong.",
+        variant: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
@@ -322,6 +370,7 @@ export default function UsersPage() {
                     size="sm"
                     onClick={() => openEdit(u)}
                     className="mr-2"
+                    title="Edit"
                   >
                     <Pencil className="w-4 h-4" />
                   </Button>
@@ -329,8 +378,20 @@ export default function UsersPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => openPassword(u)}
+                    className="mr-2"
+                    title="Change password"
                   >
                     <KeyRound className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openRemove(u)}
+                    title="Remove"
+                    disabled={u.id === auth?.userId}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </TableCell>
               </TableRow>
@@ -473,6 +534,37 @@ export default function UsersPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove User Confirmation Dialog */}
+      <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove User</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to remove{" "}
+            <strong>{selectedUser?.username}</strong>? This action cannot be
+            undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRemoveOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleRemove}
+              disabled={submitting}
+            >
+              {submitting ? "Removing..." : "Remove"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

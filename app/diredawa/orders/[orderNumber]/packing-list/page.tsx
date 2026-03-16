@@ -20,9 +20,11 @@ interface OrderDetail {
   order_number: string;
   order_date: string;
   buyer: string;
+  buyer_address?: string | null;
   add_consignee?: string | null;
   proforma_ref_no: string;
   shipper: string;
+  shipper_address?: string | null;
   notify_party?: string | null;
   add_notify_party?: string | null;
   country_of_origin: string;
@@ -180,7 +182,7 @@ export default function PackingListPage() {
   }, [itemsForTable]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white">
+    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -243,6 +245,11 @@ export default function PackingListPage() {
             <div className="space-y-1">
               <p className="font-semibold">Shipper</p>
               <p className="uppercase">{order.shipper}</p>
+              {order.shipper_address && (
+                <p className="text-[11px] text-muted-foreground">
+                  {order.shipper_address}
+                </p>
+              )}
               {order.add_consignee && (
                 <p className="text-[11px] text-muted-foreground">
                   {order.add_consignee}
@@ -275,7 +282,7 @@ export default function PackingListPage() {
               </div>
             </div>
 
-            {/* Customer order and truck waybill */}
+            {/* Customer order, truck waybill, Freight, Shipment Type */}
             <div className="space-y-1">
               <div>
                 <p className="font-semibold">Customer Order No.</p>
@@ -284,6 +291,14 @@ export default function PackingListPage() {
               <div>
                 <p className="font-semibold">Truck Waybill Number</p>
                 <p>{invoice.waybill_number ?? "-"}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Freight</p>
+                <p>{order.freight}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Shipment Type</p>
+                <p>{order.shipment_type}</p>
               </div>
             </div>
           </div>
@@ -295,6 +310,11 @@ export default function PackingListPage() {
             <div className="space-y-1">
               <p className="font-semibold">Buyer Details</p>
               <p className="uppercase">{order.buyer}</p>
+              {order.buyer_address && (
+                <p className="text-[11px] text-muted-foreground">
+                  {order.buyer_address}
+                </p>
+              )}
               {order.add_notify_party && (
                 <p className="text-[11px] text-muted-foreground">
                   {order.add_notify_party}
@@ -318,7 +338,7 @@ export default function PackingListPage() {
               </div>
             </div>
 
-            {/* Country / destination / terms */}
+            {/* Country / destination / Shipment Terms */}
             <div className="space-y-1">
               <div>
                 <p className="font-semibold">Country of Origin</p>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ApiProxy from "@/app/api/proxy";
 import { DJANGO_API_ENDPOINT } from "@/config/defaults";
 
-const DJANGO_API_USERS = `${DJANGO_API_ENDPOINT}/partners/users`;
+const DJANGO_API_DN = `${DJANGO_API_ENDPOINT}/inventory/dn`;
 
 export async function GET(
   _request: NextRequest,
@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const { data, status } = await ApiProxy.get(
-    `${DJANGO_API_USERS}/${id}`,
+    `${DJANGO_API_DN}/${encodeURIComponent(id)}`,
     true
   );
   return NextResponse.json(data, { status });
@@ -23,7 +23,7 @@ export async function PUT(
   const { id } = await params;
   const body = await request.json();
   const { data, status } = await ApiProxy.put(
-    `${DJANGO_API_USERS}/${id}`,
+    `${DJANGO_API_DN}/${encodeURIComponent(id)}`,
     body,
     true
   );
@@ -36,7 +36,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const { data, status } = await ApiProxy.delete(
-    `${DJANGO_API_USERS}/${id}`,
+    `${DJANGO_API_DN}/${encodeURIComponent(id)}`,
     true
   );
   return NextResponse.json(data, { status });

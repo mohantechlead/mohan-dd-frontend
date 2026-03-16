@@ -17,6 +17,8 @@ interface ShippingItemState {
   bags: string;
   net_weight: string;
   gross_weight: string;
+  grade: string;
+  brand: string;
 }
 
 export default function ShippingDetailsPage() {
@@ -37,21 +39,39 @@ export default function ShippingDetailsPage() {
     packing_list_remark: "",
     waybill_remark: "",
     bill_of_lading_remark: "",
+    sr_no: "",
   });
 
-  const [shippingItem, setShippingItem] = useState<ShippingItemState>({
+  const [shippingItem, setShippingItem] = useState<
+    Omit<ShippingItemState, "price" | "quantity" | "total_price"> & {
+      price: string;
+      quantity: string;
+      total_price: number;
+    }
+  >({
     item_name: "",
-    price: 0,
-    quantity: 0,
+    price: "",
+    quantity: "",
     total_price: 0,
     measurement: "",
     bags: "",
     net_weight: "",
     gross_weight: "",
+    grade: "",
+    brand: "",
   });
 
   const [shippingItems, setShippingItems] = useState<ShippingItemState[]>([]);
+  const [itemsTotal, setItemsTotal] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleCalculateTotal = () => {
+    const total = shippingItems.reduce(
+      (sum, it) => sum + (Number(it.total_price) || 0),
+      0
+    );
+    setItemsTotal(total);
+  };
 
   const [itemOptions, setItemOptions] = useState<
     { item_name: string; hscode: string; internal_code: string | null }[]
@@ -85,13 +105,46 @@ export default function ShippingDetailsPage() {
     e.preventDefault();
     if (!orderNumber) return;
 
-    if (!shippingForm.invoice_number.trim()) {
+    const invoiceNumber = shippingForm.invoice_number.trim();
+    if (!invoiceNumber) {
       showToast({
         title: "Invoice number required",
         description: "Please enter an invoice number before submitting.",
         variant: "error",
       });
       return;
+    }
+
+    // Check for duplicate invoice number
+    try {
+      const checkRes = await fetch(SHIPPING_INVOICES_API_URL, {
+        credentials: "include",
+      });
+      if (checkRes.ok) {
+        const raw = await checkRes.json();
+        const invoices = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as { results?: unknown })?.results)
+            ? (raw as { results: { invoice_number?: string }[] }).results
+            : [];
+        const isDuplicate = invoices.some(
+          (inv: { invoice_number?: string }) =>
+            String(inv?.invoice_number ?? "")
+              .toLowerCase()
+              .trim() === invoiceNumber.toLowerCase().trim()
+        );
+        if (isDuplicate) {
+          showToast({
+            title: "Duplicate invoice number",
+            description:
+              "This invoice number already exists. Please use a different one.",
+            variant: "error",
+          });
+          return;
+        }
+      }
+    } catch {
+      // Continue to submit; backend will also validate
     }
     if (!shippingForm.invoice_date) {
       showToast({
@@ -130,6 +183,7 @@ export default function ShippingDetailsPage() {
       packing_list_remark: shippingForm.packing_list_remark || null,
       waybill_remark: shippingForm.waybill_remark || null,
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
+      sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
       items: shippingItems.map((it) => ({
         item_name: it.item_name,
         price: Number(it.price) || 0,
@@ -139,6 +193,8 @@ export default function ShippingDetailsPage() {
         bags: it.bags ? Number(it.bags) : null,
         net_weight: it.net_weight ? Number(it.net_weight) : null,
         gross_weight: it.gross_weight ? Number(it.gross_weight) : null,
+        grade: it.grade?.trim() || null,
+        brand: it.brand?.trim() || null,
       })),
     };
 
@@ -148,15 +204,34 @@ export default function ShippingDetailsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: "include",
       });
-      const data = await res.json();
+      let data: Record<string, unknown> = {};
+      try {
+        const text = await res.text();
+        data = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        data = { detail: "Invalid response from server" };
+      }
 
       if (!res.ok) {
-        const message =
-          (data as any)?.detail || (data as any)?.message || "Please try again.";
+        const message: string =
+          (typeof data?.detail === "string"
+            ? data.detail
+            : Array.isArray(data?.detail)
+              ? String((data.detail as unknown[])[0] ?? "")
+              : (data?.message as string)) || "Please try again.";
+        const isDuplicate =
+          typeof message === "string" &&
+          (message.toLowerCase().includes("already exists") ||
+            message.toLowerCase().includes("duplicate"));
         showToast({
-          title: "Failed to save shipping details",
-          description: message,
+          title: isDuplicate
+            ? "Duplicate invoice number"
+            : "Failed to save shipping details",
+          description: isDuplicate
+            ? "This invoice number already exists. Please use a different one."
+            : message,
           variant: "error",
         });
         return;
@@ -210,7 +285,7 @@ export default function ShippingDetailsPage() {
             </div>
             <div>
               <label className="block font-medium mb-1">
-                Invoice Number
+                Invoice Number *
               </label>
               <input
                 value={shippingForm.invoice_number}
@@ -220,6 +295,24 @@ export default function ShippingDetailsPage() {
                     invoice_number: e.target.value,
                   }))
                 }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">
+                Sr. No. (optional)
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={shippingForm.sr_no}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    sr_no: e.target.value,
+                  }))
+                }
+                placeholder="Leave empty for no Sr. No."
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>
@@ -389,7 +482,7 @@ export default function ShippingDetailsPage() {
               />
               {showItemDropdown && itemOptions.length > 0 && (
                 <div
-                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg"
+                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                   style={{ backgroundColor: "#ffffff" }}
                 >
                   {itemOptions
@@ -403,12 +496,12 @@ export default function ShippingDetailsPage() {
                       <button
                         type="button"
                         key={opt.internal_code ?? opt.item_name}
-                        className="block w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
-                        style={{ backgroundColor: "#ffffff" }}
+                        className="block w-full text-left px-3 py-1.5 text-sm bg-white hover:bg-gray-100"
                         onClick={() => {
                           setShippingItem((prev) => ({
                             ...prev,
                             item_name: opt.item_name,
+                            grade: opt.internal_code ?? "",
                           }));
                           setItemQuery(opt.item_name);
                           setShowItemDropdown(false);
@@ -430,13 +523,18 @@ export default function ShippingDetailsPage() {
               <input
                 type="number"
                 value={shippingItem.price}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const priceStr = e.target.value;
+                  const priceNum = parseFloat(priceStr) || 0;
+                  const qtyNum = parseFloat(shippingItem.quantity) || 0;
                   setShippingItem((prev) => ({
                     ...prev,
-                    price: Number(e.target.value),
-                  }))
-                }
+                    price: priceStr,
+                    total_price: priceNum * qtyNum,
+                  }));
+                }}
                 className="w-full border rounded-md px-3 py-2"
+                placeholder="0"
               />
             </div>
             <div>
@@ -444,13 +542,18 @@ export default function ShippingDetailsPage() {
               <input
                 type="number"
                 value={shippingItem.quantity}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const qtyStr = e.target.value;
+                  const qtyNum = parseFloat(qtyStr) || 0;
+                  const priceNum = parseFloat(shippingItem.price) || 0;
                   setShippingItem((prev) => ({
                     ...prev,
-                    quantity: Number(e.target.value),
-                  }))
-                }
+                    quantity: qtyStr,
+                    total_price: priceNum * qtyNum,
+                  }));
+                }}
                 className="w-full border rounded-md px-3 py-2"
+                placeholder="0"
               />
             </div>
             <div>
@@ -460,6 +563,7 @@ export default function ShippingDetailsPage() {
                 value={shippingItem.total_price}
                 readOnly
                 className="w-full border rounded-md px-3 py-2 bg-muted/40"
+                placeholder="Auto-calculated"
               />
             </div>
             <div>
@@ -517,32 +621,47 @@ export default function ShippingDetailsPage() {
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>
+            <div>
+              <label className="block font-medium mb-1">Grade</label>
+              <input
+                value={shippingItem.grade}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    grade: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+                placeholder="Auto-filled from item internal code"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Brand</label>
+              <input
+                value={shippingItem.brand}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    brand: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                const total =
-                  (Number(shippingItem.price) || 0) *
-                  (Number(shippingItem.quantity) || 0);
-                setShippingItem((prev) => ({
-                  ...prev,
-                  total_price: total,
-                }));
-              }}
-            >
-              Calculate Total
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
+          <div className="flex flex-col gap-3 mt-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                const priceNum = parseFloat(shippingItem.price) || 0;
+                const qtyNum = parseFloat(shippingItem.quantity) || 0;
                 if (
                   !shippingItem.item_name ||
-                  !shippingItem.quantity ||
-                  !shippingItem.price
+                  !shippingItem.quantity.trim() ||
+                  !shippingItem.price.trim()
                 ) {
                   showToast({
                     title: "Incomplete item",
@@ -552,27 +671,57 @@ export default function ShippingDetailsPage() {
                   });
                   return;
                 }
-                const total =
-                  shippingItem.total_price ||
-                  (Number(shippingItem.price) || 0) *
-                    (Number(shippingItem.quantity) || 0);
+                if (priceNum <= 0 || qtyNum <= 0) {
+                  showToast({
+                    title: "Invalid values",
+                    description: "Price and Quantity must be greater than 0.",
+                    variant: "error",
+                  });
+                  return;
+                }
+                const total = priceNum * qtyNum;
                 setShippingItems((prev) => [
                   ...prev,
-                  { ...shippingItem, total_price: total },
+                  {
+                    ...shippingItem,
+                    price: priceNum,
+                    quantity: qtyNum,
+                    total_price: total,
+                  },
                 ]);
                 setShippingItem({
                   item_name: "",
-                  price: 0,
-                  quantity: 0,
+                  price: "",
+                  quantity: "",
                   total_price: 0,
                   measurement: "",
                   bags: "",
                   net_weight: "",
                   gross_weight: "",
+                  grade: "",
+                  brand: "",
                 });
               }}
             >
               Add Item
+            </Button>
+              {shippingItems.length > 0 && (
+                <span className="ml-auto text-sm font-semibold">
+                  Total Price: $
+                  {itemsTotal.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCalculateTotal}
+            >
+              Calculate Total
             </Button>
           </div>
 
@@ -582,6 +731,8 @@ export default function ShippingDetailsPage() {
                 <thead className="bg-muted/60">
                   <tr>
                     <th className="px-2 py-1 text-left">Item</th>
+                    <th className="px-2 py-1 text-left">Grade</th>
+                    <th className="px-2 py-1 text-left">Brand</th>
                     <th className="px-2 py-1 text-right">Qty</th>
                     <th className="px-2 py-1 text-right">Price</th>
                     <th className="px-2 py-1 text-right">Total</th>
@@ -591,6 +742,8 @@ export default function ShippingDetailsPage() {
                   {shippingItems.map((it, idx) => (
                     <tr key={idx} className="border-t">
                       <td className="px-2 py-1">{it.item_name}</td>
+                      <td className="px-2 py-1">{it.grade || "—"}</td>
+                      <td className="px-2 py-1">{it.brand || "—"}</td>
                       <td className="px-2 py-1 text-right">{it.quantity}</td>
                       <td className="px-2 py-1 text-right">
                         {Number(it.price).toLocaleString(undefined, {

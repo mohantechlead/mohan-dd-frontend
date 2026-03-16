@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface PurchaseItem {
   item_name: string;
@@ -28,44 +37,86 @@ const PURCHASES_API_URL = "/api/purchases";
 export default function DisplayPurchasesPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const auth = useAuth();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    const fetchPurchases = async () => {
-      try {
-        const res = await fetch(PURCHASES_API_URL, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        const data: unknown = await res.json();
+  const fetchPurchases = async () => {
+    try {
+      const res = await fetch(PURCHASES_API_URL, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const data: unknown = await res.json();
 
-        if (!res.ok) {
-          showToast({
-            title: "Failed to load purchases",
-            description:
-              (data as { detail?: string; message?: string })?.detail ||
-              (data as { detail?: string; message?: string })?.message ||
-              "Please try again.",
-            variant: "error",
-          });
-          return;
-        }
-
-        setPurchases(data as Purchase[]);
-      } catch {
+      if (!res.ok) {
         showToast({
           title: "Failed to load purchases",
-          description: "Something went wrong. Please try again.",
+          description:
+            (data as { detail?: string; message?: string })?.detail ||
+            (data as { detail?: string; message?: string })?.message ||
+            "Please try again.",
           variant: "error",
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      setPurchases(data as Purchase[]);
+    } catch {
+      showToast({
+        title: "Failed to load purchases",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchPurchases();
   }, [showToast]);
+
+  const openDelete = (purchase: Purchase) => {
+    setPurchaseToDelete(purchase);
+    setDeleteOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!purchaseToDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `${PURCHASES_API_URL}/${encodeURIComponent(purchaseToDelete.purchase_number)}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to delete purchase",
+          description: (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({ title: "Purchase deleted", variant: "success" });
+      setDeleteOpen(false);
+      setPurchaseToDelete(null);
+      fetchPurchases();
+    } catch {
+      showToast({
+        title: "Failed to delete purchase",
+        description: "Something went wrong.",
+        variant: "error",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto mt-4 space-y-6">
@@ -94,6 +145,9 @@ export default function DisplayPurchasesPage() {
                 <th className="text-right px-4 py-2">Total Price</th>
                 <th className="text-left px-4 py-2">Vendor Name</th>
                 <th className="text-left px-4 py-2">Status</th>
+                {auth?.isAdmin && (
+                  <th className="text-right px-4 py-2">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -134,6 +188,30 @@ export default function DisplayPurchasesPage() {
                     </td>
                     <td className="px-4 py-2">{purchase.buyer}</td>
                     <td className="px-4 py-2 capitalize">{purchase.status}</td>
+                    {auth?.isAdmin && (
+                      <td className="px-4 py-2 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              router.push(
+                                `/diredawa/purchase/${purchase.purchase_number}/edit`
+                              )
+                            }
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDelete(purchase)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -141,6 +219,25 @@ export default function DisplayPurchasesPage() {
           </table>
         </div>
       )}
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Purchase</DialogTitle>
+          </DialogHeader>
+          <p>
+            Are you sure you want to delete purchase &quot;{purchaseToDelete?.purchase_number}&quot;? This action cannot be undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

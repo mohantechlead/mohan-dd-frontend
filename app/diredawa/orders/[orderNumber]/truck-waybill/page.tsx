@@ -20,9 +20,11 @@ interface OrderDetail {
   order_number: string;
   order_date: string;
   buyer: string;
+  buyer_address?: string | null;
   add_consignee?: string | null;
   proforma_ref_no: string;
   shipper: string;
+  shipper_address?: string | null;
   notify_party?: string | null;
   add_notify_party?: string | null;
   country_of_origin: string;
@@ -165,7 +167,7 @@ export default function TruckWaybillPage() {
   }, [invoice, order]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white">
+    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -227,6 +229,11 @@ export default function TruckWaybillPage() {
             <div className="space-y-1">
               <p className="font-semibold">Shipper</p>
               <p className="uppercase">{order.shipper}</p>
+              {order.shipper_address && (
+                <p className="text-[11px] text-muted-foreground">
+                  {order.shipper_address}
+                </p>
+              )}
               {order.add_consignee && (
                 <p className="text-[11px] text-muted-foreground">
                   {order.add_consignee}
@@ -267,6 +274,14 @@ export default function TruckWaybillPage() {
                 <p className="font-semibold">Waybill Number</p>
                 <p>{invoice.waybill_number ?? "-"}</p>
               </div>
+              <div>
+                <p className="font-semibold">Freight</p>
+                <p>{order.freight}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Shipment Type</p>
+                <p>{order.shipment_type || "Incoterm 2020"}</p>
+              </div>
             </div>
           </div>
 
@@ -277,6 +292,11 @@ export default function TruckWaybillPage() {
             <div className="space-y-1">
               <p className="font-semibold">Buyer Details</p>
               <p className="uppercase">{order.buyer}</p>
+              {order.buyer_address && (
+                <p className="text-[11px] text-muted-foreground">
+                  {order.buyer_address}
+                </p>
+              )}
               {order.add_notify_party && (
                 <p className="text-[11px] text-muted-foreground">
                   {order.add_notify_party}
@@ -308,21 +328,19 @@ export default function TruckWaybillPage() {
                 <p className="font-semibold">Final Destination</p>
                 <p>{order.final_destination}</p>
               </div>
-              <div>
-                <p className="font-semibold">Shipment Terms</p>
-                <p>{order.shipment_type}</p>
-              </div>
             </div>
           </div>
 
           <hr className="border-t" />
 
-          {/* Row 3: Payment terms / Incoterm */}
+          {/* Row 3: Payment terms + Shipment Terms / Incoterm */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
             <div />
             <div className="space-y-1">
               <p className="font-semibold">Payment Terms</p>
               <p>{order.payment_terms}</p>
+              <p className="font-semibold mt-2">Shipment Terms</p>
+              <p>{order.shipment_type || "Incoterm 2020"}</p>
             </div>
             <div className="space-y-1">
               <p className="font-semibold">Incoterm</p>

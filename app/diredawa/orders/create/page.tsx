@@ -294,16 +294,6 @@ export default function CreateOrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const freightPrice = form.freight_price?.trim();
-    if (!freightPrice || Number.isNaN(parseFloat(freightPrice))) {
-      showToast({
-        title: "Freight price required",
-        description: "Please enter a valid freight price.",
-        variant: "error",
-      });
-      return;
-    }
-
     // Check for duplicate order number before submitting
     try {
       const existingRes = await fetch(ORDER_API_URL, {
@@ -337,10 +327,13 @@ export default function CreateOrderPage() {
       return;
     }
 
+    const freightPriceVal = form.freight_price?.trim();
     const payload = {
       ...form,
       order_date: form.order_date,
-      freight_price: parseFloat(form.freight_price),
+      freight_price: freightPriceVal && !Number.isNaN(parseFloat(freightPriceVal))
+        ? parseFloat(freightPriceVal)
+        : null,
       items,
     };
 
@@ -373,6 +366,8 @@ export default function CreateOrderPage() {
         description: "The order has been created successfully.",
         variant: "success",
       });
+
+      router.push("/diredawa/orders/display");
     } catch (error) {
       showToast({
         title: "Failed to create order",
@@ -392,7 +387,15 @@ export default function CreateOrderPage() {
         </Button>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm p-6 space-y-6">
+      <div className="bg-white border rounded-xl shadow-sm p-6 space-y-6 relative">
+        {isSubmitting && (
+          <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center rounded-xl">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-sm font-medium">Creating order...</p>
+            </div>
+          </div>
+        )}
         <h1 className="text-2xl font-bold text-center">Create Order</h1>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -437,7 +440,7 @@ export default function CreateOrderPage() {
               />
               {showBuyerDropdown && customerOptions.length > 0 && (
                 <div
-                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg"
+                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                   style={{ backgroundColor: "#ffffff" }}
                 >
                   {customerOptions
@@ -529,7 +532,7 @@ export default function CreateOrderPage() {
               />
               {showShipperDropdown && supplierOptions.length > 0 && (
                 <div
-                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg"
+                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                   style={{ backgroundColor: "#ffffff" }}
                 >
                   {supplierOptions
@@ -717,13 +720,12 @@ export default function CreateOrderPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Freight Price *
+                  Freight Price
                 </label>
                 <input
                   name="freight_price"
                   type="number"
                   step="0.01"
-                  required
                   value={form.freight_price}
                   onChange={handleHeaderChange}
                   className="w-full border rounded-md px-3 py-2"
@@ -781,7 +783,7 @@ export default function CreateOrderPage() {
               />
               {showItemDropdown && itemOptions.length > 0 && (
                 <div
-                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg"
+                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                   style={{ backgroundColor: "#ffffff" }}
                 >
                   {itemOptions

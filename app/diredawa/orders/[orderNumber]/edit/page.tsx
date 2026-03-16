@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
+const CUSTOMERS_API_URL = "/api/partners/customers";
+const SUPPLIERS_API_URL = "/api/partners/suppliers";
+
 interface OrderDetail {
   id: string;
   order_number: string;
@@ -36,6 +39,12 @@ export default function EditOrderPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [customerOptions, setCustomerOptions] = useState<{ name: string }[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<{ name: string }[]>([]);
+  const [buyerQuery, setBuyerQuery] = useState("");
+  const [shipperQuery, setShipperQuery] = useState("");
+  const [showBuyerDropdown, setShowBuyerDropdown] = useState(false);
+  const [showShipperDropdown, setShowShipperDropdown] = useState(false);
   const [form, setForm] = useState({
     order_date: "",
     buyer: "",
@@ -55,6 +64,37 @@ export default function EditOrderPage() {
     freight_price: "",
     shipment_type: "",
   });
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch(CUSTOMERS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setCustomerOptions(data);
+      } catch {
+        // ignore
+      }
+    };
+    const fetchSuppliers = async () => {
+      try {
+        const res = await fetch(SUPPLIERS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setSupplierOptions(data);
+      } catch {
+        // ignore
+      }
+    };
+    fetchCustomers();
+    fetchSuppliers();
+  }, []);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -93,6 +133,8 @@ export default function EditOrderPage() {
             detail.freight_price != null ? String(detail.freight_price) : "",
           shipment_type: detail.shipment_type,
         });
+        setBuyerQuery(detail.buyer);
+        setShipperQuery(detail.shipper);
       } catch {
         showToast({
           title: "Failed to load order",
@@ -173,6 +215,20 @@ export default function EditOrderPage() {
     }
   };
 
+  const handleBuyerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setForm((prev) => ({ ...prev, buyer: value }));
+    setBuyerQuery(value);
+    setShowBuyerDropdown(true);
+  };
+
+  const handleShipperChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setForm((prev) => ({ ...prev, shipper: value }));
+    setShipperQuery(value);
+    setShowShipperDropdown(true);
+  };
+
   return (
     <div className="max-w-5xl mx-auto mt-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -219,15 +275,42 @@ export default function EditOrderPage() {
                   className="w-full border rounded-md px-3 py-2"
                 />
               </div>
-              <div>
+              <div className="relative">
                 <label className="block font-medium mb-1">Buyer</label>
                 <input
                   value={form.buyer}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, buyer: e.target.value }))
-                  }
+                  onChange={handleBuyerChange}
                   className="w-full border rounded-md px-3 py-2"
+                  autoComplete="off"
+                  onFocus={() => setShowBuyerDropdown(true)}
                 />
+                {showBuyerDropdown && customerOptions.length > 0 && (
+                  <div
+                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                    style={{ backgroundColor: "#ffffff" }}
+                  >
+                    {customerOptions
+                      .filter((opt) =>
+                        opt.name.toLowerCase().includes(buyerQuery.toLowerCase())
+                      )
+                      .slice(0, 20)
+                      .map((opt) => (
+                        <button
+                          type="button"
+                          key={opt.name}
+                          className="block w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+                          style={{ backgroundColor: "#ffffff" }}
+                          onClick={() => {
+                            setForm((prev) => ({ ...prev, buyer: opt.name }));
+                            setBuyerQuery(opt.name);
+                            setShowBuyerDropdown(false);
+                          }}
+                        >
+                          {opt.name}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block font-medium mb-1">
@@ -258,18 +341,44 @@ export default function EditOrderPage() {
                   className="w-full border rounded-md px-3 py-2"
                 />
               </div>
-              <div>
+              <div className="relative">
                 <label className="block font-medium mb-1">Shipper</label>
                 <input
                   value={form.shipper}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      shipper: e.target.value,
-                    }))
-                  }
+                  onChange={handleShipperChange}
                   className="w-full border rounded-md px-3 py-2"
+                  autoComplete="off"
+                  onFocus={() => setShowShipperDropdown(true)}
                 />
+                {showShipperDropdown && supplierOptions.length > 0 && (
+                  <div
+                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                    style={{ backgroundColor: "#ffffff" }}
+                  >
+                    {supplierOptions
+                      .filter((opt) =>
+                        opt.name
+                          .toLowerCase()
+                          .includes(shipperQuery.toLowerCase())
+                      )
+                      .slice(0, 20)
+                      .map((opt) => (
+                        <button
+                          type="button"
+                          key={opt.name}
+                          className="block w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+                          style={{ backgroundColor: "#ffffff" }}
+                          onClick={() => {
+                            setForm((prev) => ({ ...prev, shipper: opt.name }));
+                            setShipperQuery(opt.name);
+                            setShowShipperDropdown(false);
+                          }}
+                        >
+                          {opt.name}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
 

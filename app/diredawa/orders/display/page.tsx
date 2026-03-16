@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface OrderItem {
   item_name: string;
@@ -30,44 +39,86 @@ const ORDERS_API_URL = "/api/orders";
 export default function DisplayOrdersPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const auth = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await fetch(ORDERS_API_URL, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        const data = await res.json();
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(ORDERS_API_URL, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const data = await res.json();
 
-        if (!res.ok) {
-          showToast({
-            title: "Failed to load orders",
-            description:
-              (data as any)?.detail ||
-              (data as any)?.message ||
-              "Please try again.",
-            variant: "error",
-          });
-          return;
-        }
-
-        setOrders(data as Order[]);
-      } catch (error) {
+      if (!res.ok) {
         showToast({
           title: "Failed to load orders",
-          description: "Something went wrong. Please try again.",
+          description:
+            (data as { detail?: string; message?: string })?.detail ||
+            (data as { detail?: string; message?: string })?.message ||
+            "Please try again.",
           variant: "error",
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      setOrders(data as Order[]);
+    } catch {
+      showToast({
+        title: "Failed to load orders",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchOrders();
   }, [showToast]);
+
+  const openDelete = (order: Order) => {
+    setOrderToDelete(order);
+    setDeleteOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!orderToDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `${ORDERS_API_URL}/${encodeURIComponent(orderToDelete.order_number)}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to delete order",
+          description: (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({ title: "Order deleted", variant: "success" });
+      setDeleteOpen(false);
+      setOrderToDelete(null);
+      fetchOrders();
+    } catch {
+      showToast({
+        title: "Failed to delete order",
+        description: "Something went wrong.",
+        variant: "error",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto mt-4 space-y-6">
@@ -100,6 +151,9 @@ export default function DisplayOrdersPage() {
                 <th className="text-left px-4 py-2">Customer Name</th>
                 <th className="text-left px-4 py-2">Approved By</th>
                 <th className="text-left px-4 py-2">Status</th>
+                {auth?.isAdmin && (
+                  <th className="text-right px-4 py-2">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -144,10 +198,34 @@ export default function DisplayOrdersPage() {
                         <td className="px-4 py-2 capitalize">
                           {order.status ?? "—"}
                         </td>
+                        {auth?.isAdmin && idx === 0 && (
+                          <td className="px-4 py-2 text-right" rowSpan={order.items.length}>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  router.push(
+                                    `/diredawa/orders/${order.order_number}/edit`
+                                  )
+                                }
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDelete(order)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))
                   : [
-                      <tr key={order.id} className="border-t" >
+                      <tr key={order.id} className="border-t">
                         <td className="px-4 py-2">
                           <button
                             type="button"
@@ -175,6 +253,30 @@ export default function DisplayOrdersPage() {
                         <td className="px-4 py-2 capitalize">
                           {order.status ?? "—"}
                         </td>
+                        {auth?.isAdmin && (
+                          <td className="px-4 py-2 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  router.push(
+                                    `/diredawa/orders/${order.order_number}/edit`
+                                  )
+                                }
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDelete(order)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
                       </tr>,
                     ]
               )}
@@ -182,6 +284,25 @@ export default function DisplayOrdersPage() {
           </table>
         </div>
       )}
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Order</DialogTitle>
+          </DialogHeader>
+          <p>
+            Are you sure you want to delete order &quot;{orderToDelete?.order_number}&quot;? This action cannot be undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

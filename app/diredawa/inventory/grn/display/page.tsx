@@ -1,29 +1,151 @@
 "use client";
 
+import { useState } from "react";
 import { DataTable } from "@/components/data-table";
-import { columns, GRN } from "./columns";
+import { getGRNColumns, GRN } from "./columns";
 import useSWR from "swr";
 import fetcher from "@/lib/fetcher";
 import { useAuth } from "@/components/authProvider";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 const GRN_API_URL = "/api/inventory/grn";
 
 export default function DemoPage() {
-  const router =  useRouter();
+  const router = useRouter();
   const auth = useAuth();
+  const { showToast } = useToast();
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedGRN, setSelectedGRN] = useState<GRN | null>(null);
+  const [editSupplierName, setEditSupplierName] = useState("");
+  const [editPlateNo, setEditPlateNo] = useState("");
+  const [editPurchaseNo, setEditPurchaseNo] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  // useSWR fetches data on the client
-  const { data, error, isLoading } = useSWR<GRN[]>(GRN_API_URL, fetcher);
+  const { data, error, isLoading, mutate } = useSWR<GRN[]>(GRN_API_URL, fetcher);
 
-  // Redirect to login if unauthorized
   useEffect(() => {
     if (error?.status === 401) {
       auth?.loginRequiredRedirect();
     }
   }, [auth, error]);
+
+  const openEdit = async (row: GRN) => {
+    setSelectedGRN(row);
+    setEditSupplierName(row.supplier_name);
+    setEditPurchaseNo(row.purchase_no);
+    const grnNo = String(row.grn_no);
+    try {
+      const res = await fetch(`${GRN_API_URL}/${encodeURIComponent(grnNo)}`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const detail = await res.json();
+        setEditPlateNo(detail.plate_no || "");
+      } else {
+        setEditPlateNo("");
+      }
+    } catch {
+      setEditPlateNo("");
+    }
+    setEditOpen(true);
+  };
+
+  const openDelete = (row: GRN) => {
+    setSelectedGRN(row);
+    setDeleteOpen(true);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGRN) return;
+    const grnNo = String(selectedGRN.grn_no);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${GRN_API_URL}/${encodeURIComponent(grnNo)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          supplier_name: editSupplierName,
+          plate_no: editPlateNo || null,
+          purchase_no: editPurchaseNo,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to update GRN",
+          description: (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({ title: "GRN updated", variant: "success" });
+      setEditOpen(false);
+      setSelectedGRN(null);
+      mutate();
+    } catch {
+      showToast({
+        title: "Failed to update GRN",
+        description: "Something went wrong.",
+        variant: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedGRN) return;
+    const grnNo = String(selectedGRN.grn_no);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${GRN_API_URL}/${encodeURIComponent(grnNo)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to delete GRN",
+          description: (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({ title: "GRN deleted", variant: "success" });
+      setDeleteOpen(false);
+      setSelectedGRN(null);
+      mutate();
+    } catch {
+      showToast({
+        title: "Failed to delete GRN",
+        description: "Something went wrong.",
+        variant: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const columns = getGRNColumns(openEdit, openDelete, auth?.isAdmin);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
@@ -31,10 +153,63 @@ export default function DemoPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-start my-4">
-      <Button onClick={() => router.push('/diredawa/inventory/grn/create')}>Create GRN</Button>
+        <Button onClick={() => router.push("/diredawa/inventory/grn/create")}>
+          Create GRN
+        </Button>
       </div>
       <h1 className="text-2xl text-center my-2 font-bold">GRN List</h1>
-      <DataTable columns={columns} data={data || [] } />
+      <DataTable columns={columns} data={data || []} />
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit GRN</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>Supplier Name</FieldLabel>
+                <Input value={editSupplierName} onChange={(e) => setEditSupplierName(e.target.value)} required />
+              </Field>
+              <Field>
+                <FieldLabel>Plate No</FieldLabel>
+                <Input value={editPlateNo} onChange={(e) => setEditPlateNo(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Purchase No</FieldLabel>
+                <Input value={editPurchaseNo} onChange={(e) => setEditPurchaseNo(e.target.value)} required />
+              </Field>
+            </FieldGroup>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete GRN</DialogTitle>
+          </DialogHeader>
+          <p>
+            Are you sure you want to delete GRN &quot;{selectedGRN?.grn_no}&quot;? This action cannot be undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+              {submitting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

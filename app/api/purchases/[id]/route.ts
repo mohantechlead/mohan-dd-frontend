@@ -24,3 +24,23 @@ export async function PUT(
   const { data, status } = await ApiProxy.put(endpoint, body, true);
   return NextResponse.json(data, { status });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  const endpoint = `${DJANGO_API_PURCHASES}/${encodeURIComponent(id)}`;
+  const { data, status } = await ApiProxy.delete(endpoint, true);
+  return NextResponse.json(data, { status });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  const endpoint = `${DJANGO_API_PURCHASES}/${encodeURIComponent(id)}`;
+  const { data, status } = await ApiProxy.delete(endpoint, true);
+  return NextResponse.json(data, { status });
+}

@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
+import { amountInWords } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -20,9 +21,11 @@ interface OrderDetail {
   order_number: string;
   order_date: string;
   buyer: string;
+  buyer_address?: string | null;
   add_consignee?: string | null;
   proforma_ref_no: string;
   shipper: string;
+  shipper_address?: string | null;
   notify_party?: string | null;
   add_notify_party?: string | null;
   country_of_origin: string;
@@ -194,7 +197,7 @@ export default function CommercialInvoicePage() {
   }, [itemsForTable]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white">
+    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -285,7 +288,7 @@ export default function CommercialInvoicePage() {
               </div>
             </div>
 
-            {/* R1C3: Waybill Number, Customer Order No. */}
+            {/* R1C3: Waybill Number, Customer Order No., Freight, Shipment Type */}
             <div className="space-y-1">
               <div>
                 <p className="font-semibold">Waybill Number</p>
@@ -294,6 +297,14 @@ export default function CommercialInvoicePage() {
               <div>
                 <p className="font-semibold">Customer Order No.</p>
                 <p>{invoice.customer_order_number}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Freight</p>
+                <p>{order.freight}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Shipment Type</p>
+                <p>{order.shipment_type}</p>
               </div>
             </div>
           </div>
@@ -306,6 +317,7 @@ export default function CommercialInvoicePage() {
             <div className="space-y-1">
               <p className="font-semibold">Buyer Details</p>
               <p className="uppercase">{order.buyer}</p>
+              {order.buyer_address && <p>{order.buyer_address}</p>}
               {order.add_consignee && <p>{order.add_consignee}</p>}
             </div>
 
@@ -327,10 +339,20 @@ export default function CommercialInvoicePage() {
                 <p className="font-semibold">Payment Terms</p>
                 <p>{order.payment_terms}</p>
               </div>
+              <div>
+                <p className="font-semibold">Shipment Terms</p>
+                <p>{order.shipment_type}</p>
+              </div>
             </div>
 
-            {/* R2C3: Country of Origin, Final Destination, Shipment Terms */}
+            {/* R2C3: Country of Origin, Final Destination, Shipper Address */}
             <div className="space-y-1">
+              {order.shipper_address && (
+                <div>
+                  <p className="font-semibold">Shipper Address</p>
+                  <p>{order.shipper_address}</p>
+                </div>
+              )}
               <div>
                 <p className="font-semibold">Country of Origin</p>
                 <p>{order.country_of_origin}</p>
@@ -338,10 +360,6 @@ export default function CommercialInvoicePage() {
               <div>
                 <p className="font-semibold">Final Destination</p>
                 <p>{order.final_destination}</p>
-              </div>
-              <div>
-                <p className="font-semibold">Shipment Terms</p>
-                <p>{order.shipment_type}</p>
               </div>
             </div>
           </div>
@@ -402,11 +420,7 @@ export default function CommercialInvoicePage() {
                   <td className="px-2 py-2 font-semibold" colSpan={5}>
                     Total
                     <span className="ml-4 text-[10px] text-muted-foreground">
-                      Amount in Words: USD{" "}
-                      {totalAmount.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      ONLY
+                      Amount in Words: USD {amountInWords(totalAmount)} ONLY
                     </span>
                   </td>
                   <td className="px-2 py-2 text-right font-semibold">

@@ -268,6 +268,19 @@ export default function OrderDetailPage() {
               </Button> */}
               <Button
                 className="w-full justify-start"
+                disabled={!selectedInvoiceId}
+                onClick={() =>
+                  router.push(
+                    selectedInvoiceId
+                      ? `/diredawa/orders/${order.order_number}/loading-instruction?invoiceId=${selectedInvoiceId}`
+                      : `/diredawa/orders/${order.order_number}/loading-instruction`
+                  )
+                }
+              >
+                Loading Instruction
+              </Button>
+              <Button
+                className="w-full justify-start"
                 onClick={() =>
                   router.push(
                     `/diredawa/orders/${order.order_number}/shipping-details`

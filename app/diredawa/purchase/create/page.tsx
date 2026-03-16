@@ -440,7 +440,7 @@ export default function CreatePurchasePage() {
                 />
                 {showBuyerDropdown && customerOptions.length > 0 && (
                   <div
-                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg"
+                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                     style={{ backgroundColor: "#ffffff" }}
                   >
                     {customerOptions
@@ -503,7 +503,7 @@ export default function CreatePurchasePage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Conditions*
+                  Conditions
                 </label>
                 <input
                   name="conditions"
@@ -543,7 +543,7 @@ export default function CreatePurchasePage() {
                 />
                 {showShipperDropdown && supplierOptions.length > 0 && (
                   <div
-                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg"
+                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                     style={{ backgroundColor: "#ffffff" }}
                   >
                     {supplierOptions
@@ -806,7 +806,7 @@ export default function CreatePurchasePage() {
                 />
                 {showItemDropdown && itemOptions.length > 0 && (
                   <div
-                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg"
+                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                     style={{ backgroundColor: "#ffffff" }}
                   >
                     {itemOptions

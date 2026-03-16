@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
+import { amountInWords } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -20,9 +21,11 @@ interface OrderDetail {
   order_number: string;
   order_date: string;
   buyer: string;
+  buyer_address?: string | null;
   add_consignee?: string | null;
   proforma_ref_no: string;
   shipper: string;
+  shipper_address?: string | null;
   notify_party?: string | null;
   add_notify_party?: string | null;
   country_of_origin: string;
@@ -92,7 +95,7 @@ export default function ProformaInvoicePage() {
   }, [order]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white">
+    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -116,14 +119,21 @@ export default function ProformaInvoicePage() {
           Order not found.
         </p>
       ) : (
-        <div className="relative space-y-8">
-          {/* Stamp: right bottom corner */}
-          <div className="absolute right-0 bottom-0 print:right-0 print:bottom-0">
+        <div className="relative space-y-8 pb-24">
+          {/* Stamp and signature: right bottom corner */}
+          <div className="absolute right-0 bottom-0 print:right-0 print:bottom-0 flex flex-col items-end gap-2">
             <Image
               src="/stamp.png"
               alt="Stamp"
               width={120}
               height={120}
+              className="object-contain"
+            />
+            <Image
+              src="/signature.png"
+              alt="Signature"
+              width={48}
+              height={24}
               className="object-contain"
             />
           </div>
@@ -181,7 +191,7 @@ export default function ProformaInvoicePage() {
               </div>
             </div>
 
-            {/* Row1 Col3: Proforma Invoice No + Freight */}
+            {/* Row1 Col3: Proforma Invoice No + Freight + Shipment Type */}
             <div className="space-y-2">
               <div>
                 <p className="font-semibold">Proforma Invoice No:</p>
@@ -191,10 +201,12 @@ export default function ProformaInvoicePage() {
                 <p className="font-semibold">Freight</p>
                 <p>{order.freight}</p>
               </div>
+              <div>
+                <p className="font-semibold">Shipment Type</p>
+                <p>{order.shipment_type}</p>
+              </div>
             </div>
           </div>
-
-          <hr className="border-t my-4" />
 
           {/* Row 2: Buyer / Ports / Country+Destination+Payment+Shipment */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-xs">
@@ -202,6 +214,7 @@ export default function ProformaInvoicePage() {
             <div className="space-y-1">
               <p className="font-semibold mb-1">Buyer Details</p>
               <p className="uppercase">{order.buyer}</p>
+              {order.buyer_address && <p>{order.buyer_address}</p>}
               {order.add_consignee && <p>{order.add_consignee}</p>}
             </div>
 
@@ -221,8 +234,14 @@ export default function ProformaInvoicePage() {
               </div>
             </div>
 
-            {/* Row2 Col3: Country / Final Destination / Payment / Shipment */}
+            {/* Row2 Col3: Country / Final Destination / Payment / Shipment Terms / Shipper */}
             <div className="space-y-2">
+              {order.shipper_address && (
+                <div>
+                  <p className="font-semibold">Shipper Address</p>
+                  <p>{order.shipper_address}</p>
+                </div>
+              )}
               <div>
                 <p className="font-semibold">Country of Origin</p>
                 <p>{order.country_of_origin}</p>
@@ -245,7 +264,7 @@ export default function ProformaInvoicePage() {
           {/* Order summary table */}
           <div className="mt-4">
             <p className="text-sm font-semibold mb-2">Order Summary</p>
-            <table className="w-full text-xs border-t">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-left">
                   <th className="px-2 py-2 w-10">No.</th>
@@ -260,7 +279,7 @@ export default function ProformaInvoicePage() {
 
                   <th className="px-2 py-2">
                     <div>Unit of</div>
-                    <div>Measurement{order.measurement_type ? ` (${order.measurement_type})` : ""}</div>
+                    <div>Measurement</div>
                   </th>
 
                   <th className="px-2 py-2 text-right">Total</th>
@@ -296,11 +315,7 @@ export default function ProformaInvoicePage() {
                   <td className="px-2 py-2 font-semibold" colSpan={5}>
                     Total
                     <span className="ml-4 text-[10px] text-muted-foreground">
-                      Amount in Words: USD{" "}
-                      {totalPrice.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      ONLY
+                      Amount in Words: USD {amountInWords(totalPrice)} ONLY
                     </span>
                   </td>
                   <td className="px-2 py-2 text-right font-semibold">
@@ -313,17 +328,8 @@ export default function ProformaInvoicePage() {
             </table>
           </div>
 
-          {/* Payment & conditions */}
+          {/* Conditions & Payment */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs mt-6">
-            <div className="space-y-1">
-              <p className="font-semibold">Payment must be remitted to:</p>
-              <p>Beneficiary: Mohan PLC</p>
-              <p className="mt-2 font-semibold">Beneficiary Bank details:</p>
-              <p>BANK NAME: COMMERCIAL BANK OF ETHIOPIA</p>
-              <p>SWIFT: CBETETAA</p>
-              <p>Account Number: 1000679266407</p>
-            </div>
-
             <div className="space-y-1">
               <p className="font-semibold">Conditions</p>
               <ol className="list-decimal list-inside space-y-0.5">
@@ -337,6 +343,15 @@ export default function ProformaInvoicePage() {
                   Ethiopia.
                 </li>
               </ol>
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-semibold">Payment must be remitted to:</p>
+              <p>Beneficiary: Mohan PLC</p>
+              <p className="mt-2 font-semibold">Beneficiary Bank details:</p>
+              <p>BANK NAME: COMMERCIAL BANK OF ETHIOPIA</p>
+              <p>SWIFT: CBETETAA</p>
+              <p>Account Number: 1000679266407</p>
             </div>
           </div>
         </div>

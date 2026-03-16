@@ -9,6 +9,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+.font-poppins {
+  font-family: var(--font-poppins), sans-serif;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -89,13 +93,13 @@
   }
 }
 
-/* Print: 95% scale (like Custom 95 in print dialog), preserve colors */
+/* Print: 85% scale (like Custom 85 in print dialog), preserve colors */
 @media print {
   html,
   body {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
-    transform: scale(0.95);
+    transform: scale(0.85);
     transform-origin: top center;
     width: 100%;
     min-height: 100%;

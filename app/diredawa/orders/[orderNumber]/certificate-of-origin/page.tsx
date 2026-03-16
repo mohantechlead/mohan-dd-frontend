@@ -20,9 +20,11 @@ interface OrderDetail {
   order_number: string;
   order_date: string;
   buyer: string;
+  buyer_address?: string | null;
   add_consignee?: string | null;
   proforma_ref_no: string;
   shipper: string;
+  shipper_address?: string | null;
   notify_party?: string | null;
   add_notify_party?: string | null;
   country_of_origin: string;
@@ -188,7 +190,7 @@ export default function CertificateOfOriginPage() {
   }, [itemsForTable]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white">
+    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -266,6 +268,11 @@ export default function CertificateOfOriginPage() {
                     <div className="font-semibold uppercase">
                       {order.shipper}
                     </div>
+                    {order.shipper_address && (
+                      <div className="text-[11px] text-muted-foreground">
+                        {order.shipper_address}
+                      </div>
+                    )}
                     <div className="text-[11px] text-muted-foreground">
                       DIRE DAWA FREE TRADE ZONE BRANCH
                     </div>

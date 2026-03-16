@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/authProvider";
 import { useToast } from "@/components/ui/toast";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface Order {
   id: string;
@@ -44,6 +46,9 @@ export default function OrderStatusPage() {
   );
   const [remarking, setRemarking] = useState(false);
   const [remark, setRemark] = useState("");
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [orderToRemove, setOrderToRemove] = useState<Order | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -157,6 +162,50 @@ export default function OrderStatusPage() {
     }
   };
 
+  const openRemove = (order: Order) => {
+    setOrderToRemove(order);
+    setRemoveOpen(true);
+  };
+
+  const handleRemove = async () => {
+    if (!orderToRemove) return;
+    setRemoving(true);
+    try {
+      const res = await fetch(
+        `/api/orders/${encodeURIComponent(orderToRemove.order_number)}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        const detail = (data as any)?.detail;
+        showToast({
+          title: "Failed to remove order",
+          description: detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      setOrders((prev) =>
+        prev.filter((o) => o.order_number !== orderToRemove.order_number)
+      );
+      showToast({
+        title: "Order removed",
+        description: `Order ${orderToRemove.order_number} has been removed.`,
+        variant: "success",
+      });
+      setRemoveOpen(false);
+      setOrderToRemove(null);
+    } catch {
+      showToast({
+        title: "Failed to remove order",
+        description: "Something went wrong.",
+        variant: "error",
+      });
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto mt-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -205,7 +254,7 @@ export default function OrderStatusPage() {
                   </td>
                   <td className="px-4 py-2">{order.order_number}</td>
                   <td className="px-4 py-2 capitalize">{order.status}</td>
-                  <td className="px-4 py-2 flex gap-2">
+                  <td className="px-4 py-2 flex gap-2 items-center">
                     <Button
                       size="sm"
                       style={{ backgroundColor: "#16a34a", color: "white" }}
@@ -222,6 +271,20 @@ export default function OrderStatusPage() {
                       }
                     >
                       Cancelled
+                    </Button>
+                    <Link href={`/diredawa/orders/${order.order_number}/edit`}>
+                      <Button size="sm" variant="outline" title="Edit">
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openRemove(order)}
+                      title="Remove"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </td>
                 </tr>
@@ -268,6 +331,31 @@ export default function OrderStatusPage() {
               className={popupAction === "completed" ? "hover:opacity-90" : ""}
             >
               {remarking ? "Updating..." : popupAction === "completed" ? "Complete" : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Order</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to remove order{" "}
+            <strong>{orderToRemove?.order_number}</strong>? This action cannot
+            be undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setRemoveOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRemove}
+              disabled={removing}
+            >
+              {removing ? "Removing..." : "Remove"}
             </Button>
           </DialogFooter>
         </DialogContent>

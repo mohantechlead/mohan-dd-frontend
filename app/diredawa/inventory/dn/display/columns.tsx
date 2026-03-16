@@ -1,13 +1,13 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
+import { Button } from "@/components/ui/button"
+import { Pencil, Trash2 } from "lucide-react"
 
-// This type is used to define the shape of our data.
-// You can use a Zod schema here if you want.
 export type DNItem = {
   item_name: string
   quantity: number
-  unit_measurement: string
+  unit_measurement?: string
 }
 
 export type DN = {
@@ -17,33 +17,73 @@ export type DN = {
   items: DNItem[]
 }
 
-export const columns: ColumnDef<DN>[] = [
-{
-        accessorKey: "dn_no",
-        header: "DN No",
+export function getDNColumns(
+  onEdit?: (row: DN) => void,
+  onDelete?: (row: DN) => void,
+  isAdmin?: boolean
+): ColumnDef<DN>[] {
+  const cols: ColumnDef<DN>[] = [
+    { accessorKey: "dn_no", header: "DN No" },
+    { accessorKey: "customer_name", header: "Customer Name" },
+    { accessorKey: "sales_no", header: "Sales No" },
+    {
+      accessorKey: "items",
+      header: "Items",
+      cell: ({ row }) => {
+        const items = row.original.items;
+        return (
+          <ul className="list-disc ml-5">
+            {items?.map((item, idx) => (
+              <li key={idx}>
+                {item.item_name} - {item.quantity} {item.unit_measurement ?? ""}
+              </li>
+            ))}
+          </ul>
+        );
       },
+    },
+  ]
+  if (isAdmin && (onEdit || onDelete)) {
+    cols.push({
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex gap-2">
+          {onEdit && (
+            <Button variant="ghost" size="sm" onClick={() => onEdit(row.original)}>
+              <Pencil className="w-4 h-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="sm" onClick={() => onDelete(row.original)}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      ),
+    })
+  }
+  return cols
+}
+
+export const columns: ColumnDef<DN>[] = [
+  { accessorKey: "dn_no", header: "DN No" },
+  { accessorKey: "customer_name", header: "Customer Name" },
+  { accessorKey: "sales_no", header: "Sales No" },
   {
-    accessorKey: "customer_name",
-    header: "Customer Name",
-  },
- 
-  {
-    accessorKey: "sales_no",
-    header: "Sales No",
-  },
-   {accessorKey: "items",
+    accessorKey: "items",
     header: "Items",
     cell: ({ row }) => {
-      const items = row.original.items; // row.original is your full data object
+      const items = row.original.items;
       return (
         <ul className="list-disc ml-5">
-          {items.map((item, idx) => (
+          {items?.map((item, idx) => (
             <li key={idx}>
-              {item.item_name} - {item.quantity} {item.unit_measurement}
+              {item.item_name} - {item.quantity} {item.unit_measurement ?? ""}
             </li>
           ))}
         </ul>
       );
     },
-  }
+  },
 ]
