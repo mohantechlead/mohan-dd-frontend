@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/authProvider";
 import { useToast } from "@/components/ui/toast";
@@ -15,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil, Trash2 } from "lucide-react";
 
 interface Purchase {
   id: string;
@@ -43,9 +41,6 @@ export default function PurchaseStatusPage() {
   const [popupAction, setPopupAction] = useState<"completed" | "cancelled">("completed");
   const [remarking, setRemarking] = useState(false);
   const [remark, setRemark] = useState("");
-  const [removeOpen, setRemoveOpen] = useState(false);
-  const [purchaseToRemove, setPurchaseToRemove] = useState<Purchase | null>(null);
-  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     const fetchPurchases = async () => {
@@ -159,50 +154,6 @@ export default function PurchaseStatusPage() {
     }
   };
 
-  const openRemove = (purchase: Purchase) => {
-    setPurchaseToRemove(purchase);
-    setRemoveOpen(true);
-  };
-
-  const handleRemove = async () => {
-    if (!purchaseToRemove) return;
-    setRemoving(true);
-    try {
-      const res = await fetch(
-        `/api/purchases/${encodeURIComponent(purchaseToRemove.purchase_number)}`,
-        { method: "DELETE", credentials: "include" }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        const detail = (data as any)?.detail;
-        showToast({
-          title: "Failed to remove purchase",
-          description: detail || "Please try again.",
-          variant: "error",
-        });
-        return;
-      }
-      setPurchases((prev) =>
-        prev.filter((p) => p.purchase_number !== purchaseToRemove.purchase_number)
-      );
-      showToast({
-        title: "Purchase removed",
-        description: `Purchase ${purchaseToRemove.purchase_number} has been removed.`,
-        variant: "success",
-      });
-      setRemoveOpen(false);
-      setPurchaseToRemove(null);
-    } catch {
-      showToast({
-        title: "Failed to remove purchase",
-        description: "Something went wrong.",
-        variant: "error",
-      });
-    } finally {
-      setRemoving(false);
-    }
-  };
-
   return (
     <div className="max-w-5xl mx-auto mt-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -269,20 +220,6 @@ export default function PurchaseStatusPage() {
                     >
                       Cancelled
                     </Button>
-                    <Link href={`/diredawa/purchase/${purchase.purchase_number}/edit`}>
-                      <Button size="sm" variant="outline" title="Edit">
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openRemove(purchase)}
-                      title="Remove"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </td>
                 </tr>
               ))
@@ -328,31 +265,6 @@ export default function PurchaseStatusPage() {
               className={popupAction === "completed" ? "hover:opacity-90" : ""}
             >
               {remarking ? "Updating..." : popupAction === "completed" ? "Complete" : "Cancel Purchase"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Purchase</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to remove purchase{" "}
-            <strong>{purchaseToRemove?.purchase_number}</strong>? This action cannot
-            be undone.
-          </p>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setRemoveOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRemove}
-              disabled={removing}
-            >
-              {removing ? "Removing..." : "Remove"}
             </Button>
           </DialogFooter>
         </DialogContent>
