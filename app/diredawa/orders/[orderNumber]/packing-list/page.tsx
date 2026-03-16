@@ -33,6 +33,7 @@ interface OrderDetail {
   port_of_discharge: string;
   payment_terms: string;
   mode_of_transport: string;
+  freight?: string | null;
   shipment_type: string;
   items: OrderItem[];
 }
