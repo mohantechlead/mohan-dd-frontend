@@ -40,6 +40,15 @@ interface PurchaseItem {
   measurement: string;
 }
 
+/** Form state for current item - price/quantity as string so inputs can be cleared */
+interface PurchaseItemForm {
+  item_name: string;
+  price: string;
+  quantity: string;
+  total_price: number;
+  measurement: string;
+}
+
 interface PurchaseFormState {
   purchase_number: string;
   proforma_ref_no: string;
@@ -95,15 +104,16 @@ export default function CreatePurchasePage() {
     shipment_type: "",
   });
 
-  const [currentItem, setCurrentItem] = useState<PurchaseItem>({
+  const [currentItem, setCurrentItem] = useState<PurchaseItemForm>({
     item_name: "",
-    price: 0,
-    quantity: 0,
+    price: "",
+    quantity: "",
     total_price: 0,
     measurement: "",
   });
 
   const [items, setItems] = useState<PurchaseItem[]>([]);
+  const [itemsTotal, setItemsTotal] = useState(0);
   const [itemOptions, setItemOptions] = useState<
     { item_name: string; hscode: string; internal_code: string | null }[]
   >([]);
@@ -196,22 +206,35 @@ export default function CreatePurchasePage() {
       setItemQuery(value);
       setShowItemDropdown(true);
     }
-    setCurrentItem((prev) => ({
-      ...prev,
-      [name]:
-        name === "price" || name === "quantity" || name === "total_price"
-          ? Number(value)
-          : value,
-    }));
+    setCurrentItem((prev) => {
+      const next: PurchaseItemForm = {
+        ...prev,
+        [name]:
+          name === "price" || name === "quantity"
+            ? value
+            : name === "total_price"
+              ? Number(value)
+              : value,
+      } as PurchaseItemForm;
+      // Auto-calculate Total Price when price or quantity changes
+      if (name === "price" || name === "quantity") {
+        const priceNum = parseFloat(String(next.price)) || 0;
+        const qty = parseFloat(String(next.quantity)) || 0;
+        next.total_price = priceNum * qty;
+      }
+      return next;
+    });
   };
 
   const handleCalculateTotal = () => {
-    const total = (currentItem.price || 0) * (currentItem.quantity || 0);
-    setCurrentItem((prev) => ({ ...prev, total_price: total }));
+    const total = items.reduce((sum, it) => sum + it.total_price, 0);
+    setItemsTotal(total);
   };
 
   const handleAddItem = () => {
-    if (!currentItem.item_name || !currentItem.quantity || !currentItem.price) {
+    const priceNum = parseFloat(String(currentItem.price));
+    const qtyNum = parseFloat(String(currentItem.quantity));
+    if (!currentItem.item_name || !currentItem.quantity || !currentItem.price || Number.isNaN(priceNum) || Number.isNaN(qtyNum)) {
       showToast({
         title: "Incomplete item",
         description:
@@ -221,20 +244,23 @@ export default function CreatePurchasePage() {
       return;
     }
 
+    const priceVal = priceNum || 0;
+    const qtyVal = qtyNum || 0;
     const total =
-      currentItem.total_price ||
-      (currentItem.price || 0) * (currentItem.quantity || 0);
+      currentItem.total_price || priceVal * qtyVal;
 
     const itemToAdd: PurchaseItem = {
       ...currentItem,
+      price: priceVal,
+      quantity: qtyVal,
       total_price: total,
     };
 
     setItems((prev) => [...prev, itemToAdd]);
     setCurrentItem({
       item_name: "",
-      price: 0,
-      quantity: 0,
+      price: "",
+      quantity: "",
       total_price: 0,
       measurement: "",
     });
@@ -847,9 +873,8 @@ export default function CreatePurchasePage() {
                   type="number"
                   name="total_price"
                   value={currentItem.total_price}
-                  onChange={handleItemChange}
-                  className="w-full border rounded-md px-3 py-2"
                   readOnly
+                  className="w-full border rounded-md px-3 py-2 bg-muted/50"
                 />
               </div>
               <div>
@@ -865,11 +890,16 @@ export default function CreatePurchasePage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              <Button type="button" onClick={handleAddItem}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Item
-              </Button>
+            <div className="flex flex-col gap-3 mt-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" onClick={handleAddItem}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Item
+                </Button>
+                <span className="ml-auto text-sm font-semibold">
+                  Total Price: ${itemsTotal.toFixed(2)}
+                </span>
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -877,9 +907,6 @@ export default function CreatePurchasePage() {
               >
                 Calculate Total
               </Button>
-              <span className="ml-auto text-sm font-semibold">
-                Line Total: ${currentItem.total_price.toFixed(2)}
-              </span>
             </div>
 
             {items.length > 0 && (

@@ -41,6 +41,16 @@ interface OrderItem {
   measurement: string;
 }
 
+/** Form state for current item - price/quantity as string so inputs can be cleared */
+interface OrderItemForm {
+  item_name: string;
+  hs_code: string;
+  price: string;
+  quantity: string;
+  total_price: number;
+  measurement: string;
+}
+
 interface OrderFormState {
   order_number: string;
   proforma_ref_no: string;
@@ -92,16 +102,17 @@ export default function CreateOrderPage() {
     shipment_type: "",
   });
 
-  const [currentItem, setCurrentItem] = useState<OrderItem>({
+  const [currentItem, setCurrentItem] = useState<OrderItemForm>({
     item_name: "",
     hs_code: "",
-    price: 0,
-    quantity: 0,
+    price: "",
+    quantity: "",
     total_price: 0,
     measurement: "",
   });
 
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [itemsTotal, setItemsTotal] = useState(0);
   const [itemOptions, setItemOptions] = useState<
     { item_name: string; hscode: string; internal_code: string | null }[]
   >([]);
@@ -194,22 +205,35 @@ export default function CreateOrderPage() {
       setItemQuery(value);
       setShowItemDropdown(true);
     }
-    setCurrentItem((prev) => ({
-      ...prev,
-      [name]:
-        name === "price" || name === "quantity" || name === "total_price"
-          ? Number(value)
-          : value,
-    }));
+    setCurrentItem((prev) => {
+      const next: OrderItemForm = {
+        ...prev,
+        [name]:
+          name === "price" || name === "quantity"
+            ? value
+            : name === "total_price"
+              ? Number(value)
+              : value,
+      } as OrderItemForm;
+      // Auto-calculate Total Price when price or quantity changes
+      if (name === "price" || name === "quantity") {
+        const priceNum = parseFloat(String(next.price)) || 0;
+        const qty = parseFloat(String(next.quantity)) || 0;
+        next.total_price = priceNum * qty;
+      }
+      return next;
+    });
   };
 
   const handleCalculateTotal = () => {
-    const total = (currentItem.price || 0) * (currentItem.quantity || 0);
-    setCurrentItem((prev) => ({ ...prev, total_price: total }));
+    const total = items.reduce((sum, it) => sum + it.total_price, 0);
+    setItemsTotal(total);
   };
 
   const handleAddItem = () => {
-    if (!currentItem.item_name || !currentItem.quantity || !currentItem.price) {
+    const priceNum = parseFloat(String(currentItem.price));
+    const qtyNum = parseFloat(String(currentItem.quantity));
+    if (!currentItem.item_name || !currentItem.quantity || !currentItem.price || Number.isNaN(priceNum) || Number.isNaN(qtyNum)) {
       showToast({
         title: "Incomplete item",
         description: "Please fill Item name, Price and Quantity before adding.",
@@ -218,12 +242,15 @@ export default function CreateOrderPage() {
       return;
     }
 
+    const priceVal = priceNum || 0;
+    const qtyVal = qtyNum || 0;
     const total =
-      currentItem.total_price ||
-      (currentItem.price || 0) * (currentItem.quantity || 0);
+      currentItem.total_price || priceVal * qtyVal;
 
     const itemToAdd: OrderItem = {
       ...currentItem,
+      price: priceVal,
+      quantity: qtyVal,
       total_price: total,
     };
 
@@ -231,8 +258,8 @@ export default function CreateOrderPage() {
     setCurrentItem({
       item_name: "",
       hs_code: "",
-      price: 0,
-      quantity: 0,
+      price: "",
+      quantity: "",
       total_price: 0,
       measurement: "",
     });
@@ -833,9 +860,8 @@ export default function CreateOrderPage() {
                 type="number"
                 name="total_price"
                 value={currentItem.total_price}
-                onChange={handleItemChange}
-                className="w-full border rounded-md px-3 py-2"
                 readOnly
+                className="w-full border rounded-md px-3 py-2 bg-muted/50"
               />
             </div>
             <div>
@@ -851,17 +877,23 @@ export default function CreateOrderPage() {
             </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              <Button type="button" onClick={handleAddItem}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Item
-              </Button>
-              <Button type="button" variant="outline" onClick={handleCalculateTotal}>
+            <div className="flex flex-col gap-3 mt-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" onClick={handleAddItem}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Item
+                </Button>
+                <span className="ml-auto text-sm font-semibold">
+                  Total Price: ${itemsTotal.toFixed(2)}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCalculateTotal}
+              >
                 Calculate Total
               </Button>
-              <span className="ml-auto text-sm font-semibold">
-                Line Total: ${currentItem.total_price.toFixed(2)}
-              </span>
             </div>
 
             {items.length > 0 && (

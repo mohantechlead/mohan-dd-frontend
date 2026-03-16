@@ -23,9 +23,14 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Base nav data - Status and Approvals are admin-only
 const baseNavMain = [
@@ -159,6 +164,25 @@ const data = {
   },
 };
 
+/** Placeholder shown during SSR/initial hydration to avoid Radix ID mismatch */
+function SidebarNavSkeleton() {
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarMenu>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <SidebarMenuItem key={i}>
+            <div className="flex h-8 items-center gap-2 rounded-md px-2">
+              <Skeleton className="size-4 rounded-md" />
+              <Skeleton className="h-4 flex-1" style={{ maxWidth: "70%" }} />
+            </div>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const auth = useAuth();
   const [mounted, setMounted] = React.useState(false);
@@ -174,7 +198,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader></SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} />
+        {mounted ? <NavMain items={navMain} /> : <SidebarNavSkeleton />}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

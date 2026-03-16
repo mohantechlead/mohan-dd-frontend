@@ -24,15 +24,26 @@ export default class ApiProxy {
 
   // Handle the fetch request and return response data
   static async handleFetch(endpoint: string, requestOptions: RequestInit): Promise<ApiResponse> {
-    let data = {};
+    let data: Record<string, unknown> = {};
     let status = 500;
 
     try {
       const response = await fetch(endpoint, requestOptions);
-      data = await response.json();
+      const text = await response.text();
       status = response.status;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { message: "Invalid JSON response", raw: text.slice(0, 200) };
+      }
     } catch (error) {
-      data = { message: "Cannot reach API server", error };
+      const err = error as Error;
+      data = {
+        message: "Cannot reach API server. Is the Django backend running?",
+        hint: "Start it with: cd mohan-dd-backend/django_backend && python manage.py runserver",
+        endpoint,
+        error: err?.message ?? String(error),
+      };
       status = 500;
     }
 
