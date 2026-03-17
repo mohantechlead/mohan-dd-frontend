@@ -38,6 +38,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 // adminLogisticsHidden: true = hide from admin and logistics (only store sees it)
 const baseNavMain = [
   {
+    title: "Dashboard",
+    url: "/diredawa/dashboard",
+    icon: PieChart,
+    adminOnly: true,
+    items: [{ title: "Admin Dashboard", url: "/diredawa/dashboard" }],
+  },
+  {
     title: "Status",
     url: "#",
     icon: SquareTerminal,
@@ -95,7 +102,9 @@ const baseNavMain = [
     icon: Settings2,
     items: [
       { title: "Add GRN", url: "/diredawa/inventory/grn/create", storeVisible: true },
+      { title: "Display GRN", url: "/diredawa/inventory/grn/display", storeVisible: true },
       { title: "Add DN", url: "/diredawa/inventory/dn/create", storeVisible: true },
+      { title: "Display DN", url: "/diredawa/inventory/dn/display", storeVisible: true },
       { title: "Items", url: "/diredawa/inventory/items/create" },
       { title: "Stock", url: "/diredawa/inventory/stock" },
     ],

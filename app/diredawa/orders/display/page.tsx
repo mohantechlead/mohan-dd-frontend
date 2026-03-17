@@ -220,17 +220,21 @@ export default function DisplayOrdersPage() {
                               className="px-4 py-2 border border-border align-top"
                               rowSpan={order.items.length}
                             >
-                              <button
-                                type="button"
-                                className="text-blue-600 hover:underline"
-                                onClick={() =>
-                                  router.push(
-                                    `/diredawa/orders/${order.order_number}`
-                                  )
-                                }
-                              >
-                                {order.order_number}
-                              </button>
+                              {auth?.isStore ? (
+                                <span>{order.order_number}</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="text-blue-600 hover:underline"
+                                  onClick={() =>
+                                    router.push(
+                                      `/diredawa/orders/${order.order_number}`
+                                    )
+                                  }
+                                >
+                                  {order.order_number}
+                                </button>
+                              )}
                             </td>
                             <td
                               className="px-4 py-2 border border-border align-top"
@@ -315,17 +319,21 @@ export default function DisplayOrdersPage() {
                   : [
                       <tr key={order.id}>
                         <td className="px-4 py-2 border border-border">
-                          <button
-                            type="button"
-                            className="text-blue-600 hover:underline"
-                            onClick={() =>
-                              router.push(
-                                `/diredawa/orders/${order.order_number}`
-                              )
-                            }
-                          >
-                            {order.order_number}
-                          </button>
+                          {auth?.isStore ? (
+                            <span>{order.order_number}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="text-blue-600 hover:underline"
+                              onClick={() =>
+                                router.push(
+                                  `/diredawa/orders/${order.order_number}`
+                                )
+                              }
+                            >
+                              {order.order_number}
+                            </button>
+                          )}
                         </td>
                         <td className="px-4 py-2 border border-border">
                           {new Date(order.order_date).toLocaleDateString()}

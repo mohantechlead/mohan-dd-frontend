@@ -60,18 +60,9 @@ export default function AuthorizedLoadingInstructionsPage() {
 
   return (
     <div className="max-w-5xl mx-auto mt-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/diredawa/orders/display")}
-        >
-          Back
-        </Button>
-        <h1 className="text-2xl font-bold flex-1 text-center">
-          Authorized Loading Instructions
-        </h1>
-        <div className="w-[70px]" />
-      </div>
+      <h1 className="text-2xl font-bold text-center">
+        Authorized Loading Instructions
+      </h1>
 
       {loading ? (
         <p className="text-center text-sm text-muted-foreground">

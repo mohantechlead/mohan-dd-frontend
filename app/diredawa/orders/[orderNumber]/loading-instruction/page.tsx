@@ -178,9 +178,15 @@ export default function LoadingInstructionPage() {
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
-          onClick={() => router.push(`/diredawa/orders/${orderNumber}`)}
+          onClick={() =>
+            router.push(
+              auth?.isStore
+                ? "/diredawa/loading-instructions/authorized"
+                : `/diredawa/orders/${orderNumber}`
+            )
+          }
         >
-          Back to Order Detail
+          {auth?.isStore ? "Back to Auth. Loading Instruction" : "Back to Order Detail"}
         </Button>
         <div className="flex items-center gap-2">
           {invoice?.authorized_by ? (
