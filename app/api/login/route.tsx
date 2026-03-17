@@ -34,7 +34,7 @@ export async function POST(request: any) {
             }
         } catch (_) {}
         return NextResponse.json(
-            { loggedIn: true, username, role: role ?? "viewer", userId },
+            { loggedIn: true, username, role: role ?? "logistics", userId },
             { status: 200 }
         )
     }

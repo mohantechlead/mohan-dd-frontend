@@ -1,34 +1,49 @@
-"use client"
+"use client";
 
-import { useFieldArray, useFormContext } from "react-hook-form"
-import { useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Trash2 } from "lucide-react"
+import { useFieldArray, useFormContext } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Trash2 } from "lucide-react";
+import { SearchableDropdown, type DropdownOption } from "@/components/searchable-dropdown";
+
+const ITEMS_API_URL = "/api/inventory/items";
 
 export function ItemsForm() {
-  // Access parent form context
-  const { control, register } = useFormContext()
+  const { control, register, setValue, watch } = useFormContext();
+  const [itemOptions, setItemOptions] = useState<DropdownOption[]>([]);
 
-  const ITEMS_API_URL = "/api/inventory/items"
-  
-  // Dynamic fields (field array)
   const { fields, append, remove } = useFieldArray({
-    name: "items",   // ⭐ parent form will collect values as form.items
+    name: "items",
     control,
-  })
+  });
+
+  const items = watch("items") || [];
 
   useEffect(() => {
     async function loadItems() {
-      const res = await fetch(ITEMS_API_URL)
-      const data = await res.json()
-
-
+      try {
+        const res = await fetch(ITEMS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setItemOptions(
+          data.map((item: { item_name: string; hscode?: string; internal_code?: string | null }) => ({
+            value: item.item_name,
+            display: item.item_name,
+            subtext: item.hscode || item.internal_code || undefined,
+            internalCode: item.internal_code || undefined,
+          }))
+        );
+      } catch {
+        // ignore
+      }
     }
-    loadItems()
+    loadItems();
   }, []);
-
 
   return (
     <div className="flex flex-col gap-4 border p-4 rounded-xl mt-4">
@@ -38,7 +53,13 @@ export function ItemsForm() {
           type="button"
           variant="outline"
           onClick={() =>
-            append({ item_name: "", quantity: "", unit_measurement: "", bags: "", internal_code: "" })
+            append({
+              item_name: "",
+              quantity: "",
+              unit_measurement: "",
+              bags: "",
+              internal_code: "",
+            })
           }
         >
           + Add Item
@@ -46,10 +67,19 @@ export function ItemsForm() {
       </div>
 
       {fields.map((field, index) => (
-        <div key={field.id} className=" items-end">
+        <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/20 rounded-lg p-4">
           <div>
             <Label>Item Name</Label>
-            <Input {...register(`items.${index}.item_name` as const)} />
+            <SearchableDropdown
+              value={(items[index]?.item_name as string) || ""}
+              onChange={(value) => {
+                setValue(`items.${index}.item_name` as const, value);
+                const opt = itemOptions.find((o) => o.display === value) as (DropdownOption & { internalCode?: string }) | undefined;
+                if (opt?.internalCode) setValue(`items.${index}.internal_code` as const, opt.internalCode);
+              }}
+              options={itemOptions}
+              placeholder="Search item..."
+            />
           </div>
 
           <div>
@@ -67,20 +97,17 @@ export function ItemsForm() {
             <Input type="number" {...register(`items.${index}.bags` as const)} />
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 md:col-span-2">
             <div className="flex-1">
               <Label>Internal Code</Label>
-              <Input
-                type="text"
-                {...register(`items.${index}.internal_code` as const)}
-              />
+              <Input type="text" {...register(`items.${index}.internal_code` as const)} />
             </div>
 
             <Button
               type="button"
               variant="destructive"
               onClick={() => remove(index)}
-              className="mt-4"
+              className="mt-6"
             >
               <Trash2 size={16} />
             </Button>
@@ -88,5 +115,5 @@ export function ItemsForm() {
         </div>
       ))}
     </div>
-  )
+  );
 }

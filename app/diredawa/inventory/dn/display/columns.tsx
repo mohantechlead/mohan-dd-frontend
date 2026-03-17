@@ -23,7 +23,7 @@ export function getDNColumns(
   isAdmin?: boolean
 ): ColumnDef<DN>[] {
   const cols: ColumnDef<DN>[] = [
-    { accessorKey: "dn_no", header: "DN No" },
+    { accessorKey: "dn_no", header: "Delivery Number" },
     { accessorKey: "customer_name", header: "Customer Name" },
     { accessorKey: "sales_no", header: "Sales No" },
     {
@@ -67,7 +67,7 @@ export function getDNColumns(
 }
 
 export const columns: ColumnDef<DN>[] = [
-  { accessorKey: "dn_no", header: "DN No" },
+  { accessorKey: "dn_no", header: "Delivery Number" },
   { accessorKey: "customer_name", header: "Customer Name" },
   { accessorKey: "sales_no", header: "Sales No" },
   {

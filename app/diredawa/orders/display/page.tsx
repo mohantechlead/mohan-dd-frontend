@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Pencil, Trash2 } from "lucide-react";
+import { TableSearch } from "@/components/table-search";
 
 interface OrderItem {
   item_name: string;
@@ -42,9 +43,23 @@ export default function DisplayOrdersPage() {
   const auth = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const filteredOrders = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return orders;
+    return orders.filter(
+      (o) =>
+        o.order_number.toLowerCase().includes(q) ||
+        o.buyer.toLowerCase().includes(q) ||
+        (o.proforma_ref_no?.toLowerCase().includes(q)) ||
+        (o.status?.toLowerCase().includes(q)) ||
+        o.items.some((i) => i.item_name.toLowerCase().includes(q))
+    );
+  }, [orders, search]);
 
   const fetchOrders = async () => {
     try {
@@ -138,95 +153,168 @@ export default function DisplayOrdersPage() {
           No orders found.
         </p>
       ) : (
-        <div className="border rounded-md overflow-hidden bg-white">
-          <table className="w-full text-sm">
+        <>
+          <div className="flex justify-end mb-4">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search orders, customer, items..." />
+        </div>
+          <div className="border border-border rounded-md overflow-hidden bg-white">
+          <table className="w-full text-sm border-collapse">
             <thead className="bg-muted/60">
               <tr>
-                <th className="text-left px-4 py-2">Order Number</th>
-                <th className="text-left px-4 py-2">Date</th>
-                <th className="text-left px-4 py-2">Items</th>
-                <th className="text-right px-4 py-2">Quantity</th>
-                <th className="text-right px-4 py-2">Unit Price</th>
-                <th className="text-right px-4 py-2">Total Price</th>
-                <th className="text-left px-4 py-2">Customer Name</th>
-                <th className="text-left px-4 py-2">Approved By</th>
-                <th className="text-left px-4 py-2">Status</th>
+                <th className="text-left px-4 py-2 border border-border">
+                  Order Number
+                </th>
+                <th className="text-left px-4 py-2 border border-border">
+                  Date
+                </th>
+                <th className="text-left px-4 py-2 border border-border">
+                  Items
+                </th>
+                <th className="text-right px-4 py-2 border border-border">
+                  Quantity
+                </th>
+                <th className="text-right px-4 py-2 border border-border">
+                  Unit Price
+                </th>
+                <th className="text-right px-4 py-2 border border-border">
+                  Total Price
+                </th>
+                <th className="text-left px-4 py-2 border border-border">
+                  Customer Name
+                </th>
+                <th className="text-left px-4 py-2 border border-border">
+                  Approved By
+                </th>
+                <th className="text-left px-4 py-2 border border-border">
+                  Status
+                </th>
                 {auth?.isAdmin && (
-                  <th className="text-right px-4 py-2">Actions</th>
+                  <th className="text-right px-4 py-2 border border-border">
+                    Actions
+                  </th>
                 )}
               </tr>
             </thead>
             <tbody>
-              {orders.flatMap((order) =>
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={auth?.isAdmin ? 9 : 8} className="px-4 py-8 text-center text-muted-foreground">
+                    No results match your search.
+                  </td>
+                </tr>
+              ) : (
+              filteredOrders.flatMap((order, orderIdx) =>
                 order.items.length > 0
                   ? order.items.map((item, idx) => (
-                      <tr key={`${order.id}-${idx}`} className="border-t">
-                        <td className="px-4 py-2">
-                          <button
-                            type="button"
-                            className="text-blue-600 hover:underline"
-                            onClick={() =>
-                              router.push(
-                                `/diredawa/orders/${order.order_number}`
-                              )
-                            }
-                          >
-                            {order.order_number}
-                          </button>
+                      <tr
+                        key={`${order.id}-${idx}`}
+                        className={
+                          orderIdx > 0 && idx === 0
+                            ? "border-t-4 border-t-border"
+                            : "border-t border-t-border"
+                        }
+                      >
+                        {idx === 0 ? (
+                          <>
+                            <td
+                              className="px-4 py-2 border border-border align-top"
+                              rowSpan={order.items.length}
+                            >
+                              <button
+                                type="button"
+                                className="text-blue-600 hover:underline"
+                                onClick={() =>
+                                  router.push(
+                                    `/diredawa/orders/${order.order_number}`
+                                  )
+                                }
+                              >
+                                {order.order_number}
+                              </button>
+                            </td>
+                            <td
+                              className="px-4 py-2 border border-border align-top"
+                              rowSpan={order.items.length}
+                            >
+                              {new Date(
+                                order.order_date
+                              ).toLocaleDateString()}
+                            </td>
+                          </>
+                        ) : null}
+                        <td className="px-4 py-2 border border-border">
+                          {item.item_name}
                         </td>
-                        <td className="px-4 py-2">
-                          {new Date(order.order_date).toLocaleDateString()}
+                        <td className="px-4 py-2 text-right border border-border">
+                          {item.quantity.toLocaleString(undefined, {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          })}
                         </td>
-                        <td className="px-4 py-2">{item.item_name}</td>
-                        <td className="px-4 py-2 text-right">
-                          {item.quantity}
-                        </td>
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-4 py-2 text-right border border-border">
                           {item.price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-4 py-2 text-right border border-border">
                           {item.total_price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="px-4 py-2">{order.buyer}</td>
-                        <td className="px-4 py-2">
-                          {order.approved_by ?? "—"}
-                        </td>
-                        <td className="px-4 py-2 capitalize">
-                          {order.status ?? "—"}
-                        </td>
-                        {auth?.isAdmin && idx === 0 && (
-                          <td className="px-4 py-2 text-right" rowSpan={order.items.length}>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  router.push(
-                                    `/diredawa/orders/${order.order_number}/edit`
-                                  )
-                                }
+                        {idx === 0 ? (
+                          <>
+                            <td
+                              className="px-4 py-2 border border-border align-top"
+                              rowSpan={order.items.length}
+                            >
+                              {order.buyer}
+                            </td>
+                            <td
+                              className="px-4 py-2 border border-border align-top"
+                              rowSpan={order.items.length}
+                            >
+                              {order.approved_by ?? "—"}
+                            </td>
+                            <td
+                              className="px-4 py-2 border border-border capitalize align-top"
+                              rowSpan={order.items.length}
+                            >
+                              {order.status ?? "—"}
+                            </td>
+                            {auth?.isAdmin && (
+                              <td
+                                className="px-4 py-2 text-right border border-border align-top"
+                                rowSpan={order.items.length}
                               >
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDelete(order)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        )}
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      router.push(
+                                        `/diredawa/orders/${order.order_number}/edit`
+                                      )
+                                    }
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDelete(order)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            )}
+                          </>
+                        ) : null}
                       </tr>
                     ))
                   : [
-                      <tr key={order.id} className="border-t">
-                        <td className="px-4 py-2">
+                      <tr key={order.id}>
+                        <td className="px-4 py-2 border border-border">
                           <button
                             type="button"
                             className="text-blue-600 hover:underline"
@@ -239,22 +327,28 @@ export default function DisplayOrdersPage() {
                             {order.order_number}
                           </button>
                         </td>
-                        <td className="px-4 py-2">
+                        <td className="px-4 py-2 border border-border">
                           {new Date(order.order_date).toLocaleDateString()}
                         </td>
-                        <td className="px-4 py-2" colSpan={5}>
+                        <td
+                          className="px-4 py-2 border border-border"
+                          colSpan={4}
+                        >
                           <span className="text-xs text-muted-foreground">
                             No items
                           </span>
                         </td>
-                        <td className="px-4 py-2">
+                        <td className="px-4 py-2 border border-border">
+                          {order.buyer}
+                        </td>
+                        <td className="px-4 py-2 border border-border">
                           {order.approved_by ?? "—"}
                         </td>
-                        <td className="px-4 py-2 capitalize">
+                        <td className="px-4 py-2 border border-border capitalize">
                           {order.status ?? "—"}
                         </td>
                         {auth?.isAdmin && (
-                          <td className="px-4 py-2 text-right">
+                          <td className="px-4 py-2 text-right border border-border">
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="ghost"
@@ -279,10 +373,12 @@ export default function DisplayOrdersPage() {
                         )}
                       </tr>,
                     ]
+              )
               )}
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

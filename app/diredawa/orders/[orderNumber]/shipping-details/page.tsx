@@ -19,6 +19,7 @@ interface ShippingItemState {
   gross_weight: string;
   grade: string;
   brand: string;
+  country_of_origin: string;
 }
 
 export default function ShippingDetailsPage() {
@@ -59,6 +60,7 @@ export default function ShippingDetailsPage() {
     gross_weight: "",
     grade: "",
     brand: "",
+    country_of_origin: "",
   });
 
   const [shippingItems, setShippingItems] = useState<ShippingItemState[]>([]);
@@ -195,6 +197,7 @@ export default function ShippingDetailsPage() {
         gross_weight: it.gross_weight ? Number(it.gross_weight) : null,
         grade: it.grade?.trim() || null,
         brand: it.brand?.trim() || null,
+        country_of_origin: it.country_of_origin?.trim() || null,
       })),
     };
 
@@ -648,6 +651,20 @@ export default function ShippingDetailsPage() {
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>
+            <div>
+              <label className="block font-medium mb-1">Country of Origin</label>
+              <input
+                value={shippingItem.country_of_origin}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    country_of_origin: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+                placeholder="e.g. CHINA"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 mt-4">
@@ -700,6 +717,7 @@ export default function ShippingDetailsPage() {
                   gross_weight: "",
                   grade: "",
                   brand: "",
+                  country_of_origin: "",
                 });
               }}
             >
@@ -733,6 +751,7 @@ export default function ShippingDetailsPage() {
                     <th className="px-2 py-1 text-left">Item</th>
                     <th className="px-2 py-1 text-left">Grade</th>
                     <th className="px-2 py-1 text-left">Brand</th>
+                    <th className="px-2 py-1 text-left">Country of Origin</th>
                     <th className="px-2 py-1 text-right">Qty</th>
                     <th className="px-2 py-1 text-right">Price</th>
                     <th className="px-2 py-1 text-right">Total</th>
@@ -744,6 +763,7 @@ export default function ShippingDetailsPage() {
                       <td className="px-2 py-1">{it.item_name}</td>
                       <td className="px-2 py-1">{it.grade || "—"}</td>
                       <td className="px-2 py-1">{it.brand || "—"}</td>
+                      <td className="px-2 py-1">{it.country_of_origin || "—"}</td>
                       <td className="px-2 py-1 text-right">{it.quantity}</td>
                       <td className="px-2 py-1 text-right">
                         {Number(it.price).toLocaleString(undefined, {

@@ -7,6 +7,16 @@ import { useToast } from "@/components/ui/toast";
 
 const CUSTOMERS_API_URL = "/api/partners/customers";
 const SUPPLIERS_API_URL = "/api/partners/suppliers";
+const ITEMS_API_URL = "/api/inventory/items";
+
+interface OrderItemForm {
+  item_name: string;
+  hs_code: string;
+  price: number | string;
+  quantity: number | string;
+  total_price: number;
+  measurement: string;
+}
 
 interface OrderDetail {
   id: string;
@@ -28,6 +38,7 @@ interface OrderDetail {
   freight: string;
   freight_price?: number | null;
   shipment_type: string;
+  items?: { item_name: string; hs_code: string; price: number; quantity: number; total_price: number; measurement: string }[];
 }
 
 export default function EditOrderPage() {
@@ -45,6 +56,22 @@ export default function EditOrderPage() {
   const [shipperQuery, setShipperQuery] = useState("");
   const [showBuyerDropdown, setShowBuyerDropdown] = useState(false);
   const [showShipperDropdown, setShowShipperDropdown] = useState(false);
+  const [orderItems, setOrderItems] = useState<OrderItemForm[]>([]);
+  const [itemsTotal, setItemsTotal] = useState(0);
+  const [currentItem, setCurrentItem] = useState<OrderItemForm>({
+    item_name: "",
+    hs_code: "",
+    price: "",
+    quantity: "",
+    total_price: 0,
+    measurement: "",
+  });
+  const [itemOptions, setItemOptions] = useState<
+    { item_name: string; hscode: string; internal_code: string | null }[]
+  >([]);
+  const [itemQuery, setItemQuery] = useState("");
+  const [showItemDropdown, setShowItemDropdown] = useState(false);
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
   const [form, setForm] = useState({
     order_date: "",
     buyer: "",
@@ -92,8 +119,22 @@ export default function EditOrderPage() {
         // ignore
       }
     };
+    const fetchItems = async () => {
+      try {
+        const res = await fetch(ITEMS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setItemOptions(data);
+      } catch {
+        // ignore
+      }
+    };
     fetchCustomers();
     fetchSuppliers();
+    fetchItems();
   }, []);
 
   useEffect(() => {
@@ -135,6 +176,21 @@ export default function EditOrderPage() {
         });
         setBuyerQuery(detail.buyer);
         setShipperQuery(detail.shipper);
+        if (detail.items && detail.items.length > 0) {
+          const items = detail.items.map((it) => ({
+            item_name: it.item_name,
+            hs_code: it.hs_code,
+            price: String(it.price),
+            quantity: String(it.quantity),
+            total_price: it.total_price,
+            measurement: it.measurement,
+          }));
+          setOrderItems(items);
+          setItemsTotal(items.reduce((sum, it) => sum + (Number(it.total_price) || 0), 0));
+        } else {
+          setOrderItems([]);
+          setItemsTotal(0);
+        }
       } catch {
         showToast({
           title: "Failed to load order",
@@ -151,9 +207,26 @@ export default function EditOrderPage() {
     }
   }, [orderNumber, showToast]);
 
+  const handleCalculateTotal = () => {
+    const total = orderItems.reduce(
+      (sum, it) => sum + (Number(it.total_price) || 0),
+      0
+    );
+    setItemsTotal(total);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderNumber) return;
+
+    if (orderItems.length === 0) {
+      showToast({
+        title: "No items",
+        description: "Please add at least one item to the order.",
+        variant: "error",
+      });
+      return;
+    }
 
     const payload = {
       proforma_ref_no: form.proforma_ref_no,
@@ -174,6 +247,14 @@ export default function EditOrderPage() {
       freight_price:
         form.freight_price !== "" ? Number(form.freight_price) : null,
       shipment_type: form.shipment_type,
+      items: orderItems.map((it) => ({
+        item_name: it.item_name,
+        hs_code: it.hs_code,
+        price: Number(it.price) || 0,
+        quantity: Math.floor(Number(it.quantity) || 0),
+        total_price: Number(it.total_price) || 0,
+        measurement: it.measurement,
+      })),
     };
 
     try {
@@ -573,17 +654,400 @@ export default function EditOrderPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          {/* Items section */}
+          <div className="border rounded-md p-4 space-y-4">
+            <h2 className="font-semibold text-sm">Order Items</h2>
+
+            {/* Add new item form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/20 border rounded-lg p-4">
+              <div className="relative">
+                <label className="block font-medium mb-1">Item name</label>
+                <input
+                  value={currentItem.item_name}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCurrentItem((prev) => ({ ...prev, item_name: value }));
+                    setItemQuery(value);
+                    setShowItemDropdown(true);
+                  }}
+                  onFocus={() => setShowItemDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowItemDropdown(false), 150)}
+                  autoComplete="off"
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+                {showItemDropdown && itemOptions.length > 0 && (
+                  <div
+                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                    style={{ backgroundColor: "#ffffff" }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    {itemOptions
+                      .filter((opt) =>
+                        opt.item_name
+                          .toLowerCase()
+                          .includes(itemQuery.toLowerCase())
+                      )
+                      .slice(0, 20)
+                      .map((opt) => (
+                        <button
+                          type="button"
+                          key={opt.internal_code ?? opt.item_name}
+                          className="block w-full text-left px-3 py-1.5 text-sm bg-white hover:bg-gray-100"
+                          onClick={() => {
+                            setCurrentItem((prev) => ({
+                              ...prev,
+                              item_name: opt.item_name,
+                              hs_code: opt.hscode ?? "",
+                            }));
+                            setItemQuery(opt.item_name);
+                            setShowItemDropdown(false);
+                          }}
+                        >
+                          {opt.item_name}
+                          {opt.hscode ? (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {opt.hscode}
+                            </span>
+                          ) : null}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block font-medium mb-1">HS CODE</label>
+                <input
+                  value={currentItem.hs_code}
+                  onChange={(e) =>
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      hs_code: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Price</label>
+                <input
+                  type="number"
+                  value={currentItem.price}
+                  onChange={(e) =>
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      price: e.target.value,
+                      total_price:
+                        (Number(e.target.value) || 0) *
+                        (Number(prev.quantity) || 0),
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Quantity</label>
+                <input
+                  type="number"
+                  value={currentItem.quantity}
+                  onChange={(e) =>
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      quantity: e.target.value,
+                      total_price:
+                        (Number(prev.price) || 0) *
+                        (Number(e.target.value) || 0),
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Total Price</label>
+                <input
+                  type="number"
+                  value={currentItem.total_price}
+                  readOnly
+                  className="w-full border rounded-md px-3 py-2 bg-muted/40"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Measurement</label>
+                <input
+                  value={currentItem.measurement}
+                  onChange={(e) =>
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      measurement: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const priceNum = parseFloat(String(currentItem.price)) || 0;
+                const qtyNum = parseFloat(String(currentItem.quantity)) || 0;
+                if (
+                  !currentItem.item_name ||
+                  !String(currentItem.quantity).trim() ||
+                  !String(currentItem.price).trim()
+                ) {
+                  showToast({
+                    title: "Incomplete item",
+                    description:
+                      "Please fill Item name, Price and Quantity before adding.",
+                    variant: "error",
+                  });
+                  return;
+                }
+                if (priceNum <= 0 || qtyNum <= 0) {
+                  showToast({
+                    title: "Invalid values",
+                    description: "Price and Quantity must be greater than 0.",
+                    variant: "error",
+                  });
+                  return;
+                }
+                const total = priceNum * qtyNum;
+                setOrderItems((prev) => [
+                  ...prev,
+                  {
+                    ...currentItem,
+                    price: priceNum,
+                    quantity: qtyNum,
+                    total_price: total,
+                  },
+                ]);
+                setCurrentItem({
+                  item_name: "",
+                  hs_code: "",
+                  price: "",
+                  quantity: "",
+                  total_price: 0,
+                  measurement: "",
+                });
+              }}
+            >
+              Add Item
+            </Button>
+
+            {/* Editable items */}
+            {orderItems.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {orderItems.map((it, idx) => (
+                  <div
+                    key={idx}
+                    className="border rounded-lg p-4 bg-white relative"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setOrderItems((prev) =>
+                          prev.filter((_, i) => i !== idx)
+                        );
+                        setOpenDropdownIndex(null);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative pr-20">
+                        <label className="block font-medium mb-1">Item name</label>
+                        <input
+                          value={it.item_name}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setOrderItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = { ...next[idx], item_name: value };
+                              return next;
+                            });
+                            setItemQuery(value);
+                            setOpenDropdownIndex(idx);
+                          }}
+                          onFocus={() => {
+                            setItemQuery(it.item_name);
+                            setOpenDropdownIndex(idx);
+                          }}
+                          onBlur={() =>
+                            setTimeout(() => setOpenDropdownIndex(null), 150)
+                          }
+                          autoComplete="off"
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                        {openDropdownIndex === idx && itemOptions.length > 0 && (
+                          <div
+                            className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                            style={{ backgroundColor: "#ffffff" }}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            {itemOptions
+                              .filter((opt) =>
+                                opt.item_name
+                                  .toLowerCase()
+                                  .includes(it.item_name.toLowerCase())
+                              )
+                              .slice(0, 20)
+                              .map((opt) => (
+                                <button
+                                  type="button"
+                                  key={opt.internal_code ?? opt.item_name}
+                                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 bg-white"
+                                  onClick={() => {
+                                    setOrderItems((prev) => {
+                                      const next = [...prev];
+                                      next[idx] = {
+                                        ...next[idx],
+                                        item_name: opt.item_name,
+                                        hs_code: opt.hscode ?? "",
+                                      };
+                                      return next;
+                                    });
+                                    setItemQuery("");
+                                    setOpenDropdownIndex(null);
+                                  }}
+                                >
+                                  {opt.item_name}
+                                  {opt.hscode ? (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      {opt.hscode}
+                                    </span>
+                                  ) : null}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">HS CODE</label>
+                        <input
+                          value={it.hs_code}
+                          onChange={(e) =>
+                            setOrderItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = { ...next[idx], hs_code: e.target.value };
+                              return next;
+                            })
+                          }
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Price</label>
+                        <input
+                          type="number"
+                          value={it.price}
+                          onChange={(e) => {
+                            const priceStr = e.target.value;
+                            const price = Number(priceStr) || 0;
+                            const qty = Number(it.quantity) || 0;
+                            setOrderItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                price: priceStr,
+                                total_price: qty * price,
+                              };
+                              return next;
+                            });
+                          }}
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Quantity</label>
+                        <input
+                          type="number"
+                          value={it.quantity}
+                          onChange={(e) => {
+                            const qtyStr = e.target.value;
+                            const qty = Number(qtyStr) || 0;
+                            const price = Number(it.price) || 0;
+                            setOrderItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                quantity: qtyStr,
+                                total_price: qty * price,
+                              };
+                              return next;
+                            });
+                          }}
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Total Price</label>
+                        <input
+                          type="number"
+                          value={it.total_price}
+                          readOnly
+                          className="w-full border rounded-md px-3 py-2 bg-muted/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Measurement</label>
+                        <input
+                          value={it.measurement}
+                          onChange={(e) =>
+                            setOrderItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = { ...next[idx], measurement: e.target.value };
+                              return next;
+                            })
+                          }
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-4 mt-6 -mx-6 -mb-6 px-6 py-5 bg-black rounded-b-md">
+            <span className="text-white text-lg font-semibold">
+              Total Price: $
+              {itemsTotal.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+            <div className="flex items-center gap-4">
+            <Button
+              type="button"
+              size="lg"
+              onClick={handleCalculateTotal}
+            >
+              Calculate Total
+            </Button>
             <Button
               type="button"
               variant="outline"
+              className="border-white text-white hover:bg-white/10"
               onClick={() => router.push(`/diredawa/orders/${orderNumber}`)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button
+              type="submit"
+              disabled={
+                submitting ||
+                orderItems.length === 0 ||
+                orderItems.some((it) => !(Number(it.total_price) > 0))
+              }
+              className="bg-white text-black hover:bg-gray-200 disabled:opacity-50 disabled:pointer-events-none"
+            >
               {submitting ? "Saving..." : "Save Changes"}
             </Button>
+            </div>
           </div>
         </form>
       )}

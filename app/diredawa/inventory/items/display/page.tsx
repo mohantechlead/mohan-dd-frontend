@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DataTable } from "@/components/data-table";
 import { getItemsColumns, Items } from "./columns";
 import useSWR from "swr";
@@ -23,6 +23,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { TableSearch } from "@/components/table-search";
 
 const ITEMS_API_URL = "/api/inventory/items";
 
@@ -37,8 +38,21 @@ export default function DemoPage() {
   const [editHscode, setEditHscode] = useState("");
   const [editInternalCode, setEditInternalCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data, error, isLoading, mutate } = useSWR<Items[]>(ITEMS_API_URL, fetcher);
+
+  const filteredData = useMemo(() => {
+    const list = data || [];
+    const q = search.toLowerCase().trim();
+    if (!q) return list;
+    return list.filter(
+      (i) =>
+        i.item_name.toLowerCase().includes(q) ||
+        (i.hscode?.toLowerCase().includes(q)) ||
+        (i.internal_code?.toLowerCase().includes(q))
+    );
+  }, [data, search]);
 
   useEffect(() => {
     if (error?.status === 401) {
@@ -143,7 +157,10 @@ export default function DemoPage() {
         </Button>
       </div>
       <h1 className="text-2xl text-center my-2 font-bold">Items List</h1>
-      <DataTable columns={columns} data={data || []} />
+      <div className="flex justify-end mb-4">
+        <TableSearch value={search} onChange={setSearch} placeholder="Search items, HS code, internal code..." />
+      </div>
+      <DataTable columns={columns} data={filteredData} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>

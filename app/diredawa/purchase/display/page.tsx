@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Pencil, Trash2 } from "lucide-react";
+import { TableSearch } from "@/components/table-search";
 
 interface PurchaseItem {
   item_name: string;
@@ -40,9 +41,23 @@ export default function DisplayPurchasesPage() {
   const auth = useAuth();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const filteredPurchases = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return purchases;
+    return purchases.filter(
+      (p) =>
+        p.purchase_number.toLowerCase().includes(q) ||
+        p.buyer.toLowerCase().includes(q) ||
+        (p.proforma_ref_no?.toLowerCase().includes(q)) ||
+        p.status.toLowerCase().includes(q) ||
+        p.items.some((i) => i.item_name.toLowerCase().includes(q))
+    );
+  }, [purchases, search]);
 
   const fetchPurchases = async () => {
     try {
@@ -136,7 +151,11 @@ export default function DisplayPurchasesPage() {
           No purchases found.
         </p>
       ) : (
-        <div className="border rounded-md overflow-hidden bg-white">
+        <>
+          <div className="flex justify-end mb-4">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search purchases, vendor, items..." />
+        </div>
+          <div className="border rounded-md overflow-hidden bg-white">
           <table className="w-full text-sm">
             <thead className="bg-muted/60">
               <tr>
@@ -151,7 +170,7 @@ export default function DisplayPurchasesPage() {
               </tr>
             </thead>
             <tbody>
-              {purchases.map((purchase) => {
+              {filteredPurchases.map((purchase) => {
                 const totalPrice = purchase.items.reduce(
                   (sum, item) => sum + item.total_price,
                   0
@@ -218,6 +237,7 @@ export default function DisplayPurchasesPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

@@ -29,7 +29,7 @@ import {
 import { KeyRound, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 
 const USERS_API = "/api/users";
-const ROLES = ["admin", "viewer"] as const;
+const ROLES = ["admin", "logistics", "store"] as const;
 
 interface User {
   id: number;
@@ -56,12 +56,12 @@ export default function UsersPage() {
   const [createUsername, setCreateUsername] = useState("");
   const [createPassword, setCreatePassword] = useState("");
   const [createEmail, setCreateEmail] = useState("");
-  const [createRole, setCreateRole] = useState<string>("viewer");
+  const [createRole, setCreateRole] = useState<string>("logistics");
 
   // Edit form
   const [editUsername, setEditUsername] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState<string>("viewer");
+  const [editRole, setEditRole] = useState<string>("logistics");
   const [editIsActive, setEditIsActive] = useState(true);
 
   // Change password form
@@ -147,7 +147,7 @@ export default function UsersPage() {
       setCreateUsername("");
       setCreatePassword("");
       setCreateEmail("");
-      setCreateRole("viewer");
+      setCreateRole("logistics");
       fetchUsers();
     } catch {
       showToast({

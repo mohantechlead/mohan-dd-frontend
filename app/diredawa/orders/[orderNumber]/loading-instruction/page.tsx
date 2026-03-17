@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface OrderDetail {
   id: string;
@@ -20,6 +29,8 @@ interface ShippingInvoiceDetail {
   invoice_date: string;
   customer_order_number: string;
   sr_no?: number;
+  authorized_by?: string | null;
+  authorized_at?: string | null;
   items: {
     item_name: string;
     price: number;
@@ -41,6 +52,7 @@ export default function LoadingInstructionPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { showToast } = useToast();
+  const auth = useAuth();
 
   const orderNumber = params.orderNumber;
   const invoiceIdFromQuery = searchParams.get("invoiceId");
@@ -48,6 +60,8 @@ export default function LoadingInstructionPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [invoice, setInvoice] = useState<ShippingInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAuthorizeDialog, setShowAuthorizeDialog] = useState(false);
+  const [authorizing, setAuthorizing] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -115,6 +129,50 @@ export default function LoadingInstructionPage() {
     }
   }, [orderNumber, invoiceIdFromQuery, showToast]);
 
+  const handleAuthorizeConfirm = async () => {
+    if (!invoice?.id) return;
+    setAuthorizing(true);
+    try {
+      const res = await fetch(
+        `/api/inventory/shipping-invoices/${invoice.id}/authorize`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to authorize",
+          description:
+            (data as { detail?: string; message?: string })?.detail ||
+            (data as { detail?: string; message?: string })?.message ||
+            "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({
+        title: "Authorized",
+        description: "Loading instruction has been authorized and saved.",
+        variant: "success",
+      });
+      setShowAuthorizeDialog(false);
+      setInvoice((prev) =>
+        prev && data ? { ...prev, ...(data as Partial<ShippingInvoiceDetail>) } : prev
+      );
+    } catch {
+      showToast({
+        title: "Failed to authorize",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setAuthorizing(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
@@ -124,10 +182,49 @@ export default function LoadingInstructionPage() {
         >
           Back to Order Detail
         </Button>
-        <Button variant="outline" onClick={() => window.print()}>
-          Print
-        </Button>
+        <div className="flex items-center gap-2">
+          {invoice?.authorized_by ? (
+            <span className="inline-flex items-center rounded-md bg-muted px-3 py-1.5 text-sm font-medium">
+              Authorized
+            </span>
+          ) : !auth?.isStore ? (
+            <Button
+              variant="outline"
+              onClick={() => setShowAuthorizeDialog(true)}
+              disabled={!invoice}
+            >
+              Authorize
+            </Button>
+          ) : null}
+          <Button variant="outline" onClick={() => window.print()}>
+            Print
+          </Button>
+        </div>
       </div>
+
+      <Dialog open={showAuthorizeDialog} onOpenChange={setShowAuthorizeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Authorize Loading Instruction</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to authorize this loading instruction? This
+              will save the authorization.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAuthorizeDialog(false)}
+              disabled={authorizing}
+            >
+              No
+            </Button>
+            <Button onClick={handleAuthorizeConfirm} disabled={authorizing}>
+              {authorizing ? "Saving..." : "Yes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {loading ? (
         <p className="text-center text-sm text-muted-foreground">

@@ -61,13 +61,29 @@ export default function HomePage() {
         body: JSON.stringify(payload), // send raw object
       });
   
-      const data = await res.json();
-  
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+
       if (!res.ok) {
         console.error("Error creating GRN:", data);
+        const err = (typeof data === "object" && data !== null ? data : {}) as Record<string, unknown>;
+        const message =
+          typeof err?.detail === "string"
+            ? err.detail
+            : Array.isArray(err?.detail)
+              ? (err.detail as string[]).join(". ")
+              : typeof err?.message === "string"
+                ? err.message
+                : typeof err?.error === "string"
+                  ? err.error
+                  : "Please check the form and try again.";
         showToast({
           title: "Failed to create GRN",
-          description: (data as any)?.detail || "Please check the form and try again.",
+          description: message,
           variant: "error",
         });
         return;
@@ -101,12 +117,13 @@ export default function HomePage() {
       <h1 className="text-2xl font-bold mb-6 text-center">Create GRN</h1>
 
       <Form<GrnFormValues>
+        defaultValues={{ items: [] }}
         fields={[
           { name: "date", label: "Date", type: "date", placeholder: "Enter Date" },
           { name: "grn_no", label: "GRN No", placeholder: "Enter GRN No" },
-          { name: "supplier_name", label: "Supplier Name", placeholder: "Enter Supplier Name" },
+          { name: "supplier_name", label: "Supplier Name", placeholder: "Search supplier...", dropdownConfig: { url: "/api/partners/suppliers", displayKey: "name" } },
           { name: "plate_no", label: "Plate No", placeholder: "Enter Plate No" },
-          { name: "purchase_no", label: "Purchase No", placeholder: "Enter Purchase No" },
+          { name: "purchase_no", label: "Purchase No", placeholder: "Search purchase...", dropdownConfig: { url: "/api/purchases", displayKey: "purchase_number" } },
           { name: "ECD_no", label: "ECD no", placeholder: "Enter ECD No" },
           { name: "transporter_name", label: "Transporter Name", placeholder: "Enter Transporter Name" },
           { name: "storekeeper_name", label: "Store Keeper Name", placeholder: "Enter Store Keeper Name" },

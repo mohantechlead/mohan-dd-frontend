@@ -13,6 +13,7 @@ interface AuthContextType {
     role: string;
     userId: number | null;
     isAdmin: boolean;
+    isStore: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -30,11 +31,11 @@ interface AuthProviderProps {
 }
 
 function getInitialAuth() {
-    if (typeof window === "undefined") return { isAuthenticated: false, username: "", role: "viewer", userId: null as number | null };
+    if (typeof window === "undefined") return { isAuthenticated: false, username: "", role: "logistics", userId: null as number | null };
     const isAuthenticated = localStorage.getItem(LOCAL_STORAGE_KEY) === "1";
     const username = localStorage.getItem(LOCAL_USERNAME_KEY) || "";
     const roleRaw = localStorage.getItem(LOCAL_ROLE_KEY);
-    const role = roleRaw ? String(roleRaw).toLowerCase() : "viewer";
+    const role = roleRaw ? String(roleRaw).toLowerCase() : "logistics";
     const userIdRaw = localStorage.getItem(LOCAL_USER_ID_KEY);
     const userId = userIdRaw ? parseInt(userIdRaw, 10) : null;
     return { isAuthenticated, username, role, userId: Number.isNaN(userId) ? null : userId };
@@ -139,7 +140,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const logout = () => {
         setIsAuthenticated(false);
-        setRole("viewer");
+        setRole("logistics");
         setUserId(null);
         localStorage.setItem(LOCAL_STORAGE_KEY, "0");
         localStorage.removeItem(LOCAL_ROLE_KEY);
@@ -159,7 +160,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, logout, loginRequiredRedirect, username, role, userId, isAdmin: (role || "").toLowerCase() === "admin" }}>
+        <AuthContext.Provider value={{ isAuthenticated, login, logout, loginRequiredRedirect, username, role, userId, isAdmin: (role || "").toLowerCase() === "admin",
+        isStore: (role || "").toLowerCase() === "store" }}>
             {children}
         </AuthContext.Provider>
     );

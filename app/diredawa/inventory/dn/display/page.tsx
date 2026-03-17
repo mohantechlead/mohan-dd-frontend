@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DataTable } from "@/components/data-table";
 import { getDNColumns, DN } from "./columns";
 import useSWR from "swr";
@@ -23,6 +23,15 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { TableSearch } from "@/components/table-search";
+import { OverUnderNotification } from "@/components/over-under-notification";
+
+interface OverUnderItem {
+  item_name: string;
+  invoiced: number;
+  delivered: number;
+  variance: number;
+}
 
 const DN_API_URL = "/api/inventory/dn";
 
@@ -36,8 +45,28 @@ export default function DemoPage() {
   const [editCustomerName, setEditCustomerName] = useState("");
   const [editSalesNo, setEditSalesNo] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [overUnderOpen, setOverUnderOpen] = useState(false);
+  const [overUnderData, setOverUnderData] = useState<{
+    dnNo: string;
+    overItems: OverUnderItem[];
+    underItems: OverUnderItem[];
+  } | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR<DN[]>(DN_API_URL, fetcher);
+
+  const filteredData = useMemo(() => {
+    const list = data || [];
+    const q = search.toLowerCase().trim();
+    if (!q) return list;
+    return list.filter(
+      (d) =>
+        d.dn_no.toLowerCase().includes(q) ||
+        d.customer_name.toLowerCase().includes(q) ||
+        d.sales_no.toLowerCase().includes(q) ||
+        d.items.some((i) => i.item_name.toLowerCase().includes(q))
+    );
+  }, [data, search]);
 
   useEffect(() => {
     if (error?.status === 401) {
@@ -74,19 +103,31 @@ export default function DemoPage() {
       const data = await res.json();
       if (!res.ok) {
         showToast({
-          title: "Failed to update DN",
+          title: "Failed to update Delivery Note",
           description: (data as { detail?: string })?.detail || "Please try again.",
           variant: "error",
         });
         return;
       }
-      showToast({ title: "DN updated", variant: "success" });
+      showToast({ title: "Delivery Note updated", variant: "success" });
       setEditOpen(false);
       setSelectedDN(null);
       mutate();
+      const resData = data as { dn_no?: string; over_items?: OverUnderItem[]; under_items?: OverUnderItem[] };
+      if (
+        (resData.over_items && resData.over_items.length > 0) ||
+        (resData.under_items && resData.under_items.length > 0)
+      ) {
+        setOverUnderData({
+          dnNo: resData.dn_no || selectedDN?.dn_no || "",
+          overItems: resData.over_items || [],
+          underItems: resData.under_items || [],
+        });
+        setOverUnderOpen(true);
+      }
     } catch {
       showToast({
-        title: "Failed to update DN",
+        title: "Failed to update Delivery Note",
         description: "Something went wrong.",
         variant: "error",
       });
@@ -106,19 +147,19 @@ export default function DemoPage() {
       const data = await res.json();
       if (!res.ok) {
         showToast({
-          title: "Failed to delete DN",
+          title: "Failed to delete Delivery Note",
           description: (data as { detail?: string })?.detail || "Please try again.",
           variant: "error",
         });
         return;
       }
-      showToast({ title: "DN deleted", variant: "success" });
+      showToast({ title: "Delivery Note deleted", variant: "success" });
       setDeleteOpen(false);
       setSelectedDN(null);
       mutate();
     } catch {
       showToast({
-        title: "Failed to delete DN",
+        title: "Failed to delete Delivery Note",
         description: "Something went wrong.",
         variant: "error",
       });
@@ -136,16 +177,19 @@ export default function DemoPage() {
     <div className="container mx-auto py-10">
       <div className="flex justify-start my-4">
         <Button onClick={() => router.push("/diredawa/inventory/dn/create")}>
-          Create DN
+          Create Delivery Note
         </Button>
       </div>
-      <h1 className="text-2xl text-center my-2 font-bold">DN List</h1>
-      <DataTable columns={columns} data={data || []} />
+      <h1 className="text-2xl text-center my-2 font-bold">Delivery Note List</h1>
+      <div className="flex justify-end mb-4">
+        <TableSearch value={search} onChange={setSearch} placeholder="Search delivery notes, customer, items..." />
+      </div>
+      <DataTable columns={columns} data={filteredData} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit DN</DialogTitle>
+            <DialogTitle>Edit Delivery Note</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEdit}>
             <FieldGroup>
@@ -173,10 +217,10 @@ export default function DemoPage() {
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete DN</DialogTitle>
+            <DialogTitle>Delete Delivery Note</DialogTitle>
           </DialogHeader>
           <p>
-            Are you sure you want to delete DN &quot;{selectedDN?.dn_no}&quot;? This action cannot be undone.
+            Are you sure you want to delete delivery note &quot;{selectedDN?.dn_no}&quot;? This action cannot be undone.
           </p>
           <DialogFooter className="mt-4">
             <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
@@ -188,6 +232,16 @@ export default function DemoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {overUnderData && (
+        <OverUnderNotification
+          open={overUnderOpen}
+          onOpenChange={setOverUnderOpen}
+          dnNo={overUnderData.dnNo}
+          overItems={overUnderData.overItems}
+          underItems={overUnderData.underItems}
+        />
+      )}
     </div>
   );
 }

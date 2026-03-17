@@ -34,6 +34,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Base nav data - Status and Approvals are admin-only
+// storeVisible: true = store role can see this item (Display Sales, Add GRN, Add DN, Loading Instruction)
+// adminLogisticsHidden: true = hide from admin and logistics (only store sees it)
 const baseNavMain = [
   {
     title: "Status",
@@ -48,101 +50,54 @@ const baseNavMain = [
   },
   {
     title: "Customers",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Create Customers",
-          url: "/diredawa/partners/customers/create",
-        },
-        {
-          title: "Display Customers",
-          url: "/diredawa/partners/customers/display",
-        },
+    url: "#",
+    icon: Bot,
+    items: [
+      { title: "Create Customers", url: "/diredawa/partners/customers/create" },
+      { title: "Display Customers", url: "/diredawa/partners/customers/display" },
     ],
   },
   {
     title: "Suppliers",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Create Suppliers",
-          url: "/diredawa/partners/suppliers/create",
-        },
-        {
-          title: "Display Suppliers",
-          url: "/diredawa/partners/suppliers/display",
-        },
+    url: "#",
+    icon: BookOpen,
+    items: [
+      { title: "Create Suppliers", url: "/diredawa/partners/suppliers/create" },
+      { title: "Display Suppliers", url: "/diredawa/partners/suppliers/display" },
     ],
   },
   {
     title: "Sales",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "Create Sales",
-          url: "/diredawa/orders/create",
-        },
-        {
-          title: "Display Sales",
-          url: "/diredawa/orders/display",
-        },
-        {
-          title: "Rejected Orders",
-          url: "/diredawa/sales/rejected",
-        },
-        {
-          title: "Completed Orders",
-          url: "/diredawa/sales/completed",
-        },
+    url: "#",
+    icon: Settings2,
+    items: [
+      { title: "Create Sales", url: "/diredawa/orders/create" },
+      { title: "Display Sales", url: "/diredawa/orders/display" },
+      { title: "Authorized loading instructions", url: "/diredawa/loading-instructions/authorized", storeVisible: true, adminLogisticsHidden: true },
+      { title: "Rejected Orders", url: "/diredawa/sales/rejected" },
+      { title: "Completed Orders", url: "/diredawa/sales/completed" },
     ],
   },
   {
     title: "Purchase",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "Create Purchase",
-          url: "/diredawa/purchase/create",
-        },
-        {
-          title: "Display Purchase",
-          url: "/diredawa/purchase/display",
-        },
-        {
-          title: "Rejected Purchases",
-          url: "/diredawa/purchase/rejected",
-        },
-        {
-          title: "Completed Purchases",
-          url: "/diredawa/purchase/completed",
-        },
+    url: "#",
+    icon: Settings2,
+    items: [
+      { title: "Create Purchase", url: "/diredawa/purchase/create" },
+      { title: "Display Purchase", url: "/diredawa/purchase/display" },
+      { title: "Rejected Purchases", url: "/diredawa/purchase/rejected" },
+      { title: "Completed Purchases", url: "/diredawa/purchase/completed" },
     ],
   },
   {
     title: "Inventory",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "GRN",
-          url: "/diredawa/inventory/grn/create",
-        },
-        {
-          title: "DN",
-          url: "/diredawa/inventory/dn/create",
-        },
-        {
-          title: "Items",
-          url: "/diredawa/inventory/items/create",
-        },
-        {
-          title: "Stock",
-          url: "/diredawa/inventory/stock",
-        },
+    url: "#",
+    icon: Settings2,
+    items: [
+      { title: "Add GRN", url: "/diredawa/inventory/grn/create", storeVisible: true },
+      { title: "Add DN", url: "/diredawa/inventory/dn/create", storeVisible: true },
+      { title: "Items", url: "/diredawa/inventory/items/create" },
+      { title: "Stock", url: "/diredawa/inventory/stock" },
     ],
   },
   {
@@ -195,12 +150,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const auth = useAuth();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
-  // Use isAdmin only after mount so server and first client render match (avoids hydration mismatch from localStorage)
   const isAdmin = mounted ? (auth?.isAdmin ?? false) : false;
+  const isStore = mounted ? (auth?.isStore ?? false) : false;
 
   const navMain = React.useMemo(() => {
-    return baseNavMain.filter((item) => !(item as { adminOnly?: boolean }).adminOnly || isAdmin);
-  }, [isAdmin]);
+    let items = baseNavMain.filter((item) => !(item as { adminOnly?: boolean }).adminOnly || isAdmin);
+    if (isStore) {
+      items = items
+        .filter((section) => {
+          const sectionItems = (section as { items?: { storeVisible?: boolean }[] }).items ?? [];
+          return sectionItems.some((sub) => (sub as { storeVisible?: boolean }).storeVisible);
+        })
+        .map((section) => ({
+          ...section,
+          items: ((section as { items?: { storeVisible?: boolean; title: string; url: string }[] }).items ?? []).filter(
+            (sub) => (sub as { storeVisible?: boolean }).storeVisible
+          ),
+        })) as typeof baseNavMain;
+    } else {
+      // Admin and logistics: hide items with adminLogisticsHidden
+      items = items.map((section) => ({
+        ...section,
+        items: ((section as { items?: { adminLogisticsHidden?: boolean }[] }).items ?? []).filter(
+          (sub) => !(sub as { adminLogisticsHidden?: boolean }).adminLogisticsHidden
+        ),
+      })) as typeof baseNavMain;
+    }
+    return items;
+  }, [isAdmin, isStore]);
 
   return (
     <Sidebar collapsible="icon" {...props}>

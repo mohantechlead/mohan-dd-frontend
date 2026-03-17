@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DataTable } from "@/components/data-table";
 import { getCustomerColumns, Customer } from "./columns";
 import useSWR from "swr";
@@ -23,6 +23,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { TableSearch } from "@/components/table-search";
 
 const CUSTOMER_API_URL = "/api/partners/customers";
 
@@ -39,8 +40,23 @@ export default function DemoPage() {
   const [editAddress, setEditAddress] = useState("");
   const [editTinNumber, setEditTinNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data, error, isLoading, mutate } = useSWR<Customer[]>(CUSTOMER_API_URL, fetcher);
+
+  const filteredData = useMemo(() => {
+    const list = data || [];
+    const q = search.toLowerCase().trim();
+    if (!q) return list;
+    return list.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.email?.toLowerCase().includes(q)) ||
+        (c.phone?.toLowerCase().includes(q)) ||
+        (c.address?.toLowerCase().includes(q)) ||
+        (c.tin_number?.toLowerCase().includes(q))
+    );
+  }, [data, search]);
 
   useEffect(() => {
     if (error?.status === 401) {
@@ -149,7 +165,10 @@ export default function DemoPage() {
         </Button>
       </div>
       <h1 className="text-2xl text-center my-2 font-bold">Customers List</h1>
-      <DataTable columns={columns} data={data || []} />
+      <div className="flex justify-end mb-4">
+        <TableSearch value={search} onChange={setSearch} placeholder="Search customers, name, email, phone..." />
+      </div>
+      <DataTable columns={columns} data={filteredData} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>

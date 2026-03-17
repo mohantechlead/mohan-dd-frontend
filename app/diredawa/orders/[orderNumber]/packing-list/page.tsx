@@ -63,6 +63,7 @@ interface ShippingInvoiceDetail {
     bags?: number | null;
     net_weight?: number | null;
     gross_weight?: number | null;
+    country_of_origin?: string | null;
   }[];
 }
 
@@ -161,10 +162,25 @@ export default function PackingListPage() {
         bags: null,
         net_weight: null,
         gross_weight: null,
+        country_of_origin: order.country_of_origin || null,
       }));
     }
     return [];
   }, [invoice, order]);
+
+  const countriesDisplay = useMemo(() => {
+    if (itemsForTable.length > 0) {
+      const countries = [
+        ...new Set(
+          itemsForTable
+            .map((i) => i.country_of_origin?.trim())
+            .filter((c) => c)
+        ),
+      ];
+      if (countries.length > 0) return countries.join(" | ");
+    }
+    return order?.country_of_origin || "";
+  }, [itemsForTable, order]);
 
   const { totalBags, totalNetKg } = useMemo(() => {
     let bags = 0;
@@ -343,7 +359,7 @@ export default function PackingListPage() {
             <div className="space-y-1">
               <div>
                 <p className="font-semibold">Country of Origin</p>
-                <p>{order.country_of_origin}</p>
+                <p>{countriesDisplay}</p>
               </div>
               <div>
                 <p className="font-semibold">Final Destination</p>
@@ -414,7 +430,9 @@ export default function PackingListPage() {
                       <td className="px-3 py-2 text-right">
                         {grossLabel && `${grossLabel} KG`}
                       </td>
-                      <td className="px-3 py-2">{order.country_of_origin}</td>
+                      <td className="px-3 py-2">
+                        {item.country_of_origin || countriesDisplay}
+                      </td>
                     </tr>
                   );
                 })}

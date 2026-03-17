@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DataTable } from "@/components/data-table";
 import { getGRNColumns, GRN } from "./columns";
 import useSWR from "swr";
@@ -23,6 +23,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { TableSearch } from "@/components/table-search";
 
 const GRN_API_URL = "/api/inventory/grn";
 
@@ -37,8 +38,22 @@ export default function DemoPage() {
   const [editPlateNo, setEditPlateNo] = useState("");
   const [editPurchaseNo, setEditPurchaseNo] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data, error, isLoading, mutate } = useSWR<GRN[]>(GRN_API_URL, fetcher);
+
+  const filteredData = useMemo(() => {
+    const list = data || [];
+    const q = search.toLowerCase().trim();
+    if (!q) return list;
+    return list.filter(
+      (g) =>
+        String(g.grn_no).toLowerCase().includes(q) ||
+        g.supplier_name.toLowerCase().includes(q) ||
+        g.purchase_no.toLowerCase().includes(q) ||
+        g.items.some((i) => i.item_name.toLowerCase().includes(q))
+    );
+  }, [data, search]);
 
   useEffect(() => {
     if (error?.status === 401) {
@@ -158,7 +173,10 @@ export default function DemoPage() {
         </Button>
       </div>
       <h1 className="text-2xl text-center my-2 font-bold">GRN List</h1>
-      <DataTable columns={columns} data={data || []} />
+      <div className="flex justify-end mb-4">
+        <TableSearch value={search} onChange={setSearch} placeholder="Search GRN, supplier, items..." />
+      </div>
+      <DataTable columns={columns} data={filteredData} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>

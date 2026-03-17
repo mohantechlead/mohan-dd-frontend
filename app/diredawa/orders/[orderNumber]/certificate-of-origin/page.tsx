@@ -46,6 +46,7 @@ interface ShippingInvoiceItem {
   bags?: number | null;
   net_weight?: number | null;
   gross_weight?: number | null;
+  country_of_origin?: string | null;
 }
 
 interface ShippingInvoiceDetail {
@@ -158,6 +159,7 @@ export default function CertificateOfOriginPage() {
         bags: null,
         net_weight: null,
         gross_weight: null,
+        country_of_origin: order.country_of_origin || null,
       }));
     }
     return [];
@@ -250,110 +252,167 @@ export default function CertificateOfOriginPage() {
             produced that the following goods is:
           </div>
 
-          {/* Brands / Description / Weight table */}
+          {/* Brands / Description / Country of Origin / Weight table */}
           <div className="mt-4">
             <table className="w-full text-xs border-t border-b">
               <thead>
                 <tr className="border-b">
-                  <th className="px-3 py-2 text-left w-1/4">Brands</th>
-                  <th className="px-3 py-2 text-left w-2/4">
+                  <th className="px-3 py-2 text-left w-1/5">Brands</th>
+                  <th className="px-3 py-2 text-left w-2/5">
                     Description of Goods
                   </th>
-                  <th className="px-3 py-2 text-left w-1/4">Weight</th>
+                  <th className="px-3 py-2 text-left w-1/5">Country of Origin</th>
+                  <th className="px-3 py-2 text-left w-1/5">Weight</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="align-top">
-                  <td className="px-3 py-3">
-                    <div className="font-semibold uppercase">
-                      {order.shipper}
-                    </div>
-                    {order.shipper_address && (
-                      <div className="text-[11px] text-muted-foreground">
-                        {order.shipper_address}
-                      </div>
-                    )}
-                    <div className="text-[11px] text-muted-foreground">
-                      DIRE DAWA FREE TRADE ZONE BRANCH
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    {itemsForTable.length > 0 && (
-                      <>
-                        <div>
-                          {totalNetKg.toLocaleString(undefined, {
-                            maximumFractionDigits: 3,
-                          })}{" "}
-                          KG{" "}
-                          {itemsForTable[0].item_name}
-                        </div>
-                        <div>
-                          AS PER PROFORMA INV NO {order.proforma_ref_no} DATED{" "}
-                          {new Date(order.order_date).toLocaleDateString(
-                            undefined,
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            }
+                {itemsForTable.length > 0 ? (
+                  itemsForTable.map((item, idx) => {
+                    const netKg =
+                      item.net_weight != null
+                        ? item.net_weight
+                        : item.quantity != null
+                          ? item.quantity
+                          : 0;
+                    const grossKg =
+                      item.gross_weight != null
+                        ? item.gross_weight
+                        : item.quantity != null
+                          ? item.quantity
+                          : 0;
+                    return (
+                      <tr key={idx} className="align-top border-b last:border-b-0">
+                        <td className="px-3 py-3">
+                          {idx === 0 ? (
+                            <>
+                              <div className="font-semibold uppercase">
+                                {order.shipper}
+                              </div>
+                              {order.shipper_address && (
+                                <div className="text-[11px] text-muted-foreground">
+                                  {order.shipper_address}
+                                </div>
+                              )}
+                              <div className="text-[11px] text-muted-foreground">
+                                DIRE DAWA FREE TRADE ZONE BRANCH
+                              </div>
+                            </>
+                          ) : (
+                            "—"
                           )}
-                        </div>
-                        <div>
-                          PO NUMBER: {invoice.customer_order_number}
-                        </div>
-                        <div>HS CODE: {mainOrderItem?.hs_code ?? ""}</div>
-                      </>
-                    )}
-                  </td>
-                  <td className="px-3 py-3">
-                    <div>
-                      NW{" "}
-                      {totalNetKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 3,
-                      })}{" "}
-                      KG
-                    </div>
-                    <div>
-                      GW{" "}
-                      {totalGrossKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 3,
-                      })}{" "}
-                      KG
-                    </div>
-                  </td>
-                </tr>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div>
+                            {netKg.toLocaleString(undefined, {
+                              maximumFractionDigits: 3,
+                            })}{" "}
+                            KG {item.item_name}
+                          </div>
+                          {idx === 0 && (
+                            <>
+                              <div>
+                                AS PER PROFORMA INV NO {order.proforma_ref_no}{" "}
+                                DATED{" "}
+                                {new Date(order.order_date).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                  }
+                                )}
+                              </div>
+                              <div>
+                                PO NUMBER: {invoice.customer_order_number}
+                              </div>
+                              <div>
+                                HS CODE: {mainOrderItem?.hs_code ?? ""}
+                              </div>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
+                          {item.country_of_origin || "CHINA"}
+                        </td>
+                        <td className="px-3 py-3">
+                          <div>
+                            NW{" "}
+                            {netKg.toLocaleString(undefined, {
+                              maximumFractionDigits: 3,
+                            })}{" "}
+                            KG
+                          </div>
+                          <div>
+                            GW{" "}
+                            {grossKg.toLocaleString(undefined, {
+                              maximumFractionDigits: 3,
+                            })}{" "}
+                            KG
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-3">
+                      No items
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Footer line with loaded by / destination / product of */}
-          <div className="text-xs mt-8 space-y-2">
-            <div className="flex justify-between">
-              <div>
-                Loaded by ______{" "}
-                <span className="font-semibold">MOHAN PLC</span>
+          <div className="text-xs mt-8">
+            <div className="flex justify-between gap-8">
+              <div className="space-y-2">
+                <div>
+                  Loaded by ______{" "}
+                  <span className="font-semibold">MOHAN PLC</span>
+                </div>
+                <div>
+                  Are really PRODUCT OF{" "}
+                  <span className="font-semibold">
+                    {itemsForTable.length > 0
+                      ? [
+                          ...new Set(
+                            itemsForTable
+                              .map((i) => i.country_of_origin || "CHINA")
+                              .filter(Boolean)
+                          ),
+                        ].join(" | ")
+                      : order.country_of_origin || "CHINA"}
+                  </span>
+                </div>
               </div>
-              <div>
-                Destination{" "}
-                <span className="font-semibold">
-                  {order.final_destination || "MOHAN INTERNATIONAL WAREHOUSE, ADDIS ABABA"}
-                </span>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <div>
-                Are really PRODUCT OF{" "}
-                <span className="font-semibold">
-                  {order.country_of_origin || "CHINA"}
-                </span>
-              </div>
-              <div>
-                Addis Ababa,{" "}
-                {new Date(order.order_date).toLocaleDateString(undefined, {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
+              <div className="text-left space-y-1 min-w-[200px]">
+                <div>
+                  Destination{" "}
+                  <span className="font-semibold">
+                    {order.buyer ? (
+                      <>
+                        {order.buyer}
+                        {order.buyer_address && (
+                          <span className="block font-normal mt-0.5">
+                            {order.buyer_address}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      order.final_destination || "MOHAN INTERNATIONAL WAREHOUSE, ADDIS ABABA"
+                    )}
+                  </span>
+                </div>
+                <div>
+                  Addis Ababa,{" "}
+                  {new Date(order.order_date).toLocaleDateString(undefined, {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                </div>
               </div>
             </div>
           </div>

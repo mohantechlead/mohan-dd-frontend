@@ -19,6 +19,7 @@ interface ShippingItemState {
   gross_weight: string;
   grade: string;
   brand: string;
+  country_of_origin: string;
 }
 
 interface ShippingInvoiceDetail {
@@ -46,6 +47,7 @@ interface ShippingInvoiceDetail {
     gross_weight?: number | null;
     grade?: string | null;
     brand?: string | null;
+    country_of_origin?: string | null;
   }[];
 }
 
@@ -85,6 +87,7 @@ export default function EditShippingInvoicePage() {
     gross_weight: "",
     grade: "",
     brand: "",
+    country_of_origin: "",
   });
 
   const [itemOptions, setItemOptions] = useState<
@@ -128,6 +131,7 @@ export default function EditShippingInvoicePage() {
               it.gross_weight != null ? String(it.gross_weight) : "",
             grade: it.grade ?? "",
             brand: it.brand ?? "",
+            country_of_origin: it.country_of_origin ?? "",
           }));
           setShippingItems(items);
           setItemsTotal(
@@ -219,6 +223,7 @@ export default function EditShippingInvoicePage() {
         gross_weight: it.gross_weight ? Number(it.gross_weight) : null,
         grade: it.grade?.trim() || null,
         brand: it.brand?.trim() || null,
+        country_of_origin: it.country_of_origin?.trim() || null,
       })),
     };
 
@@ -494,6 +499,7 @@ export default function EditShippingInvoicePage() {
                       gross_weight: "",
                       grade: "",
                       brand: "",
+                      country_of_origin: "",
                     });
                     setItemQuery("");
                   }}
@@ -700,6 +706,20 @@ export default function EditShippingInvoicePage() {
                     }))
                   }
                   className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Country of Origin</label>
+                <input
+                  value={shippingItem.country_of_origin}
+                  onChange={(e) =>
+                    setShippingItem((prev) => ({
+                      ...prev,
+                      country_of_origin: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                  placeholder="e.g. CHINA"
                 />
               </div>
             </div>
@@ -941,6 +961,22 @@ export default function EditShippingInvoicePage() {
                           })
                         }
                         className="w-full border rounded-md px-3 py-2 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-medium mb-1">Country of Origin</label>
+                      <input
+                        value={it.country_of_origin}
+                        onChange={(e) =>
+                          setShippingItems((prev) => {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], country_of_origin: e.target.value };
+                            return next;
+                          })
+                        }
+                        className="w-full border rounded-md px-3 py-2 bg-white"
+                        placeholder="e.g. CHINA"
                       />
                     </div>
                     </div>
