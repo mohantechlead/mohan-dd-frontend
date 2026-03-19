@@ -47,14 +47,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <SidebarInset>
         {/* Header - hidden when printing so output starts from document logo */}
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 print:hidden">
-          <div className="flex items-center gap-2 px-4">
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 print:hidden">
+          <div className="flex w-full items-center gap-3 px-4">
             <SidebarTrigger className="-ml-1" />
+            <div className="h-6 w-px bg-border" />
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">Mohan PLC</div>
+              <div className="truncate text-xs text-muted-foreground">Dire Dawa</div>
+            </div>
           </div>
         </header>
 
         {/* Page Content - no print layout changes; print exactly what's on screen (sidebar/header hidden via print:hidden above) */}
-        <main className="p-4">{children}</main>
+        <main className="min-h-[calc(100svh-4rem)] bg-muted/20">
+          <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
+            {children}
+          </div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

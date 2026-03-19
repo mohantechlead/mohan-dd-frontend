@@ -77,6 +77,15 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
+          <div className="flex items-center justify-center pb-2">
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl">
+              <img
+                src="/logo.ico"
+                alt="Mohan PLC"
+                className="h-10 w-10"
+              />
+            </div>
+          </div>
           <CardTitle>Login to your account</CardTitle>
           <CardDescription>
             Enter your username below to login to your account

@@ -58,6 +58,7 @@ export default function EditOrderPage() {
   const [showShipperDropdown, setShowShipperDropdown] = useState(false);
   const [orderItems, setOrderItems] = useState<OrderItemForm[]>([]);
   const [itemsTotal, setItemsTotal] = useState(0);
+  const [isTotalCalculated, setIsTotalCalculated] = useState(false);
   const [currentItem, setCurrentItem] = useState<OrderItemForm>({
     item_name: "",
     hs_code: "",
@@ -187,9 +188,11 @@ export default function EditOrderPage() {
           }));
           setOrderItems(items);
           setItemsTotal(items.reduce((sum, it) => sum + (Number(it.total_price) || 0), 0));
+          setIsTotalCalculated(true);
         } else {
           setOrderItems([]);
           setItemsTotal(0);
+          setIsTotalCalculated(false);
         }
       } catch {
         showToast({
@@ -213,11 +216,21 @@ export default function EditOrderPage() {
       0
     );
     setItemsTotal(total);
+    setIsTotalCalculated(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderNumber) return;
+
+    if (!isTotalCalculated) {
+      showToast({
+        title: "Calculate total first",
+        description: "Please click Calculate Total before saving.",
+        variant: "error",
+      });
+      return;
+    }
 
     if (orderItems.length === 0) {
       showToast({
@@ -821,6 +834,7 @@ export default function EditOrderPage() {
                     total_price: total,
                   },
                 ]);
+                setIsTotalCalculated(false);
                 setCurrentItem({
                   item_name: "",
                   hs_code: "",
@@ -1025,6 +1039,8 @@ export default function EditOrderPage() {
               type="button"
               size="lg"
               onClick={handleCalculateTotal}
+              variant="cta"
+              className="animate-pulse"
             >
               Calculate Total
             </Button>
@@ -1040,6 +1056,7 @@ export default function EditOrderPage() {
               type="submit"
               disabled={
                 submitting ||
+                !isTotalCalculated ||
                 orderItems.length === 0 ||
                 orderItems.some((it) => !(Number(it.total_price) > 0))
               }

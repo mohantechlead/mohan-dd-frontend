@@ -2,17 +2,15 @@
 
 import * as React from "react";
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
+  Building2,
+  CheckSquare,
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
+  ShoppingCart,
   Users,
+  Users2,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -40,14 +38,14 @@ const baseNavMain = [
   {
     title: "Dashboard",
     url: "/diredawa/dashboard",
-    icon: PieChart,
+    icon: LayoutDashboard,
     adminOnly: true,
     items: [{ title: "Admin Dashboard", url: "/diredawa/dashboard" }],
   },
   {
     title: "Status",
     url: "#",
-    icon: SquareTerminal,
+    icon: ClipboardList,
     isActive: true,
     adminOnly: true,
     items: [
@@ -58,7 +56,7 @@ const baseNavMain = [
   {
     title: "Customers",
     url: "#",
-    icon: Bot,
+    icon: Users2,
     items: [
       { title: "Create Customers", url: "/diredawa/partners/customers/create" },
       { title: "Display Customers", url: "/diredawa/partners/customers/display" },
@@ -67,7 +65,7 @@ const baseNavMain = [
   {
     title: "Suppliers",
     url: "#",
-    icon: BookOpen,
+    icon: Building2,
     items: [
       { title: "Create Suppliers", url: "/diredawa/partners/suppliers/create" },
       { title: "Display Suppliers", url: "/diredawa/partners/suppliers/display" },
@@ -76,7 +74,7 @@ const baseNavMain = [
   {
     title: "Sales",
     url: "#",
-    icon: Settings2,
+    icon: ShoppingCart,
     items: [
       { title: "Create Sales", url: "/diredawa/orders/create" },
       { title: "Display Sales", url: "/diredawa/orders/display" },
@@ -88,7 +86,7 @@ const baseNavMain = [
   {
     title: "Purchase",
     url: "#",
-    icon: Settings2,
+    icon: ShoppingBag,
     items: [
       { title: "Create Purchase", url: "/diredawa/purchase/create" },
       { title: "Display Purchase", url: "/diredawa/purchase/display" },
@@ -99,7 +97,7 @@ const baseNavMain = [
   {
     title: "Inventory",
     url: "#",
-    icon: Settings2,
+    icon: Package,
     items: [
       { title: "Add GRN", url: "/diredawa/inventory/grn/create", storeVisible: true },
       { title: "Display GRN", url: "/diredawa/inventory/grn/display", storeVisible: true },
@@ -112,7 +110,7 @@ const baseNavMain = [
   {
     title: "Approvals",
     url: "#",
-    icon: Settings2,
+    icon: CheckSquare,
     adminOnly: true,
     items: [
       { title: "Order Approval", url: "/diredawa/approvals/orders" },
@@ -190,7 +188,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader></SidebarHeader>
+      <SidebarHeader className="gap-3 border-b border-sidebar-border">
+        <div className="flex items-center gap-3 px-1.5 py-1">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold">
+            M
+          </div>
+          <div className="min-w-0 group-data-[collapsible=icon]/sidebar-wrapper:hidden">
+            <div className="truncate text-sm font-semibold leading-tight">
+              Mohan PLC
+            </div>
+            <div className="truncate text-xs text-sidebar-foreground/70">
+              Dire Dawa
+            </div>
+          </div>
+        </div>
+      </SidebarHeader>
       <SidebarContent>
         {mounted ? <NavMain items={navMain} /> : <SidebarNavSkeleton />}
       </SidebarContent>

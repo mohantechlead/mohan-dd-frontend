@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed inset-y-0 right-0 flex items-start justify-end pointer-events-none pr-4 pt-4">
+      <div className="fixed inset-y-0 right-0 z-50 flex items-start justify-end pointer-events-none pr-4 pt-4">
         {toast && (
           <div
             className={`pointer-events-auto w-80 rounded-md shadow-lg border px-4 py-3 space-y-1 translate-x-0 transition-transform text-white

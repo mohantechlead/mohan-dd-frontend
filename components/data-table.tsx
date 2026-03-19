@@ -4,8 +4,10 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { useEffect, useMemo, useState } from "react"
 
 import {
   Table,
@@ -15,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { TablePagination, clamp, getPageCount } from "@/components/table-pagination"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -25,14 +28,29 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const totalItems = data.length
+  const pageSizeOptions = useMemo(() => [10, 20, 50, 100], [])
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
+
+  useEffect(() => {
+    const pageCount = getPageCount(totalItems, pagination.pageSize)
+    const nextIndex = clamp(pagination.pageIndex, 0, pageCount - 1)
+    if (nextIndex !== pagination.pageIndex) {
+      setPagination((p) => ({ ...p, pageIndex: nextIndex }))
+    }
+  }, [pagination.pageIndex, pagination.pageSize, totalItems])
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
+    state: { pagination },
   })
 
   return (
-    <div className="overflow-hidden rounded-md border">
+    <div className="overflow-hidden rounded-md border bg-background">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -53,8 +71,8 @@ export function DataTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
+          {table.getPaginationRowModel().rows?.length ? (
+            table.getPaginationRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
@@ -75,6 +93,15 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
+
+      <TablePagination
+        pageIndex={table.getState().pagination.pageIndex}
+        pageSize={table.getState().pagination.pageSize}
+        totalItems={totalItems}
+        pageSizeOptions={pageSizeOptions}
+        onPageIndexChange={(next) => table.setPageIndex(next)}
+        onPageSizeChange={(next) => table.setPageSize(next)}
+      />
     </div>
   )
 }

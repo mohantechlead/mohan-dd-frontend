@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
 
@@ -180,6 +181,16 @@ export default function OrderApprovalsPage() {
                   <td className="px-4 py-2">{order.order_number}</td>
                   <td className="px-4 py-2 capitalize">{order.status}</td>
                   <td className="px-4 py-2 flex gap-2 items-center">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        router.push(`/diredawa/orders/${order.order_number}`)
+                      }
+                      title="View"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                     <Button
                       size="sm"
                       onClick={() => handleApprove(order.order_number)}

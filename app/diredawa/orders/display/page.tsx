@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
+import { TablePagination, slicePage } from "@/components/table-pagination";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,8 @@ export default function DisplayOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -60,6 +63,15 @@ export default function DisplayOrdersPage() {
         o.items.some((i) => i.item_name.toLowerCase().includes(q))
     );
   }, [orders, search]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [search]);
+
+  const pagedOrders = useMemo(
+    () => slicePage(filteredOrders, pageIndex, pageSize),
+    [filteredOrders, pageIndex, pageSize]
+  );
 
   const fetchOrders = async () => {
     try {
@@ -203,7 +215,7 @@ export default function DisplayOrdersPage() {
                   </td>
                 </tr>
               ) : (
-              filteredOrders.flatMap((order, orderIdx) =>
+              pagedOrders.flatMap((order, orderIdx) =>
                 order.items.length > 0
                   ? order.items.map((item, idx) => (
                       <tr
@@ -385,6 +397,19 @@ export default function DisplayOrdersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="border border-border border-t-0 rounded-b-md overflow-hidden bg-white">
+          <TablePagination
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            totalItems={filteredOrders.length}
+            onPageIndexChange={setPageIndex}
+            onPageSizeChange={(next) => {
+              setPageSize(next);
+              setPageIndex(0);
+            }}
+          />
         </div>
         </>
       )}

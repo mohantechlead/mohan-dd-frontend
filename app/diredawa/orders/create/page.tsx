@@ -113,6 +113,7 @@ export default function CreateOrderPage() {
 
   const [items, setItems] = useState<OrderItem[]>([]);
   const [itemsTotal, setItemsTotal] = useState(0);
+  const [isTotalCalculated, setIsTotalCalculated] = useState(false);
   const [itemOptions, setItemOptions] = useState<
     { item_name: string; hscode: string; internal_code: string | null }[]
   >([]);
@@ -228,6 +229,7 @@ export default function CreateOrderPage() {
   const handleCalculateTotal = () => {
     const total = items.reduce((sum, it) => sum + it.total_price, 0);
     setItemsTotal(total);
+    setIsTotalCalculated(true);
   };
 
   const handleAddItem = () => {
@@ -255,6 +257,7 @@ export default function CreateOrderPage() {
     };
 
     setItems((prev) => [...prev, itemToAdd]);
+    setIsTotalCalculated(false);
     setCurrentItem({
       item_name: "",
       hs_code: "",
@@ -293,6 +296,15 @@ export default function CreateOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isTotalCalculated) {
+      showToast({
+        title: "Calculate total first",
+        description: "Please click Calculate Total before submitting.",
+        variant: "error",
+      });
+      return;
+    }
 
     // Check for duplicate order number before submitting
     try {
@@ -891,7 +903,9 @@ export default function CreateOrderPage() {
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="cta"
+                size="lg"
+                className="w-full animate-pulse"
                 onClick={handleCalculateTotal}
               >
                 Calculate Total
@@ -938,7 +952,7 @@ export default function CreateOrderPage() {
             <Button
               type="submit"
               className="px-10"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isTotalCalculated}
             >
               {isSubmitting ? (
                 <>

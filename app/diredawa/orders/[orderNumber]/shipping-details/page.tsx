@@ -65,6 +65,7 @@ export default function ShippingDetailsPage() {
 
   const [shippingItems, setShippingItems] = useState<ShippingItemState[]>([]);
   const [itemsTotal, setItemsTotal] = useState(0);
+  const [isTotalCalculated, setIsTotalCalculated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleCalculateTotal = () => {
@@ -73,6 +74,7 @@ export default function ShippingDetailsPage() {
       0
     );
     setItemsTotal(total);
+    setIsTotalCalculated(true);
   };
 
   const [itemOptions, setItemOptions] = useState<
@@ -106,6 +108,15 @@ export default function ShippingDetailsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderNumber) return;
+
+    if (!isTotalCalculated) {
+      showToast({
+        title: "Calculate total first",
+        description: "Please click Calculate Total before submitting.",
+        variant: "error",
+      });
+      return;
+    }
 
     const invoiceNumber = shippingForm.invoice_number.trim();
     if (!invoiceNumber) {
@@ -706,6 +717,7 @@ export default function ShippingDetailsPage() {
                     total_price: total,
                   },
                 ]);
+                setIsTotalCalculated(false);
                 setShippingItem({
                   item_name: "",
                   price: "",
@@ -735,8 +747,9 @@ export default function ShippingDetailsPage() {
             </div>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant="cta"
+              size="lg"
+              className="w-full animate-pulse"
               onClick={handleCalculateTotal}
             >
               Calculate Total
@@ -791,7 +804,7 @@ export default function ShippingDetailsPage() {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting || !isTotalCalculated}>
             {submitting ? "Submitting..." : "Submit"}
           </Button>
         </div>

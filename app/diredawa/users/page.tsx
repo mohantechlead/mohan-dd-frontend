@@ -43,6 +43,7 @@ export default function UsersPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const auth = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -68,11 +69,12 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  useEffect(() => setMounted(true), []);
   useEffect(() => {
-    if (auth && !auth.isAdmin) {
+    if (mounted && auth && !auth.isAdmin) {
       router.replace("/");
     }
-  }, [auth, router]);
+  }, [mounted, auth, router]);
 
   const fetchUsers = async () => {
     try {
@@ -323,6 +325,7 @@ export default function UsersPage() {
     }
   };
 
+  if (!mounted) return <div className="p-6">Loading...</div>;
   if (!auth?.isAdmin) return null;
   if (loading) return <div className="p-6">Loading...</div>;
 

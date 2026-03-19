@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
+import { TablePagination, slicePage } from "@/components/table-pagination";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,8 @@ export default function DisplayPurchasesPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -58,6 +61,15 @@ export default function DisplayPurchasesPage() {
         p.items.some((i) => i.item_name.toLowerCase().includes(q))
     );
   }, [purchases, search]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [search]);
+
+  const pagedPurchases = useMemo(
+    () => slicePage(filteredPurchases, pageIndex, pageSize),
+    [filteredPurchases, pageIndex, pageSize]
+  );
 
   const fetchPurchases = async () => {
     try {
@@ -170,7 +182,7 @@ export default function DisplayPurchasesPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredPurchases.map((purchase) => {
+              {pagedPurchases.map((purchase) => {
                 const totalPrice = purchase.items.reduce(
                   (sum, item) => sum + item.total_price,
                   0
@@ -236,6 +248,19 @@ export default function DisplayPurchasesPage() {
               })}
             </tbody>
           </table>
+        </div>
+
+        <div className="border border-border border-t-0 rounded-b-md overflow-hidden bg-white">
+          <TablePagination
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            totalItems={filteredPurchases.length}
+            onPageIndexChange={setPageIndex}
+            onPageSizeChange={(next) => {
+              setPageSize(next);
+              setPageIndex(0);
+            }}
+          />
         </div>
         </>
       )}

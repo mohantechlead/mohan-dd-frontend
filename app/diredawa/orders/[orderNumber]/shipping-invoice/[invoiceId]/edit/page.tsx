@@ -76,6 +76,7 @@ export default function EditShippingInvoicePage() {
 
   const [shippingItems, setShippingItems] = useState<ShippingItemState[]>([]);
   const [itemsTotal, setItemsTotal] = useState(0);
+  const [isTotalCalculated, setIsTotalCalculated] = useState(false);
   const [shippingItem, setShippingItem] = useState<ShippingItemState>({
     item_name: "",
     price: "",
@@ -137,6 +138,7 @@ export default function EditShippingInvoicePage() {
           setItemsTotal(
             items.reduce((sum, it) => sum + (Number(it.total_price) || 0), 0)
           );
+          setIsTotalCalculated(true);
         }
 
         if (itemsRes.ok) {
@@ -170,11 +172,21 @@ export default function EditShippingInvoicePage() {
       0
     );
     setItemsTotal(total);
+    setIsTotalCalculated(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderNumber || !invoiceId) return;
+
+    if (!isTotalCalculated) {
+      showToast({
+        title: "Calculate total first",
+        description: "Please click Calculate Total before saving.",
+        variant: "error",
+      });
+      return;
+    }
 
     if (!shippingForm.invoice_date) {
       showToast({
@@ -488,6 +500,7 @@ export default function EditShippingInvoicePage() {
                       ...prev,
                       { ...shippingItem, total_price: total },
                     ]);
+                    setIsTotalCalculated(false);
                     setShippingItem({
                       item_name: "",
                       price: "",
@@ -517,8 +530,9 @@ export default function EditShippingInvoicePage() {
             </div>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant="cta"
+              size="lg"
+              className="w-full animate-pulse"
               onClick={handleCalculateTotal}
             >
               Calculate Total
@@ -994,7 +1008,7 @@ export default function EditShippingInvoicePage() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || !isTotalCalculated}>
               {submitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>

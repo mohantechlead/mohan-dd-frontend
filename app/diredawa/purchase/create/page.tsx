@@ -114,6 +114,7 @@ export default function CreatePurchasePage() {
 
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [itemsTotal, setItemsTotal] = useState(0);
+  const [isTotalCalculated, setIsTotalCalculated] = useState(false);
   const [itemOptions, setItemOptions] = useState<
     { item_name: string; hscode: string; internal_code: string | null }[]
   >([]);
@@ -229,6 +230,7 @@ export default function CreatePurchasePage() {
   const handleCalculateTotal = () => {
     const total = items.reduce((sum, it) => sum + it.total_price, 0);
     setItemsTotal(total);
+    setIsTotalCalculated(true);
   };
 
   const handleAddItem = () => {
@@ -257,6 +259,7 @@ export default function CreatePurchasePage() {
     };
 
     setItems((prev) => [...prev, itemToAdd]);
+    setIsTotalCalculated(false);
     setCurrentItem({
       item_name: "",
       price: "",
@@ -294,6 +297,15 @@ export default function CreatePurchasePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isTotalCalculated) {
+      showToast({
+        title: "Calculate total first",
+        description: "Please click Calculate Total before submitting.",
+        variant: "error",
+      });
+      return;
+    }
 
     const freightPrice = form.freight_price?.trim();
     if (!freightPrice || Number.isNaN(parseFloat(freightPrice))) {
@@ -902,7 +914,9 @@ export default function CreatePurchasePage() {
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="cta"
+                size="lg"
+                className="w-full animate-pulse"
                 onClick={handleCalculateTotal}
               >
                 Calculate Total
@@ -947,7 +961,7 @@ export default function CreatePurchasePage() {
             <Button
               type="submit"
               className="px-10"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isTotalCalculated}
             >
               {isSubmitting ? (
                 <>
