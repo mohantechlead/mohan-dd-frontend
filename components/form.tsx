@@ -1,6 +1,13 @@
 "use client";
 
-import { FormProvider, useForm, FieldValues, Path } from "react-hook-form";
+import {
+  FormProvider,
+  useForm,
+  FieldValues,
+  Path,
+  PathValue,
+  DefaultValues,
+} from "react-hook-form";
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -31,7 +38,7 @@ interface FormProps<T extends FieldValues> {
   fields: Field<T>[];
   onSubmit: (values: T) => void;
   submitText: string;
-  defaultValues?: Partial<T>;
+  defaultValues?: DefaultValues<T>;
   children?: React.ReactNode;
 }
 
@@ -82,7 +89,7 @@ function FormField<T extends FieldValues>({
           setOptions(newOptions);
           const currentVal = methods.getValues(field.name);
           if (currentVal && !newOptions.some((o) => o.value === currentVal)) {
-            methods.setValue(field.name, "" as Path<T> extends infer K ? K : never);
+            methods.setValue(field.name, "" as PathValue<T, Path<T>>);
           }
         })
         .catch(() => setOptions([]));
@@ -99,7 +106,7 @@ function FormField<T extends FieldValues>({
   // Clear dependent field when parent is cleared
   useEffect(() => {
     if (field.dependentDropdownConfig && value && !dependentValue?.trim()) {
-      methods.setValue(field.name, "" as Path<T> extends infer K ? K : never);
+      methods.setValue(field.name, "" as PathValue<T, Path<T>>);
     }
   }, [dependentValue]);
 
@@ -110,7 +117,7 @@ function FormField<T extends FieldValues>({
         <Label>{field.label}</Label>
         <SearchableDropdown
           value={value || ""}
-          onChange={(val) => methods.setValue(field.name, val)}
+          onChange={(val) => methods.setValue(field.name, val as PathValue<T, Path<T>>)}
           options={options}
           placeholder={
             isDisabled
