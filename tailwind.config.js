@@ -69,7 +69,8 @@ module.exports = {
   			error: '#dc2626',
   			errorBorder: '#b91c1c',
   			warning: '#f59e0b',
-  			warningBorder: '#b45309'
+  			warningBorder: '#b45309',
+  			airbnb: '#ff385c'
   		},
   		keyframes: {
   			'accordion-down': {
@@ -93,9 +94,6 @@ module.exports = {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		}
-  	},
-  	colors: {
-  		airbnb: '#ff385c'
   	}
   },
   plugins: [require("tailwindcss-animate")],

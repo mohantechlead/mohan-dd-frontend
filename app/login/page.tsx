@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/authProvider";
+import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
-
 
 const LOGIN_URL = "/api/login"
 
@@ -42,6 +42,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const auth = useAuth();
+  const { showToast } = useToast();
 
   const router = useRouter();
 
@@ -60,16 +61,33 @@ export function LoginForm({
       body: jsonData,
     });
 
-    let data: any = null;
+    let data: Record<string, unknown> | null = null;
     try {
-      data = await response.json();
-    } catch (error) {}
+      const text = await response.text();
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
 
     if (response.ok) {
-      console.log("Logged in");
-      await auth?.login(data?.username, "/diredawa/inventory/grn/create", data?.role, data?.userId);
+      showToast({
+        title: "Login successful",
+        variant: "success",
+      });
+      await auth?.login(
+        data?.username as string | undefined,
+        "/diredawa/inventory/grn/create",
+        data?.role as string | undefined,
+        data?.userId as number | undefined
+      );
     } else {
-      console.log("Login failed", data);
+      const errorMessage =
+        (data?.detail as string) ||
+        (response.status === 502 ? "Unable to reach server. Please try again later." : "Invalid password or username");
+      showToast({
+        title: errorMessage,
+        variant: "error",
+      });
     }
   };
 

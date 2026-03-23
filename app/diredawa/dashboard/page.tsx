@@ -112,40 +112,50 @@ export default function AdminDashboardPage() {
       value: ordersPending.length,
       icon: ClipboardCheck,
       href: "/diredawa/approvals/orders",
-      color: "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20",
-      iconColor: "text-amber-600",
+      color: "!bg-amber-100 !border-amber-400 dark:!bg-amber-950/60 dark:!border-amber-600",
+      iconBg: "bg-amber-400/30",
+      iconColor: "text-amber-700 dark:text-amber-400",
+      valueColor: "text-amber-800 dark:text-amber-300",
     },
     {
       title: "Orders Awaiting Completion",
       value: ordersApproved.length,
       icon: FileCheck,
       href: "/diredawa/status/orders",
-      color: "border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20",
-      iconColor: "text-blue-600",
+      color: "!bg-blue-100 !border-blue-400 dark:!bg-blue-950/60 dark:!border-blue-600",
+      iconBg: "bg-blue-400/30",
+      iconColor: "text-blue-700 dark:text-blue-400",
+      valueColor: "text-blue-800 dark:text-blue-300",
     },
     {
       title: "Purchases Pending Approval",
       value: purchasesPending.length,
       icon: ShoppingCart,
       href: "/diredawa/approvals/purchases",
-      color: "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20",
-      iconColor: "text-amber-600",
+      color: "!bg-amber-100 !border-amber-400 dark:!bg-amber-950/60 dark:!border-amber-600",
+      iconBg: "bg-amber-400/30",
+      iconColor: "text-amber-700 dark:text-amber-400",
+      valueColor: "text-amber-800 dark:text-amber-300",
     },
     {
       title: "Purchases Awaiting Completion",
       value: purchasesApproved.length,
       icon: Package,
       href: "/diredawa/status/purchases",
-      color: "border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20",
-      iconColor: "text-blue-600",
+      color: "!bg-blue-100 !border-blue-400 dark:!bg-blue-950/60 dark:!border-blue-600",
+      iconBg: "bg-blue-400/30",
+      iconColor: "text-blue-700 dark:text-blue-400",
+      valueColor: "text-blue-800 dark:text-blue-300",
     },
     {
       title: "Loading Instructions to be authorized",
       value: invoicesPendingAuth.length,
       icon: Truck,
       href: "/diredawa/orders/display",
-      color: "border-violet-500/50 bg-violet-50/50 dark:bg-violet-950/20",
-      iconColor: "text-violet-600",
+      color: "!bg-violet-100 !border-violet-400 dark:!bg-violet-950/60 dark:!border-violet-600",
+      iconBg: "bg-violet-400/30",
+      iconColor: "text-violet-700 dark:text-violet-400",
+      valueColor: "text-violet-800 dark:text-violet-300",
     },
     {
       title: "Negative Stock Items",
@@ -154,10 +164,11 @@ export default function AdminDashboardPage() {
       href: "/diredawa/inventory/stock",
       color:
         negativeStock.length > 0
-          ? "border-red-500/50 bg-red-50/50 dark:bg-red-950/20"
-          : "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20",
-      iconColor:
-        negativeStock.length > 0 ? "text-red-600" : "text-emerald-600",
+          ? "!bg-red-100 !border-red-400 dark:!bg-red-950/60 dark:!border-red-600"
+          : "!bg-emerald-100 !border-emerald-400 dark:!bg-emerald-950/60 dark:!border-emerald-600",
+      iconBg: negativeStock.length > 0 ? "bg-red-400/30" : "bg-emerald-400/30",
+      iconColor: negativeStock.length > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400",
+      valueColor: negativeStock.length > 0 ? "text-red-800 dark:text-red-300" : "text-emerald-800 dark:text-emerald-300",
     },
   ];
 
@@ -179,7 +190,7 @@ export default function AdminDashboardPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #fef3c7 0%, #dbeafe 50%, #ede9fe 100%)" }}>
         <div className="container mx-auto pt-4 pb-10 px-4 space-y-10">
           <div className="rounded-2xl bg-slate-200 dark:bg-slate-800 px-8 py-10">
             <Skeleton className="h-8 w-14 rounded" />
@@ -200,20 +211,23 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #fef3c7 0%, #dbeafe 50%, #ede9fe 100%)" }}>
       <div className="container mx-auto pt-2 pb-10 px-4 space-y-5">
         {/* Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-800 dark:to-slate-900 px-8 py-10 shadow-xl">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent" />
+        <div
+          className="relative overflow-hidden rounded-2xl px-8 py-10 shadow-xl"
+          style={{ background: "linear-gradient(90deg, #4f46e5 0%, #2563eb 50%, #7c3aed 100%)" }}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.2)_0%,transparent_70%)]" />
           <div className="relative flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
-              <BarChart3 className="h-8 w-8 text-amber-400" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/25 backdrop-blur-sm border border-white/40">
+              <BarChart3 className="h-8 w-8 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-white">
                 Admin Dashboard
               </h1>
-              <p className="mt-1 text-slate-300">
+              <p className="mt-1 text-blue-100">
                 Overview of orders, purchases, inventory, and approvals
               </p>
             </div>
@@ -227,19 +241,19 @@ export default function AdminDashboardPage() {
             return (
               <Card
                 key={card.title}
-                className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${card.color} border-2`}
+                className={`group cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] ${card.color} border-2`}
                 onClick={() => router.push(card.href)}
               >
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {card.title}
                   </CardTitle>
-                  <div className="rounded-lg bg-background/50 p-2 transition-transform group-hover:scale-110">
+                  <div className={`rounded-xl p-2.5 transition-transform group-hover:scale-110 ${card.iconBg}`}>
                     <Icon className={`h-6 w-6 ${card.iconColor}`} />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight">{card.value}</div>
+                  <div className={`text-3xl font-bold tracking-tight ${card.valueColor}`}>{card.value}</div>
                   <div className="mt-3 flex items-center gap-1 text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     <span>View details</span>
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -251,11 +265,11 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <Card className="border-2 shadow-sm">
+        <Card className="!bg-indigo-50 !border-indigo-300 dark:!bg-indigo-950/50 dark:!border-indigo-700 border-2 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-3 text-xl">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+                <Users className="h-5 w-5" />
               </div>
               Quick Actions
             </CardTitle>
@@ -268,7 +282,7 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-11 rounded-lg border-2 transition-all hover:border-primary/50 hover:bg-primary/5"
+                className="h-11 rounded-lg border-2 border-amber-300 dark:border-amber-700 transition-all hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                 onClick={() => router.push("/diredawa/approvals/orders")}
               >
                 Approve Orders
@@ -276,7 +290,7 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-11 rounded-lg border-2 transition-all hover:border-primary/50 hover:bg-primary/5"
+                className="h-11 rounded-lg border-2 border-amber-300 dark:border-amber-700 transition-all hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                 onClick={() => router.push("/diredawa/approvals/purchases")}
               >
                 Approve Purchases
@@ -284,7 +298,7 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-11 rounded-lg border-2 transition-all hover:border-primary/50 hover:bg-primary/5"
+                className="h-11 rounded-lg border-2 border-blue-300 dark:border-blue-700 transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                 onClick={() => router.push("/diredawa/status/orders")}
               >
                 Order Status
@@ -292,7 +306,7 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-11 rounded-lg border-2 transition-all hover:border-primary/50 hover:bg-primary/5"
+                className="h-11 rounded-lg border-2 border-blue-300 dark:border-blue-700 transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                 onClick={() => router.push("/diredawa/status/purchases")}
               >
                 Purchase Status
@@ -300,7 +314,7 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-11 rounded-lg border-2 transition-all hover:border-primary/50 hover:bg-primary/5"
+                className="h-11 rounded-lg border-2 border-violet-300 dark:border-violet-700 transition-all hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-950/30"
                 onClick={() => router.push("/diredawa/users")}
               >
                 User Management
@@ -308,7 +322,7 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-11 rounded-lg border-2 transition-all hover:border-primary/50 hover:bg-primary/5"
+                className="h-11 rounded-lg border-2 border-emerald-300 dark:border-emerald-700 transition-all hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                 onClick={() => router.push("/diredawa/inventory/stock")}
               >
                 Stock
@@ -319,9 +333,9 @@ export default function AdminDashboardPage() {
 
         {/* Recent Activity */}
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="border-2 shadow-sm overflow-hidden">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Recent Orders</CardTitle>
+          <Card className="!bg-blue-50 !border-blue-300 dark:!bg-blue-950/50 dark:!border-blue-700 border-2 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-blue-200 dark:border-blue-800 !bg-blue-100 dark:!bg-blue-900/50">
+              <CardTitle className="text-lg text-blue-900 dark:text-blue-100">Recent Orders</CardTitle>
               <CardDescription>Latest 5 orders</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -367,9 +381,9 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 shadow-sm overflow-hidden">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Recent Purchases</CardTitle>
+          <Card className="!bg-violet-50 !border-violet-300 dark:!bg-violet-950/50 dark:!border-violet-700 border-2 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-violet-200 dark:border-violet-800 !bg-violet-100 dark:!bg-violet-900/50">
+              <CardTitle className="text-lg text-violet-900 dark:text-violet-100">Recent Purchases</CardTitle>
               <CardDescription>Latest 5 purchases</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
