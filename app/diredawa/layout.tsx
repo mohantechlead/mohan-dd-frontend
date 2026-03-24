@@ -14,8 +14,10 @@ const STORE_ALLOWED_PATHS = [
   "/diredawa/loading-instructions/authorized",
   "/diredawa/inventory/grn/create",
   "/diredawa/inventory/grn/display",
+  "/diredawa/inventory/grn", // allows /grn/[grnNo] detail
   "/diredawa/inventory/dn/create",
   "/diredawa/inventory/dn/display",
+  "/diredawa/inventory/dn", // allows /dn/[dnNo] detail
 ];
 
 function isStorePathAllowed(pathname: string | null): boolean {

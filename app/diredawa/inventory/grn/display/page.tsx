@@ -160,7 +160,11 @@ export default function DemoPage() {
     }
   };
 
-  const columns = getGRNColumns(openEdit, openDelete, auth?.isAdmin);
+  const openView = (row: GRN) => {
+    router.push(`/diredawa/inventory/grn/${encodeURIComponent(String(row.grn_no))}`);
+  };
+
+  const columns = getGRNColumns(openEdit, openDelete, auth?.isAdmin, openView);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;

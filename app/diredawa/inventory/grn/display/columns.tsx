@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
-import { Pencil, Trash2 } from "lucide-react"
+import { Eye, Pencil, Trash2 } from "lucide-react"
 
 export type GRNItem = {
   item_name: string
@@ -20,10 +20,29 @@ export type GRN = {
 export function getGRNColumns(
   onEdit?: (row: GRN) => void,
   onDelete?: (row: GRN) => void,
-  isAdmin?: boolean
+  isAdmin?: boolean,
+  onView?: (row: GRN) => void
 ): ColumnDef<GRN>[] {
   const cols: ColumnDef<GRN>[] = [
-    { accessorKey: "grn_no", header: "GRN No" },
+    {
+      accessorKey: "grn_no",
+      header: "GRN No",
+      cell: ({ row }) => {
+        const grnNo = String(row.original.grn_no);
+        if (onView) {
+          return (
+            <button
+              type="button"
+              className="text-primary hover:underline font-medium text-left"
+              onClick={() => onView(row.original)}
+            >
+              {grnNo}
+            </button>
+          );
+        }
+        return <span>{grnNo}</span>;
+      },
+    },
     { accessorKey: "supplier_name", header: "Supplier Name" },
     { accessorKey: "purchase_no", header: "Purchase No" },
     {
@@ -43,18 +62,28 @@ export function getGRNColumns(
       },
     },
   ]
-  if (isAdmin && (onEdit || onDelete)) {
+  if (onView || (isAdmin && (onEdit || onDelete))) {
     cols.push({
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex gap-2">
-          {onEdit && (
+          {onView && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onView(row.original)}
+              title="View details"
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+          )}
+          {isAdmin && onEdit && (
             <Button variant="ghost" size="sm" onClick={() => onEdit(row.original)}>
               <Pencil className="w-4 h-4" />
             </Button>
           )}
-          {onDelete && (
+          {isAdmin && onDelete && (
             <Button variant="ghost" size="sm" onClick={() => onDelete(row.original)}>
               <Trash2 className="w-4 h-4" />
             </Button>
