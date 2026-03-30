@@ -98,7 +98,15 @@ export default function DisplayPurchasesPage() {
         return;
       }
 
-      setPurchases(data as Purchase[]);
+      // Ensure newest/highest purchase numbers show first.
+      const sorted = [...(data as Purchase[])].sort((a, b) =>
+        (b.purchase_number ?? "").localeCompare(
+          a.purchase_number ?? "",
+          undefined,
+          { numeric: true, sensitivity: "base" }
+        )
+      );
+      setPurchases(sorted);
     } catch {
       showToast({
         title: "Failed to load purchases",
