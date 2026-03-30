@@ -94,7 +94,14 @@ export default function DisplayOrdersPage() {
         return;
       }
 
-      setOrders(data as Order[]);
+      // Ensure newest/highest order numbers show first.
+      const sorted = [...(data as Order[])].sort((a, b) =>
+        (b.order_number ?? "").localeCompare(a.order_number ?? "", undefined, {
+          numeric: true,
+          sensitivity: "base",
+        })
+      );
+      setOrders(sorted);
     } catch {
       showToast({
         title: "Failed to load orders",
