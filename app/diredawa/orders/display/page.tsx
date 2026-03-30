@@ -95,12 +95,21 @@ export default function DisplayOrdersPage() {
       }
 
       // Ensure newest/highest order numbers show first.
-      const sorted = [...(data as Order[])].sort((a, b) =>
-        (b.order_number ?? "").localeCompare(a.order_number ?? "", undefined, {
-          numeric: true,
-          sensitivity: "base",
-        })
-      );
+      // Order numbers look like "M1047", so compare by the numeric portion.
+      const extractOrderNumber = (value?: string) => {
+        const matches = (value ?? "").match(/\d+/g);
+        if (!matches || matches.length === 0) return -Infinity;
+        const last = matches[matches.length - 1];
+        const n = Number(last);
+        return Number.isFinite(n) ? n : -Infinity;
+      };
+
+      const sorted = [...(data as Order[])].sort((a, b) => {
+        const aNum = extractOrderNumber(a.order_number);
+        const bNum = extractOrderNumber(b.order_number);
+        if (bNum !== aNum) return bNum - aNum;
+        return (b.order_number ?? "").localeCompare(a.order_number ?? "");
+      });
       setOrders(sorted);
     } catch {
       showToast({

@@ -99,13 +99,21 @@ export default function DisplayPurchasesPage() {
       }
 
       // Ensure newest/highest purchase numbers show first.
-      const sorted = [...(data as Purchase[])].sort((a, b) =>
-        (b.purchase_number ?? "").localeCompare(
-          a.purchase_number ?? "",
-          undefined,
-          { numeric: true, sensitivity: "base" }
-        )
-      );
+      // Purchase numbers look like "M####", so compare by the numeric portion.
+      const extractPurchaseNumber = (value?: string) => {
+        const matches = (value ?? "").match(/\d+/g);
+        if (!matches || matches.length === 0) return -Infinity;
+        const last = matches[matches.length - 1];
+        const n = Number(last);
+        return Number.isFinite(n) ? n : -Infinity;
+      };
+
+      const sorted = [...(data as Purchase[])].sort((a, b) => {
+        const aNum = extractPurchaseNumber(a.purchase_number);
+        const bNum = extractPurchaseNumber(b.purchase_number);
+        if (bNum !== aNum) return bNum - aNum;
+        return (b.purchase_number ?? "").localeCompare(a.purchase_number ?? "");
+      });
       setPurchases(sorted);
     } catch {
       showToast({
