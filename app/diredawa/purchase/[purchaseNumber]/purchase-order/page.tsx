@@ -8,10 +8,14 @@ import { useToast } from "@/components/ui/toast";
 import { amountInWords } from "@/lib/utils";
 
 interface PurchaseItem {
+  purchase_number: string;
   item_name: string;
   price: number;
   quantity: number;
+  remaining: number;
   total_price: number;
+  before_vat?: number;
+  hscode?: string | null;
   measurement: string;
 }
 
@@ -30,6 +34,8 @@ interface PurchaseDetail {
   mode_of_transport?: string | null;
   country_of_origin?: string | null;
   final_destination?: string | null;
+  payment_type?: string | null;
+  // legacy fallback (older API responses / other UI parts)
   payment_terms?: string | null;
   freight?: string | null;
   shipment_type?: string | null;
@@ -217,8 +223,8 @@ export default function PurchaseOrderPage() {
               <p className="text-muted-foreground">{purchase.country_of_origin ?? "—"}</p>
               <p className="font-semibold mt-2">Final Destination</p>
               <p className="text-muted-foreground">{purchase.final_destination ?? "—"}</p>
-              <p className="font-semibold mt-2">Payment Terms</p>
-              <p className="text-muted-foreground">{purchase.payment_terms ?? "—"}</p>
+              <p className="font-semibold mt-2">Payment Type</p>
+              <p className="text-muted-foreground">{purchase.payment_type ?? purchase.payment_terms ?? "—"}</p>
               <p className="font-semibold mt-2">Shipment Terms</p>
               <p className="text-muted-foreground">{purchase.shipment_type ?? "—"}</p>
               <p className="font-semibold mt-2">Freight</p>
@@ -235,28 +241,34 @@ export default function PurchaseOrderPage() {
               <thead>
                 <tr className="border-b">
                   <th className="px-2 py-2 text-left w-10">No.</th>
+                  <th className="px-2 py-2 text-left w-24">Purchase No.</th>
                   <th className="px-2 py-2 text-left">Item</th>
+                  <th className="px-2 py-2 text-left w-20">HS Code</th>
                   <th className="px-2 py-2 text-right w-28">Price in USD</th>
                   <th className="px-2 py-2 text-right w-20">Quantity</th>
+                  <th className="px-2 py-2 text-right w-20">Remaining</th>
                   <th className="px-2 py-2 text-left w-24">Unit of Measurement</th>
                   <th className="px-2 py-2 text-right w-28">Total</th>
+                  <th className="px-2 py-2 text-right w-28">Before VAT</th>
                 </tr>
               </thead>
               <tbody>
                 {purchase.items.map((item, index) => {
-                  const hsCode = getHsCode(item.item_name);
+                  const hsCode =
+                    item.hscode?.trim() || getHsCode(item.item_name) || "";
                   return (
                     <tr key={index} className="border-b align-top">
                       <td className="px-2 py-2">
                         {String(index + 1).padStart(2, "0")}
                       </td>
+                      <td className="px-2 py-2 font-mono text-[10px]">
+                        {item.purchase_number}
+                      </td>
                       <td className="px-2 py-2">
                         <div>{item.item_name}</div>
-                        {hsCode && (
-                          <div className="text-[10px] text-muted-foreground">
-                            HS-code: {hsCode}
-                          </div>
-                        )}
+                      </td>
+                      <td className="px-2 py-2 font-mono text-[10px]">
+                        {hsCode || "—"}
                       </td>
                       <td className="px-2 py-2 text-right">
                         ${item.price.toLocaleString(undefined, {
@@ -268,6 +280,12 @@ export default function PurchaseOrderPage() {
                           maximumFractionDigits: 3,
                         })}
                       </td>
+                      <td className="px-2 py-2 text-right">
+                        {(item.remaining ?? item.quantity).toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 3 }
+                        )}
+                      </td>
                       <td className="px-2 py-2">
                         {item.measurement || "—"}
                       </td>
@@ -276,18 +294,23 @@ export default function PurchaseOrderPage() {
                           maximumFractionDigits: 3,
                         })}
                       </td>
+                      <td className="px-2 py-2 text-right">
+                        {(item.before_vat ?? item.total_price).toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 3 }
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
                 <tr className="border-b font-semibold">
-                  <td className="px-2 py-2" colSpan={2}>
+                  <td className="px-2 py-2" colSpan={5}>
                     <span>Total</span>
                     <span className="ml-2 text-[10px] font-normal text-muted-foreground">
                       Amount in Words: USD {amountInWords(totalPrice)} ONLY
                     </span>
                   </td>
-                  <td className="px-2 py-2" colSpan={2} />
-                  <td className="px-2 py-2" />
+                  <td className="px-2 py-2" colSpan={4} />
                   <td className="px-2 py-2 text-right">
                     ${totalPrice.toLocaleString(undefined, {
                       maximumFractionDigits: 2,

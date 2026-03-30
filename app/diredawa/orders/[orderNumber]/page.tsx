@@ -28,10 +28,10 @@ interface OrderDetail {
   final_destination: string;
   port_of_loading: string;
   port_of_discharge: string;
-  measurement_type: string;
+  measurement_type?: string | null;
   payment_terms: string;
   mode_of_transport: string;
-  freight: string;
+  freight?: string | null;
   freight_price?: number | null;
   shipment_type: string;
   status: string;

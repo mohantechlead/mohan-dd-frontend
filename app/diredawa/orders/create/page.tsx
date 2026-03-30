@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Lock, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
+import {
+  parseInventoryItemsJson,
+  type InventoryItemOption,
+} from "@/lib/parseInventoryItems";
 
 type MeasurementType =
   | "Metric Tons"
@@ -73,6 +78,7 @@ interface OrderFormState {
 }
 
 const ORDER_API_URL = "/api/orders";
+const ORDER_NEXT_NUMBER_URL = "/api/orders/next-number";
 const ITEMS_API_URL = "/api/inventory/items";
 const CUSTOMERS_API_URL = "/api/partners/customers";
 const SUPPLIERS_API_URL = "/api/partners/suppliers";
@@ -114,9 +120,7 @@ export default function CreateOrderPage() {
   const [items, setItems] = useState<OrderItem[]>([]);
   const [itemsTotal, setItemsTotal] = useState(0);
   const [isTotalCalculated, setIsTotalCalculated] = useState(false);
-  const [itemOptions, setItemOptions] = useState<
-    { item_name: string; hscode: string; internal_code: string | null }[]
-  >([]);
+  const [itemOptions, setItemOptions] = useState<InventoryItemOption[]>([]);
   const [itemQuery, setItemQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
 
@@ -132,6 +136,37 @@ export default function CreateOrderPage() {
   const [shipperQuery, setShipperQuery] = useState("");
   const [showShipperDropdown, setShowShipperDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /** When false, order number field is disabled (use Edit to change). */
+  const [orderNumberEditable, setOrderNumberEditable] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(ORDER_NEXT_NUMBER_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const next =
+          typeof data?.next_number === "string"
+            ? data.next_number
+            : typeof data?.next === "string"
+              ? data.next
+              : "";
+        if (next && !cancelled) {
+          setForm((prev) => ({ ...prev, order_number: next }));
+        }
+      } catch {
+        // leave empty; user can Edit and type
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -139,12 +174,29 @@ export default function CreateOrderPage() {
         const res = await fetch(ITEMS_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
-        if (!res.ok) return;
         const data = await res.json();
-        setItemOptions(data);
+        if (!res.ok) {
+          showToast({
+            title: "Could not load items",
+            description:
+              typeof data?.message === "string"
+                ? data.message
+                : `Request failed (${res.status})`,
+            variant: "error",
+          });
+          setItemOptions([]);
+          return;
+        }
+        setItemOptions(parseInventoryItemsJson(data));
       } catch {
-        // ignore for now
+        showToast({
+          title: "Could not load items",
+          description: "Network error. Is the app reachable?",
+          variant: "error",
+        });
+        setItemOptions([]);
       }
     };
     const fetchCustomers = async () => {
@@ -152,10 +204,11 @@ export default function CreateOrderPage() {
         const res = await fetch(CUSTOMERS_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
         if (!res.ok) return;
         const data = await res.json();
-        setCustomerOptions(data);
+        setCustomerOptions(Array.isArray(data) ? data : []);
       } catch {
         // ignore
       }
@@ -165,10 +218,11 @@ export default function CreateOrderPage() {
         const res = await fetch(SUPPLIERS_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
         if (!res.ok) return;
         const data = await res.json();
-        setSupplierOptions(data);
+        setSupplierOptions(Array.isArray(data) ? data : []);
       } catch {
         // ignore
       }
@@ -177,7 +231,7 @@ export default function CreateOrderPage() {
     fetchItems();
     fetchCustomers();
     fetchSuppliers();
-  }, []);
+  }, [showToast]);
 
   const handleHeaderChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -343,6 +397,10 @@ export default function CreateOrderPage() {
     const payload = {
       ...form,
       order_date: form.order_date,
+      measurement_type: form.measurement_type.trim()
+        ? form.measurement_type
+        : null,
+      freight: form.freight.trim() ? form.freight : null,
       freight_price: freightPriceVal && !Number.isNaN(parseFloat(freightPriceVal))
         ? parseFloat(freightPriceVal)
         : null,
@@ -418,14 +476,49 @@ export default function CreateOrderPage() {
               <label className="block text-sm font-medium mb-1">
                 Order Number *
               </label>
-              <input
-                name="order_number"
-                value={form.order_number}
-                onChange={handleHeaderChange}
-                onBlur={handleOrderNumberBlur}
-                className="w-full border rounded-md px-3 py-2"
-                required
-              />
+              <div className="flex gap-2 items-center">
+                <input
+                  name="order_number"
+                  value={form.order_number}
+                  onChange={handleHeaderChange}
+                  onBlur={handleOrderNumberBlur}
+                  readOnly={!orderNumberEditable}
+                  title={
+                    orderNumberEditable
+                      ? undefined
+                      : "Click the pencil to edit (e.g. M1086)"
+                  }
+                  className={cn(
+                    "min-w-0 flex-1 border rounded-md px-3 py-2",
+                    !orderNumberEditable &&
+                      "bg-muted text-muted-foreground cursor-not-allowed"
+                  )}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => setOrderNumberEditable((v) => !v)}
+                  aria-label={
+                    orderNumberEditable
+                      ? "Lock order number"
+                      : "Edit order number"
+                  }
+                  title={
+                    orderNumberEditable
+                      ? "Lock order number"
+                      : "Edit order number"
+                  }
+                >
+                  {orderNumberEditable ? (
+                    <Lock className="h-4 w-4" />
+                  ) : (
+                    <Pencil className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -789,18 +882,21 @@ export default function CreateOrderPage() {
                 name="item_name"
                 value={currentItem.item_name}
                 onChange={handleItemChange}
-                onFocus={() => setShowItemDropdown(true)}
+                onFocus={() => {
+                  setItemQuery("");
+                  setShowItemDropdown(true);
+                }}
                 className="w-full border rounded-md px-3 py-2"
                 autoComplete="off"
               />
               {showItemDropdown && itemOptions.length > 0 && (
                 <div
-                  className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                  className="absolute z-[100] top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                   style={{ backgroundColor: "#ffffff" }}
                 >
                   {itemOptions
                     .filter((opt) =>
-                      opt.item_name
+                      (opt.item_name ?? "")
                         .toLowerCase()
                         .includes(itemQuery.toLowerCase())
                     )

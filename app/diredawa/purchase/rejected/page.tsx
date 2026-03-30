@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
 interface PurchaseItem {
+  purchase_number: string;
   item_name: string;
   price: number;
   quantity: number;
+  remaining: number;
   total_price: number;
+  before_vat?: number;
+  hscode?: string | null;
   measurement: string;
 }
 

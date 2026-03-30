@@ -75,7 +75,11 @@ export function ItemsForm() {
               onChange={(value) => {
                 setValue(`items.${index}.item_name` as const, value);
                 const opt = itemOptions.find((o) => o.display === value) as (DropdownOption & { internalCode?: string }) | undefined;
-                if (opt?.internalCode) setValue(`items.${index}.internal_code` as const, opt.internalCode);
+                // Internal code must stay in sync with the selected item.
+                setValue(
+                  `items.${index}.internal_code` as const,
+                  opt?.internalCode ? opt.internalCode : ""
+                );
               }}
               options={itemOptions}
               placeholder="Search item..."
@@ -100,7 +104,14 @@ export function ItemsForm() {
           <div className="flex gap-4 md:col-span-2">
             <div className="flex-1">
               <Label>Internal Code</Label>
-              <Input type="text" {...register(`items.${index}.internal_code` as const)} />
+            {/* Internal code must come from the item dropdown selection.
+                Disabling prevents users from submitting arbitrary codes that aren't in the item list. */}
+            <Input
+              type="text"
+              {...register(`items.${index}.internal_code` as const)}
+              disabled
+              readOnly
+            />
             </div>
 
             <Button

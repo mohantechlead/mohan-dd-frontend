@@ -14,6 +14,13 @@ export type GRN = {
   grn_no: string | number
   supplier_name: string
   purchase_no: string
+  purchase_id?: string
+
+  received_from?: string | null
+  truck_no?: string | null
+  total_quantity?: number | null
+  store_name?: string | null
+  store_keeper?: string | null
   items: GRNItem[]
 }
 
@@ -44,7 +51,12 @@ export function getGRNColumns(
       },
     },
     { accessorKey: "supplier_name", header: "Supplier Name" },
+    { accessorKey: "received_from", header: "Received From" },
+    { accessorKey: "truck_no", header: "Truck No" },
     { accessorKey: "purchase_no", header: "Purchase No" },
+    { accessorKey: "store_name", header: "Store Name" },
+    { accessorKey: "store_keeper", header: "Store Keeper" },
+    { accessorKey: "total_quantity", header: "Total Quantity" },
     {
       accessorKey: "items",
       header: "Items",
@@ -98,7 +110,12 @@ export function getGRNColumns(
 export const columns: ColumnDef<GRN>[] = [
   { accessorKey: "grn_no", header: "GRN No" },
   { accessorKey: "supplier_name", header: "Supplier Name" },
+  { accessorKey: "received_from", header: "Received From" },
+  { accessorKey: "truck_no", header: "Truck No" },
   { accessorKey: "purchase_no", header: "Purchase No" },
+  { accessorKey: "store_name", header: "Store Name" },
+  { accessorKey: "store_keeper", header: "Store Keeper" },
+  { accessorKey: "total_quantity", header: "Total Quantity" },
   {
     accessorKey: "items",
     header: "Items",

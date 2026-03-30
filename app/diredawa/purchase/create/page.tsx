@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Lock, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
+import {
+  parseInventoryItemsJson,
+  type InventoryItemOption,
+} from "@/lib/parseInventoryItems";
 
 type MeasurementType =
   | "Metric Tons"
@@ -16,7 +21,7 @@ type MeasurementType =
   | "Sets"
   | "Other";
 
-type PaymentTerms =
+type PaymentType =
   | "Irrevocable LC at Sight"
   | "Cash Against Doc"
   | "Telegraphic Transfer"
@@ -33,16 +38,26 @@ type Freight = "Payable at Destination" | "Pre-paid";
 type ShipmentType = "FOB" | "CFR" | "FCA" | "CIF" | "Air Freight";
 
 interface PurchaseItem {
+  item_id?: string | null;
+  /** Mirrors header purchase number for each line (server stores on item). */
+  purchase_number?: string;
   item_name: string;
+  hscode?: string;
   price: number;
   quantity: number;
+  /** Defaults to quantity until receipts reduce it */
+  remaining?: number;
   total_price: number;
+  /** Line before VAT; same as total_price unless adjusted later */
+  before_vat?: number;
   measurement: string;
 }
 
 /** Form state for current item - price/quantity as string so inputs can be cleared */
 interface PurchaseItemForm {
+  item_id: string;
   item_name: string;
+  hscode: string;
   price: string;
   quantity: string;
   total_price: number;
@@ -64,7 +79,7 @@ interface PurchaseFormState {
   port_of_loading: string;
   port_of_discharge: string;
   measurement_type: MeasurementType | "";
-  payment_terms: PaymentTerms | "";
+  payment_type: PaymentType | "";
   mode_of_transport: ModeOfTransport | "";
   freight: Freight | "";
   freight_price: string;
@@ -73,6 +88,7 @@ interface PurchaseFormState {
 }
 
 const PURCHASE_API_URL = "/api/purchases";
+const PURCHASE_NEXT_NUMBER_URL = "/api/purchases/next-number";
 const ITEMS_API_URL = "/api/inventory/items";
 const CUSTOMERS_API_URL = "/api/partners/customers";
 const SUPPLIERS_API_URL = "/api/partners/suppliers";
@@ -96,7 +112,7 @@ export default function CreatePurchasePage() {
     port_of_loading: "",
     port_of_discharge: "",
     measurement_type: "",
-    payment_terms: "",
+    payment_type: "",
     mode_of_transport: "",
     freight: "",
     freight_price: "",
@@ -105,7 +121,9 @@ export default function CreatePurchasePage() {
   });
 
   const [currentItem, setCurrentItem] = useState<PurchaseItemForm>({
+    item_id: "",
     item_name: "",
+    hscode: "",
     price: "",
     quantity: "",
     total_price: 0,
@@ -115,9 +133,7 @@ export default function CreatePurchasePage() {
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [itemsTotal, setItemsTotal] = useState(0);
   const [isTotalCalculated, setIsTotalCalculated] = useState(false);
-  const [itemOptions, setItemOptions] = useState<
-    { item_name: string; hscode: string; internal_code: string | null }[]
-  >([]);
+  const [itemOptions, setItemOptions] = useState<InventoryItemOption[]>([]);
   const [itemQuery, setItemQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
 
@@ -133,6 +149,36 @@ export default function CreatePurchasePage() {
   const [shipperQuery, setShipperQuery] = useState("");
   const [showShipperDropdown, setShowShipperDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [purchaseNumberEditable, setPurchaseNumberEditable] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(PURCHASE_NEXT_NUMBER_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const next =
+          typeof data?.next_number === "string"
+            ? data.next_number
+            : typeof data?.next === "string"
+              ? data.next
+              : "";
+        if (next && !cancelled) {
+          setForm((prev) => ({ ...prev, purchase_number: next }));
+        }
+      } catch {
+        // leave empty
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -140,12 +186,29 @@ export default function CreatePurchasePage() {
         const res = await fetch(ITEMS_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
-        if (!res.ok) return;
         const data = await res.json();
-        setItemOptions(data);
+        if (!res.ok) {
+          showToast({
+            title: "Could not load items",
+            description:
+              typeof data?.message === "string"
+                ? data.message
+                : `Request failed (${res.status})`,
+            variant: "error",
+          });
+          setItemOptions([]);
+          return;
+        }
+        setItemOptions(parseInventoryItemsJson(data));
       } catch {
-        // ignore
+        showToast({
+          title: "Could not load items",
+          description: "Network error. Is the app reachable?",
+          variant: "error",
+        });
+        setItemOptions([]);
       }
     };
     const fetchCustomers = async () => {
@@ -153,10 +216,11 @@ export default function CreatePurchasePage() {
         const res = await fetch(CUSTOMERS_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
         if (!res.ok) return;
         const data = await res.json();
-        setCustomerOptions(data);
+        setCustomerOptions(Array.isArray(data) ? data : []);
       } catch {
         // ignore
       }
@@ -166,10 +230,11 @@ export default function CreatePurchasePage() {
         const res = await fetch(SUPPLIERS_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
         if (!res.ok) return;
         const data = await res.json();
-        setSupplierOptions(data);
+        setSupplierOptions(Array.isArray(data) ? data : []);
       } catch {
         // ignore
       }
@@ -178,7 +243,7 @@ export default function CreatePurchasePage() {
     fetchItems();
     fetchCustomers();
     fetchSuppliers();
-  }, []);
+  }, [showToast]);
 
   const handleHeaderChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -217,6 +282,9 @@ export default function CreatePurchasePage() {
               ? Number(value)
               : value,
       } as PurchaseItemForm;
+      if (name === "item_name") {
+        next.item_id = "";
+      }
       // Auto-calculate Total Price when price or quantity changes
       if (name === "price" || name === "quantity") {
         const priceNum = parseFloat(String(next.price)) || 0;
@@ -253,15 +321,22 @@ export default function CreatePurchasePage() {
 
     const itemToAdd: PurchaseItem = {
       ...currentItem,
+      item_id: currentItem.item_id.trim() || undefined,
+      purchase_number: form.purchase_number.trim() || undefined,
+      hscode: currentItem.hscode.trim() || undefined,
       price: priceVal,
       quantity: qtyVal,
+      remaining: qtyVal,
       total_price: total,
+      before_vat: total,
     };
 
     setItems((prev) => [...prev, itemToAdd]);
     setIsTotalCalculated(false);
     setCurrentItem({
+      item_id: "",
       item_name: "",
+      hscode: "",
       price: "",
       quantity: "",
       total_price: 0,
@@ -307,16 +382,6 @@ export default function CreatePurchasePage() {
       return;
     }
 
-    const freightPrice = form.freight_price?.trim();
-    if (!freightPrice || Number.isNaN(parseFloat(freightPrice))) {
-      showToast({
-        title: "Freight price required",
-        description: "Please enter a valid freight price.",
-        variant: "error",
-      });
-      return;
-    }
-
     // Check for duplicate purchase number before submitting
     try {
       const existingRes = await fetch(PURCHASE_API_URL, {
@@ -350,11 +415,31 @@ export default function CreatePurchasePage() {
       return;
     }
 
+    const freightTrim = form.freight_price?.trim() ?? "";
+    const freightParsed =
+      freightTrim === "" ? null : parseFloat(freightTrim);
     const payload = {
       ...form,
       order_date: form.order_date,
-      freight_price: parseFloat(form.freight_price),
-      items,
+      measurement_type: form.measurement_type.trim()
+        ? form.measurement_type
+        : null,
+      freight: form.freight.trim() ? form.freight : null,
+      freight_price:
+        freightParsed === null || Number.isNaN(freightParsed)
+          ? null
+          : freightParsed,
+      items: items.map((it) => ({
+        item_id: it.item_id?.trim() || null,
+        item_name: it.item_name,
+        price: it.price,
+        quantity: it.quantity,
+        total_price: it.total_price,
+        measurement: it.measurement,
+        remaining: it.remaining ?? it.quantity,
+        before_vat: it.before_vat ?? it.total_price,
+        hscode: it.hscode?.trim() || null,
+      })),
     };
 
     setIsSubmitting(true);
@@ -416,14 +501,49 @@ export default function CreatePurchasePage() {
                 <label className="block text-sm font-medium mb-1">
                   Purchase Number *
                 </label>
-                <input
-                  name="purchase_number"
-                  value={form.purchase_number}
-                  onChange={handleHeaderChange}
-                  onBlur={handlePurchaseNumberBlur}
-                  className="w-full border rounded-md px-3 py-2"
-                  required
-                />
+                <div className="flex gap-2 items-center">
+                  <input
+                    name="purchase_number"
+                    value={form.purchase_number}
+                    onChange={handleHeaderChange}
+                    onBlur={handlePurchaseNumberBlur}
+                    readOnly={!purchaseNumberEditable}
+                    title={
+                      purchaseNumberEditable
+                        ? undefined
+                        : "Click the pencil to edit (e.g. M1086)"
+                    }
+                    className={cn(
+                      "min-w-0 flex-1 border rounded-md px-3 py-2",
+                      !purchaseNumberEditable &&
+                        "bg-muted text-muted-foreground cursor-not-allowed"
+                    )}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => setPurchaseNumberEditable((v) => !v)}
+                    aria-label={
+                      purchaseNumberEditable
+                        ? "Lock purchase number"
+                        : "Edit purchase number"
+                    }
+                    title={
+                      purchaseNumberEditable
+                        ? "Lock purchase number"
+                        : "Edit purchase number"
+                    }
+                  >
+                    {purchaseNumberEditable ? (
+                      <Lock className="h-4 w-4" />
+                    ) : (
+                      <Pencil className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -678,7 +798,7 @@ export default function CreatePurchasePage() {
             </div>
 
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <p className="font-semibold text-sm">Payment Terms</p>
+              <p className="font-semibold text-sm">Payment Type</p>
               <div className="space-y-1 text-sm">
                 {[
                   "Irrevocable LC at Sight",
@@ -696,10 +816,10 @@ export default function CreatePurchasePage() {
                   >
                     <input
                       type="radio"
-                      name="payment_terms"
+                      name="payment_type"
                       value={label}
-                      checked={form.payment_terms === label}
-                      onChange={() => handleRadioChange("payment_terms", label)}
+                      checked={form.payment_type === label}
+                      onChange={() => handleRadioChange("payment_type", label)}
                     />
                     <span>{label}</span>
                   </label>
@@ -754,13 +874,12 @@ export default function CreatePurchasePage() {
 
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Freight Price *
+                  Freight Price
                 </label>
                 <input
                   name="freight_price"
                   type="number"
                   step="0.01"
-                  required
                   value={form.freight_price}
                   onChange={handleHeaderChange}
                   className="w-full border rounded-md px-3 py-2"
@@ -812,18 +931,21 @@ export default function CreatePurchasePage() {
                   name="item_name"
                   value={currentItem.item_name}
                   onChange={handleItemChange}
-                  onFocus={() => setShowItemDropdown(true)}
+                  onFocus={() => {
+                    setItemQuery("");
+                    setShowItemDropdown(true);
+                  }}
                   className="w-full border rounded-md px-3 py-2"
                   autoComplete="off"
                 />
                 {showItemDropdown && itemOptions.length > 0 && (
                   <div
-                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                    className="absolute z-[100] top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
                     style={{ backgroundColor: "#ffffff" }}
                   >
                     {itemOptions
                       .filter((opt) =>
-                        opt.item_name
+                        (opt.item_name ?? "")
                           .toLowerCase()
                           .includes(itemQuery.toLowerCase())
                       )
@@ -831,13 +953,15 @@ export default function CreatePurchasePage() {
                       .map((opt) => (
                         <button
                           type="button"
-                          key={opt.internal_code ?? opt.item_name}
+                          key={opt.item_id ?? opt.internal_code ?? opt.item_name}
                           className="block w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
                           style={{ backgroundColor: "#ffffff" }}
                           onClick={() => {
                             setCurrentItem((prev) => ({
                               ...prev,
+                              item_id: opt.item_id ?? "",
                               item_name: opt.item_name,
+                              hscode: opt.hscode ?? "",
                             }));
                             setItemQuery(opt.item_name);
                             setShowItemDropdown(false);
@@ -853,6 +977,16 @@ export default function CreatePurchasePage() {
                       ))}
                   </div>
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">HS CODE</label>
+                <input
+                  name="hscode"
+                  value={currentItem.hscode}
+                  onChange={handleItemChange}
+                  className="w-full border rounded-md px-3 py-2"
+                  autoComplete="off"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Price</label>
@@ -928,17 +1062,30 @@ export default function CreatePurchasePage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/60">
                     <tr>
+                      <th className="text-left px-3 py-2">Purchase No.</th>
                       <th className="text-left px-3 py-2">Item</th>
+                      <th className="text-left px-3 py-2">HS Code</th>
                       <th className="text-right px-3 py-2">Qty</th>
+                      <th className="text-right px-3 py-2">Remaining</th>
                       <th className="text-right px-3 py-2">Price</th>
                       <th className="text-right px-3 py-2">Total</th>
+                      <th className="text-right px-3 py-2">Before VAT</th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((it, idx) => (
                       <tr key={idx} className="border-t">
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {(it.purchase_number ?? form.purchase_number) || "—"}
+                        </td>
                         <td className="px-3 py-2">{it.item_name}</td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {it.hscode ?? "—"}
+                        </td>
                         <td className="px-3 py-2 text-right">{it.quantity}</td>
+                        <td className="px-3 py-2 text-right">
+                          {it.remaining ?? it.quantity}
+                        </td>
                         <td className="px-3 py-2 text-right">
                           {it.price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
@@ -948,6 +1095,12 @@ export default function CreatePurchasePage() {
                           {it.total_price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
                           })}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {(it.before_vat ?? it.total_price).toLocaleString(
+                            undefined,
+                            { maximumFractionDigits: 2 }
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -17,10 +17,14 @@ import { Pencil, Trash2 } from "lucide-react";
 import { TableSearch } from "@/components/table-search";
 
 interface PurchaseItem {
+  purchase_number: string;
   item_name: string;
   price: number;
   quantity: number;
+  remaining: number;
   total_price: number;
+  before_vat?: number;
+  hscode?: string | null;
   measurement: string;
 }
 
@@ -31,6 +35,8 @@ interface Purchase {
   buyer: string;
   proforma_ref_no: string;
   status: string;
+  /** Sum of line totals (same as summed item total_price); from API */
+  before_vat?: number;
   items: PurchaseItem[];
 }
 
@@ -173,7 +179,7 @@ export default function DisplayPurchasesPage() {
               <tr>
                 <th className="text-left px-4 py-2">Purchase Number</th>
                 <th className="text-left px-4 py-2">Date</th>
-                <th className="text-right px-4 py-2">Total Price</th>
+                <th className="text-right px-4 py-2">Before VAT</th>
                 <th className="text-left px-4 py-2">Vendor Name</th>
                 <th className="text-left px-4 py-2">Status</th>
                 {auth?.isAdmin && (
@@ -183,10 +189,12 @@ export default function DisplayPurchasesPage() {
             </thead>
             <tbody>
               {pagedPurchases.map((purchase) => {
-                const totalPrice = purchase.items.reduce(
-                  (sum, item) => sum + item.total_price,
-                  0
-                );
+                const beforeVat =
+                  purchase.before_vat ??
+                  purchase.items.reduce(
+                    (sum, item) => sum + item.total_price,
+                    0
+                  );
                 return (
                   <tr key={purchase.id} className="border-t">
                     <td className="px-4 py-2">
@@ -213,7 +221,7 @@ export default function DisplayPurchasesPage() {
                       )}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      {totalPrice.toLocaleString(undefined, {
+                      {beforeVat.toLocaleString(undefined, {
                         maximumFractionDigits: 1,
                       })}
                     </td>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { DataTable } from "@/components/data-table";
-import { getSupplierColumns, Supplier } from "./columns";
+import { getSupplierColumns, type Supplier } from "./columns";
 import useSWR from "swr";
 import fetcher from "@/lib/fetcher";
 import { useAuth } from "@/components/authProvider";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { TableSearch } from "@/components/table-search";
+import { cn } from "@/lib/utils";
 
 const SUPPLIER_API_URL = "/api/partners/suppliers";
 
@@ -39,6 +40,8 @@ export default function DemoPage() {
   const [editPhone, setEditPhone] = useState("");
   const [editAddress, setEditAddress] = useState("");
   const [editTinNumber, setEditTinNumber] = useState("");
+  const [editContactPerson, setEditContactPerson] = useState("");
+  const [editComments, setEditComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -54,7 +57,9 @@ export default function DemoPage() {
         (s.email?.toLowerCase().includes(q)) ||
         (s.phone?.toLowerCase().includes(q)) ||
         (s.address?.toLowerCase().includes(q)) ||
-        (s.tin_number?.toLowerCase().includes(q))
+        (s.tin_number?.toLowerCase().includes(q)) ||
+        (s.contact_person?.toLowerCase().includes(q)) ||
+        (s.comments?.toLowerCase().includes(q))
     );
   }, [data, search]);
 
@@ -71,6 +76,8 @@ export default function DemoPage() {
     setEditPhone(row.phone || "");
     setEditAddress(row.address || "");
     setEditTinNumber(row.tin_number || "");
+    setEditContactPerson(row.contact_person || "");
+    setEditComments(row.comments || "");
     setEditOpen(true);
   };
 
@@ -94,6 +101,8 @@ export default function DemoPage() {
           phone: editPhone || null,
           address: editAddress || null,
           tin_number: editTinNumber || null,
+          contact_person: editContactPerson.trim() || null,
+          comments: editComments.trim() || null,
         }),
       });
       const data = await res.json();
@@ -152,7 +161,12 @@ export default function DemoPage() {
     }
   };
 
-  const columns = getSupplierColumns(openEdit, openDelete, auth?.isAdmin);
+  const openView = (row: Supplier) => {
+    if (!row.id) return;
+    router.push(`/diredawa/partners/suppliers/${encodeURIComponent(row.id)}`);
+  };
+
+  const columns = getSupplierColumns(openEdit, openDelete, auth?.isAdmin, openView);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
@@ -196,6 +210,21 @@ export default function DemoPage() {
               <Field>
                 <FieldLabel>TIN Number</FieldLabel>
                 <Input value={editTinNumber} onChange={(e) => setEditTinNumber(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Contact Person</FieldLabel>
+                <Input value={editContactPerson} onChange={(e) => setEditContactPerson(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Comments</FieldLabel>
+                <textarea
+                  className={cn(
+                    "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  )}
+                  value={editComments}
+                  onChange={(e) => setEditComments(e.target.value)}
+                  placeholder="Internal notes or comments"
+                />
               </Field>
             </FieldGroup>
             <DialogFooter className="mt-4">
