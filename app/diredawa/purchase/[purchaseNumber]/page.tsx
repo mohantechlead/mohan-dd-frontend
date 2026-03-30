@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
 interface PurchaseItem {
+  purchase_number: string;
   item_name: string;
   price: number;
   quantity: number;
+  remaining: number;
   total_price: number;
+  before_vat?: number;
+  hscode?: string | null;
   measurement: string;
 }
 
@@ -20,6 +24,9 @@ interface PurchaseDetail {
   buyer: string;
   proforma_ref_no: string;
   status: string;
+  before_vat?: number;
+  total_quantity?: number;
+  remaining?: number;
   items: PurchaseItem[];
 }
 
@@ -72,7 +79,13 @@ export default function PurchaseDetailPage() {
 
   const totalPrice = useMemo(() => {
     if (!purchase) return 0;
+    if (typeof purchase.before_vat === "number") return purchase.before_vat;
     return purchase.items.reduce((sum, item) => sum + item.total_price, 0);
+  }, [purchase]);
+
+  const qtySum = useMemo(() => {
+    if (!purchase) return 0;
+    return purchase.items.reduce((sum, item) => sum + item.quantity, 0);
   }, [purchase]);
 
   return (
@@ -106,7 +119,7 @@ export default function PurchaseDetailPage() {
                 <tr>
                   <th className="px-4 py-2 text-left">Purchase Number</th>
                   <th className="px-4 py-2 text-left">Date</th>
-                  <th className="px-4 py-2 text-left">Total Price</th>
+                  <th className="px-4 py-2 text-left">Before VAT</th>
                   <th className="px-4 py-2 text-left">Vendor Name</th>
                   <th className="px-4 py-2 text-left">Status</th>
                 </tr>
@@ -134,6 +147,73 @@ export default function PurchaseDetailPage() {
                   <td className="px-4 py-2">{purchase.buyer}</td>
                   <td className="px-4 py-2 capitalize">{purchase.status}</td>
                 </tr>
+              </tbody>
+            </table>
+            <div className="px-4 py-2 text-xs text-muted-foreground border-t flex flex-wrap gap-x-6 gap-y-1">
+              <span>
+                Total quantity:{" "}
+                <span className="font-medium text-foreground">
+                  {purchase.total_quantity ?? qtySum}
+                </span>
+              </span>
+              <span>
+                Remaining:{" "}
+                <span className="font-medium text-foreground">
+                  {purchase.remaining ?? purchase.total_quantity ?? qtySum}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div className="border rounded-md overflow-hidden bg-white">
+            <h2 className="text-sm font-semibold px-4 py-2 bg-muted/40 border-b">
+              Line items
+            </h2>
+            <table className="w-full text-sm">
+              <thead className="bg-muted/60">
+                <tr>
+                  <th className="text-left px-4 py-2">Purchase No.</th>
+                  <th className="text-left px-4 py-2">Item</th>
+                  <th className="text-left px-4 py-2">HS Code</th>
+                  <th className="text-right px-4 py-2">Qty</th>
+                  <th className="text-right px-4 py-2">Remaining</th>
+                  <th className="text-right px-4 py-2">Price</th>
+                  <th className="text-right px-4 py-2">Total</th>
+                  <th className="text-right px-4 py-2">Before VAT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchase.items.map((line, idx) => (
+                  <tr key={idx} className="border-t">
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {line.purchase_number}
+                    </td>
+                    <td className="px-4 py-2">{line.item_name}</td>
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {line.hscode ?? "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right">{line.quantity}</td>
+                    <td className="px-4 py-2 text-right">
+                      {line.remaining ?? line.quantity}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {line.price.toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {line.total_price.toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {(line.before_vat ?? line.total_price).toLocaleString(
+                        undefined,
+                        { maximumFractionDigits: 2 }
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

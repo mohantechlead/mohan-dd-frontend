@@ -11,6 +11,8 @@ interface CustomerFormValues {
   phone: string;
   address: string;
   tin_number: string;
+  contact_person: string;
+  comments: string;
 }
 
 const CUSTOMER_API_URL = "/api/partners/customers";
@@ -25,10 +27,12 @@ export default function HomePage() {
     // Transform values to match backend schema exactly
     const payload = {
       name: values.name,
-      email: values.email,
-      phone: values.phone,
-      address: values.address,
-      tin_number: values.tin_number, 
+      email: values.email || null,
+      phone: values.phone || null,
+      address: values.address || null,
+      tin_number: values.tin_number || null,
+      contact_person: values.contact_person?.trim() || null,
+      comments: values.comments?.trim() || null,
       partner_type: "customer",
     };
   
@@ -86,7 +90,9 @@ export default function HomePage() {
           { name: "tin_number", label: "TIN Number", type: "text", placeholder: "Enter TIN Number" },
           { name: "email", label: "Email", placeholder: "Enter Email" },
           { name: "phone", label: "Phone No", placeholder: "Enter Phone No" },
+          { name: "contact_person", label: "Contact Person", placeholder: "Primary contact name" },
           { name: "address", label: "Address", placeholder: "Enter Address" },
+          { name: "comments", label: "Comments", type: "textarea", placeholder: "Internal notes or comments" },
         ]}
         onSubmit={handleSubmit}
         submitText="Submit Customer"

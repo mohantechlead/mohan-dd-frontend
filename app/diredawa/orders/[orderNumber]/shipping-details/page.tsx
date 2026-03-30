@@ -9,7 +9,9 @@ const SHIPPING_INVOICES_API_URL = "/api/inventory/shipping-invoices";
 const ITEMS_API_URL = "/api/inventory/items";
 
 interface ShippingItemState {
+  item_id: string;
   item_name: string;
+  hscode: string;
   price: number;
   quantity: number;
   total_price: number;
@@ -36,6 +38,12 @@ export default function ShippingDetailsPage() {
     customer_order_number: "",
     container_number: "",
     vessel: "",
+    freight_amount: "",
+    reference_no: "",
+    total_bags: "",
+    total_net_weight: "",
+    total_gross_weight: "",
+    final_price: "",
     invoice_remark: "",
     packing_list_remark: "",
     waybill_remark: "",
@@ -50,7 +58,9 @@ export default function ShippingDetailsPage() {
       total_price: number;
     }
   >({
+    item_id: "",
     item_name: "",
+    hscode: "",
     price: "",
     quantity: "",
     total_price: 0,
@@ -78,7 +88,7 @@ export default function ShippingDetailsPage() {
   };
 
   const [itemOptions, setItemOptions] = useState<
-    { item_name: string; hscode: string; internal_code: string | null }[]
+    { item_id?: string; item_name: string; hscode: string; internal_code: string | null }[]
   >([]);
   const [itemQuery, setItemQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
@@ -95,7 +105,7 @@ export default function ShippingDetailsPage() {
         if (!res.ok) return;
         const data = await res.json();
         setItemOptions(
-          data as { item_name: string; hscode: string; internal_code: string | null }[]
+          data as { item_id?: string; item_name: string; hscode: string; internal_code: string | null }[]
         );
       } catch {
         // ignore
@@ -192,13 +202,36 @@ export default function ShippingDetailsPage() {
       customer_order_number: shippingForm.customer_order_number.trim(),
       container_number: shippingForm.container_number || null,
       vessel: shippingForm.vessel || null,
+      freight_amount:
+        shippingForm.freight_amount.trim() !== ""
+          ? Number(shippingForm.freight_amount)
+          : null,
+      reference_no: shippingForm.reference_no.trim() || null,
+      total_bags:
+        shippingForm.total_bags.trim() !== ""
+          ? Number(shippingForm.total_bags)
+          : null,
+      total_net_weight:
+        shippingForm.total_net_weight.trim() !== ""
+          ? Number(shippingForm.total_net_weight)
+          : null,
+      total_gross_weight:
+        shippingForm.total_gross_weight.trim() !== ""
+          ? Number(shippingForm.total_gross_weight)
+          : null,
+      final_price:
+        shippingForm.final_price.trim() !== ""
+          ? Number(shippingForm.final_price)
+          : null,
       invoice_remark: shippingForm.invoice_remark || null,
       packing_list_remark: shippingForm.packing_list_remark || null,
       waybill_remark: shippingForm.waybill_remark || null,
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
       items: shippingItems.map((it) => ({
+        item_id: it.item_id || null,
         item_name: it.item_name,
+        hscode: it.hscode?.trim() || null,
         price: Number(it.price) || 0,
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
@@ -440,6 +473,91 @@ export default function ShippingDetailsPage() {
               />
             </div>
             <div>
+              <label className="block font-medium mb-1">Reference No</label>
+              <input
+                value={shippingForm.reference_no}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    reference_no: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Freight Amount</label>
+              <input
+                type="number"
+                step="0.01"
+                value={shippingForm.freight_amount}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    freight_amount: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Final Price</label>
+              <input
+                type="number"
+                step="0.01"
+                value={shippingForm.final_price}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    final_price: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Total Bags</label>
+              <input
+                type="number"
+                value={shippingForm.total_bags}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    total_bags: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Total Net Weight</label>
+              <input
+                type="number"
+                value={shippingForm.total_net_weight}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    total_net_weight: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Total Gross Weight</label>
+              <input
+                type="number"
+                value={shippingForm.total_gross_weight}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    total_gross_weight: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
               <label className="block font-medium mb-1">
                 Waybill Remark
               </label>
@@ -485,6 +603,7 @@ export default function ShippingDetailsPage() {
                   const value = e.target.value;
                   setShippingItem((prev) => ({
                     ...prev,
+                    item_id: "",
                     item_name: value,
                   }));
                   setItemQuery(value);
@@ -514,7 +633,9 @@ export default function ShippingDetailsPage() {
                         onClick={() => {
                           setShippingItem((prev) => ({
                             ...prev,
+                            item_id: opt.item_id ?? "",
                             item_name: opt.item_name,
+                            hscode: opt.hscode ?? "",
                             grade: opt.internal_code ?? "",
                           }));
                           setItemQuery(opt.item_name);
@@ -531,6 +652,19 @@ export default function ShippingDetailsPage() {
                     ))}
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block font-medium mb-1">HS Code</label>
+              <input
+                value={shippingItem.hscode}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    hscode: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
             </div>
             <div>
               <label className="block font-medium mb-1">Price</label>
@@ -719,7 +853,9 @@ export default function ShippingDetailsPage() {
                 ]);
                 setIsTotalCalculated(false);
                 setShippingItem({
+                  item_id: "",
                   item_name: "",
+                  hscode: "",
                   price: "",
                   quantity: "",
                   total_price: 0,
@@ -762,6 +898,7 @@ export default function ShippingDetailsPage() {
                 <thead className="bg-muted/60">
                   <tr>
                     <th className="px-2 py-1 text-left">Item</th>
+                    <th className="px-2 py-1 text-left">HS Code</th>
                     <th className="px-2 py-1 text-left">Grade</th>
                     <th className="px-2 py-1 text-left">Brand</th>
                     <th className="px-2 py-1 text-left">Country of Origin</th>
@@ -774,6 +911,7 @@ export default function ShippingDetailsPage() {
                   {shippingItems.map((it, idx) => (
                     <tr key={idx} className="border-t">
                       <td className="px-2 py-1">{it.item_name}</td>
+                      <td className="px-2 py-1">{it.hscode || "—"}</td>
                       <td className="px-2 py-1">{it.grade || "—"}</td>
                       <td className="px-2 py-1">{it.brand || "—"}</td>
                       <td className="px-2 py-1">{it.country_of_origin || "—"}</td>

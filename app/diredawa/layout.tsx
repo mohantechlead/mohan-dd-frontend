@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "../../components/app-sidebar";
 import {
@@ -30,6 +30,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuth();
+  /** Avoid SSR→client hydration mismatches when extensions inject attrs (e.g. fdprocessedid on inputs). */
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+
+  useEffect(() => {
+    setWorkspaceReady(true);
+  }, []);
 
   useEffect(() => {
     if (auth?.isStore && !isStorePathAllowed(pathname)) {
@@ -39,6 +45,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   if (auth?.isStore && !isStorePathAllowed(pathname)) {
     return null;
+  }
+
+  if (!workspaceReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/20">
+        <span className="text-sm text-muted-foreground">Loading workspace…</span>
+      </div>
+    );
   }
 
   return (

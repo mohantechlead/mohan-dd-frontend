@@ -17,12 +17,16 @@ interface GrnDetail {
   id: string;
   grn_no: string;
   supplier_name: string;
-  plate_no?: string | null;
+  purchase_id?: string | null;
+  received_from?: string | null;
+  truck_no?: string | null;
+  total_quantity?: number | null;
+  store_name?: string | null;
+  store_keeper?: string | null;
   purchase_no: string;
   date?: string | null;
   ECD_no?: string | null;
   transporter_name?: string | null;
-  storekeeper_name?: string | null;
   items: GrnItem[];
 }
 
@@ -104,7 +108,7 @@ export default function GrnDetailPage() {
                   <th className="px-4 py-2 text-left">Date</th>
                   <th className="px-4 py-2 text-left">Supplier Name</th>
                   <th className="px-4 py-2 text-left">Purchase No</th>
-                  <th className="px-4 py-2 text-left">Plate No</th>
+                  <th className="px-4 py-2 text-left">Truck No</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,7 +125,7 @@ export default function GrnDetailPage() {
                   </td>
                   <td className="px-4 py-2">{grn.supplier_name}</td>
                   <td className="px-4 py-2">{grn.purchase_no}</td>
-                  <td className="px-4 py-2">{grn.plate_no || "—"}</td>
+                  <td className="px-4 py-2">{grn.truck_no || "—"}</td>
                 </tr>
               </tbody>
             </table>
@@ -133,6 +137,14 @@ export default function GrnDetailPage() {
             </h2>
             <table className="w-full text-sm">
               <tbody>
+                <tr>
+                  <td className="px-4 py-2 text-muted-foreground w-48">Received From</td>
+                  <td className="px-4 py-2">{grn.received_from || "—"}</td>
+                </tr>
+                <tr className="border-t">
+                  <td className="px-4 py-2 text-muted-foreground w-48">Total Quantity</td>
+                  <td className="px-4 py-2">{grn.total_quantity ?? "—"}</td>
+                </tr>
                 <tr>
                   <td className="px-4 py-2 text-muted-foreground w-48">
                     ECD No
@@ -147,9 +159,15 @@ export default function GrnDetailPage() {
                 </tr>
                 <tr className="border-t">
                   <td className="px-4 py-2 text-muted-foreground">
-                    Storekeeper Name
+                    Store Name
                   </td>
-                  <td className="px-4 py-2">{grn.storekeeper_name || "—"}</td>
+                  <td className="px-4 py-2">{grn.store_name || "—"}</td>
+                </tr>
+                <tr className="border-t">
+                  <td className="px-4 py-2 text-muted-foreground">
+                    Store Keeper
+                  </td>
+                  <td className="px-4 py-2">{grn.store_keeper || "—"}</td>
                 </tr>
               </tbody>
             </table>

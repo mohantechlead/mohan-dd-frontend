@@ -48,8 +48,45 @@ export default function DN() {
     overItems: OverUnderItem[];
     underItems: OverUnderItem[];
   } | null>(null);
+  const [dnNoDuplicate, setDnNoDuplicate] = useState(false);
+  const [checkingDnNo, setCheckingDnNo] = useState(false);
   const handleSubmit = async (values: DnFormValues) => {
     console.log("Form submitted:", values);
+
+    if (dnNoDuplicate) {
+      showToast({
+        title: "Delivery Note number already exists",
+        description: "Please enter a different DN number.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const items = values.items ?? [];
+    if (items.length === 0) {
+      showToast({
+        title: "Delivery note items required",
+        description: "Please add at least one item from the list.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const hasInvalidItems = items.some((it) => {
+      const itemName = String(it.item_name ?? "").trim();
+      const internalCode = String(it.internal_code ?? "").trim();
+      const qty = Number(it.quantity ?? 0);
+      return !itemName || !internalCode || !Number.isFinite(qty) || qty <= 0;
+    });
+
+    if (hasInvalidItems) {
+      showToast({
+        title: "Select valid items",
+        description: "Each DN item must be selected from the item list and have quantity > 0.",
+        variant: "error",
+      });
+      return;
+    }
   
     // Transform values to match backend schema exactly
     const payload = {
@@ -153,7 +190,37 @@ export default function DN() {
         defaultValues={{ items: [] }}
         fields={[
           { name: "date", label: "Date", type: "date", placeholder: "Enter Date" },
-          { name: "dn_no", label: "Delivery Number", placeholder: "Enter Delivery Number" },
+          {
+            name: "dn_no",
+            label: "Delivery Number",
+            placeholder: "Enter Delivery Number",
+            onBlur: async (val) => {
+              const v = String(val ?? "").trim();
+              if (!v) {
+                setDnNoDuplicate(false);
+                return;
+              }
+              if (checkingDnNo) return;
+              setCheckingDnNo(true);
+              try {
+                const res = await fetch(`${DN_API_URL}/${encodeURIComponent(v)}`);
+                if (res.ok) {
+                  setDnNoDuplicate(true);
+                  showToast({
+                    title: "Delivery Note number already exists",
+                    description: "This DN number is already used. Please change it.",
+                    variant: "error",
+                  });
+                } else if (res.status === 404) {
+                  setDnNoDuplicate(false);
+                }
+              } catch {
+                // ignore network errors on blur
+              } finally {
+                setCheckingDnNo(false);
+              }
+            },
+          },
           { name: "customer_name", label: "Customer Name", placeholder: "Search customer...", dropdownConfig: { url: "/api/partners/customers", displayKey: "name" } },
           { name: "plate_no", label: "Plate No", placeholder: "Enter Plate No" },
           { name: "sales_no", label: "Order No", placeholder: "Search order...", dropdownConfig: { url: "/api/orders", displayKey: "order_number" } },

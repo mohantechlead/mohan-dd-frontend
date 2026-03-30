@@ -6,10 +6,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
 interface PurchaseItem {
+  item_id?: string | null;
+  purchase_number: string;
   item_name: string;
   price: number;
   quantity: number;
+  remaining: number;
   total_price: number;
+  before_vat?: number;
+  hscode?: string | null;
   measurement: string;
 }
 
@@ -29,7 +34,9 @@ interface PurchaseDetail {
   port_of_loading: string;
   port_of_discharge: string;
   measurement_type: string;
-  payment_terms: string;
+  payment_type: string;
+  /** Legacy/alternate field from API */
+  payment_terms?: string | null;
   mode_of_transport: string;
   freight: string;
   freight_price?: number | null;
@@ -60,7 +67,7 @@ export default function EditPurchasePage() {
     port_of_loading: "",
     port_of_discharge: "",
     measurement_type: "",
-    payment_terms: "",
+    payment_type: "",
     mode_of_transport: "",
     freight: "",
     freight_price: "",
@@ -100,10 +107,10 @@ export default function EditPurchasePage() {
           conditions: p.conditions || "",
           port_of_loading: p.port_of_loading,
           port_of_discharge: p.port_of_discharge,
-          measurement_type: p.measurement_type,
-          payment_terms: p.payment_terms,
+          measurement_type: p.measurement_type ?? "",
+          payment_type: p.payment_type ?? p.payment_terms ?? "",
           mode_of_transport: p.mode_of_transport,
-          freight: p.freight,
+          freight: p.freight ?? "",
           freight_price:
             p.freight_price != null ? String(p.freight_price) : "",
           insurance: p.insurance || "",
@@ -146,14 +153,24 @@ export default function EditPurchasePage() {
       conditions: form.conditions || null,
       port_of_loading: form.port_of_loading,
       port_of_discharge: form.port_of_discharge,
-      measurement_type: form.measurement_type,
-      payment_terms: form.payment_terms,
+      measurement_type: form.measurement_type.trim()
+        ? form.measurement_type
+        : null,
+      payment_type: form.payment_type,
       mode_of_transport: form.mode_of_transport,
-      freight: form.freight,
+      freight: form.freight.trim() ? form.freight : null,
       freight_price: form.freight_price ? Number(form.freight_price) : null,
       insurance: form.insurance || null,
       shipment_type: form.shipment_type,
-      items,
+      items: items.map((it) => ({
+        item_id: it.item_id ?? null,
+        item_name: it.item_name,
+        price: it.price,
+        quantity: it.quantity,
+        total_price: it.total_price,
+        measurement: it.measurement,
+        remaining: it.remaining ?? it.quantity,
+      })),
     };
     try {
       setSubmitting(true);
@@ -328,13 +345,13 @@ export default function EditPurchasePage() {
               />
             </div>
             <div>
-              <label className="block font-medium mb-1">Payment Terms</label>
+              <label className="block font-medium mb-1">Payment Type</label>
               <input
-                value={form.payment_terms}
+                value={form.payment_type}
                 onChange={(e) =>
                   setForm((prev) => ({
                     ...prev,
-                    payment_terms: e.target.value,
+                    payment_type: e.target.value,
                   }))
                 }
                 className="w-full border rounded-md px-3 py-2"
@@ -386,17 +403,30 @@ export default function EditPurchasePage() {
               <table className="w-full text-xs">
                 <thead className="bg-muted/60">
                   <tr>
+                    <th className="px-2 py-1 text-left">Purchase No.</th>
                     <th className="px-2 py-1 text-left">Item</th>
+                    <th className="px-2 py-1 text-left">HS Code</th>
                     <th className="px-2 py-1 text-right">Qty</th>
+                    <th className="px-2 py-1 text-right">Remaining</th>
                     <th className="px-2 py-1 text-right">Price</th>
                     <th className="px-2 py-1 text-right">Total</th>
+                    <th className="px-2 py-1 text-right">Before VAT</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it, idx) => (
                     <tr key={idx} className="border-t">
+                      <td className="px-2 py-1 font-mono text-[11px]">
+                        {it.purchase_number}
+                      </td>
                       <td className="px-2 py-1">{it.item_name}</td>
+                      <td className="px-2 py-1 font-mono text-[11px]">
+                        {it.hscode ?? "—"}
+                      </td>
                       <td className="px-2 py-1 text-right">{it.quantity}</td>
+                      <td className="px-2 py-1 text-right">
+                        {it.remaining ?? it.quantity}
+                      </td>
                       <td className="px-2 py-1 text-right">
                         {it.price.toLocaleString(undefined, {
                           maximumFractionDigits: 2,
@@ -406,6 +436,12 @@ export default function EditPurchasePage() {
                         {it.total_price.toLocaleString(undefined, {
                           maximumFractionDigits: 2,
                         })}
+                      </td>
+                      <td className="px-2 py-1 text-right">
+                        {(it.before_vat ?? it.total_price).toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 2 }
+                        )}
                       </td>
                     </tr>
                   ))}

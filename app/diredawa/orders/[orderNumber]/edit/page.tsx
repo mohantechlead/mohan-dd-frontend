@@ -167,10 +167,10 @@ export default function EditOrderPage() {
           final_destination: detail.final_destination,
           port_of_loading: detail.port_of_loading,
           port_of_discharge: detail.port_of_discharge,
-          measurement_type: detail.measurement_type,
+          measurement_type: detail.measurement_type ?? "",
           payment_terms: detail.payment_terms,
           mode_of_transport: detail.mode_of_transport,
-          freight: detail.freight,
+          freight: detail.freight ?? "",
           freight_price:
             detail.freight_price != null ? String(detail.freight_price) : "",
           shipment_type: detail.shipment_type,
@@ -253,10 +253,12 @@ export default function EditOrderPage() {
       final_destination: form.final_destination,
       port_of_loading: form.port_of_loading,
       port_of_discharge: form.port_of_discharge,
-      measurement_type: form.measurement_type,
+      measurement_type: form.measurement_type.trim()
+        ? form.measurement_type
+        : null,
       payment_terms: form.payment_terms,
       mode_of_transport: form.mode_of_transport,
-      freight: form.freight,
+      freight: form.freight.trim() ? form.freight : null,
       freight_price:
         form.freight_price !== "" ? Number(form.freight_price) : null,
       shipment_type: form.shipment_type,

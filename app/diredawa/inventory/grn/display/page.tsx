@@ -35,8 +35,11 @@ export default function DemoPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedGRN, setSelectedGRN] = useState<GRN | null>(null);
   const [editSupplierName, setEditSupplierName] = useState("");
-  const [editPlateNo, setEditPlateNo] = useState("");
+  const [editReceivedFrom, setEditReceivedFrom] = useState("");
+  const [editTruckNo, setEditTruckNo] = useState("");
   const [editPurchaseNo, setEditPurchaseNo] = useState("");
+  const [editStoreName, setEditStoreName] = useState("");
+  const [editStoreKeeper, setEditStoreKeeper] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -50,7 +53,10 @@ export default function DemoPage() {
       (g) =>
         String(g.grn_no).toLowerCase().includes(q) ||
         g.supplier_name.toLowerCase().includes(q) ||
+        (g.received_from?.toLowerCase().includes(q) ?? false) ||
+        (g.truck_no?.toLowerCase().includes(q) ?? false) ||
         g.purchase_no.toLowerCase().includes(q) ||
+        (g.store_keeper?.toLowerCase().includes(q) ?? false) ||
         g.items.some((i) => i.item_name.toLowerCase().includes(q))
     );
   }, [data, search]);
@@ -64,6 +70,10 @@ export default function DemoPage() {
   const openEdit = async (row: GRN) => {
     setSelectedGRN(row);
     setEditSupplierName(row.supplier_name);
+    setEditReceivedFrom(row.received_from ?? "");
+    setEditTruckNo(row.truck_no ?? "");
+    setEditStoreName(row.store_name ?? "");
+    setEditStoreKeeper(row.store_keeper ?? "");
     setEditPurchaseNo(row.purchase_no);
     const grnNo = String(row.grn_no);
     try {
@@ -72,12 +82,19 @@ export default function DemoPage() {
       });
       if (res.ok) {
         const detail = await res.json();
-        setEditPlateNo(detail.plate_no || "");
+        setEditTruckNo(detail.truck_no || "");
+        setEditReceivedFrom(detail.received_from || "");
+        setEditStoreName(detail.store_name || "");
+        setEditStoreKeeper(detail.store_keeper || "");
       } else {
-        setEditPlateNo("");
+        setEditTruckNo("");
+        setEditStoreName("");
+        setEditStoreKeeper("");
       }
     } catch {
-      setEditPlateNo("");
+      setEditTruckNo("");
+      setEditStoreName("");
+      setEditStoreKeeper("");
     }
     setEditOpen(true);
   };
@@ -99,8 +116,11 @@ export default function DemoPage() {
         credentials: "include",
         body: JSON.stringify({
           supplier_name: editSupplierName,
-          plate_no: editPlateNo || null,
+          received_from: editReceivedFrom || null,
+          truck_no: editTruckNo || null,
           purchase_no: editPurchaseNo,
+          store_name: editStoreName || null,
+          store_keeper: editStoreKeeper || null,
         }),
       });
       const data = await res.json();
@@ -194,12 +214,24 @@ export default function DemoPage() {
                 <Input value={editSupplierName} onChange={(e) => setEditSupplierName(e.target.value)} required />
               </Field>
               <Field>
-                <FieldLabel>Plate No</FieldLabel>
-                <Input value={editPlateNo} onChange={(e) => setEditPlateNo(e.target.value)} />
+                <FieldLabel>Received From</FieldLabel>
+                <Input value={editReceivedFrom} onChange={(e) => setEditReceivedFrom(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Truck No</FieldLabel>
+                <Input value={editTruckNo} onChange={(e) => setEditTruckNo(e.target.value)} />
               </Field>
               <Field>
                 <FieldLabel>Purchase No</FieldLabel>
                 <Input value={editPurchaseNo} onChange={(e) => setEditPurchaseNo(e.target.value)} required />
+              </Field>
+              <Field>
+                <FieldLabel>Store Name</FieldLabel>
+                <Input value={editStoreName} onChange={(e) => setEditStoreName(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Store Keeper</FieldLabel>
+                <Input value={editStoreKeeper} onChange={(e) => setEditStoreKeeper(e.target.value)} />
               </Field>
             </FieldGroup>
             <DialogFooter className="mt-4">

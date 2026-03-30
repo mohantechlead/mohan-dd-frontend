@@ -9,7 +9,9 @@ const SHIPPING_INVOICES_API_URL = "/api/inventory/shipping-invoices";
 const ITEMS_API_URL = "/api/inventory/items";
 
 interface ShippingItemState {
+  item_id: string;
   item_name: string;
+  hscode: string;
   price: number | string;
   quantity: number | string;
   total_price: number;
@@ -31,13 +33,21 @@ interface ShippingInvoiceDetail {
   customer_order_number: string;
   container_number?: string | null;
   vessel?: string | null;
+  freight_amount?: number | null;
+  reference_no?: string | null;
+  total_bags?: number | null;
+  total_net_weight?: number | null;
+  total_gross_weight?: number | null;
+  final_price?: number | null;
   invoice_remark?: string | null;
   packing_list_remark?: string | null;
   waybill_remark?: string | null;
   bill_of_lading_remark?: string | null;
   sr_no?: number;
   items: {
+    item_id?: string | null;
     item_name: string;
+    hscode?: string | null;
     price: number;
     quantity: number;
     total_price: number;
@@ -67,6 +77,12 @@ export default function EditShippingInvoicePage() {
     customer_order_number: "",
     container_number: "",
     vessel: "",
+    freight_amount: "",
+    reference_no: "",
+    total_bags: "",
+    total_net_weight: "",
+    total_gross_weight: "",
+    final_price: "",
     invoice_remark: "",
     packing_list_remark: "",
     waybill_remark: "",
@@ -78,7 +94,9 @@ export default function EditShippingInvoicePage() {
   const [itemsTotal, setItemsTotal] = useState(0);
   const [isTotalCalculated, setIsTotalCalculated] = useState(false);
   const [shippingItem, setShippingItem] = useState<ShippingItemState>({
+    item_id: "",
     item_name: "",
+    hscode: "",
     price: "",
     quantity: "",
     total_price: 0,
@@ -92,7 +110,7 @@ export default function EditShippingInvoicePage() {
   });
 
   const [itemOptions, setItemOptions] = useState<
-    { item_name: string; hscode: string; internal_code: string | null }[]
+    { item_id?: string; item_name: string; hscode: string; internal_code: string | null }[]
   >([]);
   const [itemQuery, setItemQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
@@ -114,6 +132,19 @@ export default function EditShippingInvoicePage() {
             customer_order_number: invData.customer_order_number,
             container_number: invData.container_number || "",
             vessel: invData.vessel || "",
+            freight_amount:
+              invData.freight_amount != null ? String(invData.freight_amount) : "",
+            reference_no: invData.reference_no || "",
+            total_bags: invData.total_bags != null ? String(invData.total_bags) : "",
+            total_net_weight:
+              invData.total_net_weight != null
+                ? String(invData.total_net_weight)
+                : "",
+            total_gross_weight:
+              invData.total_gross_weight != null
+                ? String(invData.total_gross_weight)
+                : "",
+            final_price: invData.final_price != null ? String(invData.final_price) : "",
             invoice_remark: invData.invoice_remark || "",
             packing_list_remark: invData.packing_list_remark || "",
             waybill_remark: invData.waybill_remark || "",
@@ -121,7 +152,9 @@ export default function EditShippingInvoicePage() {
             sr_no: invData.sr_no != null ? String(invData.sr_no) : "",
           });
           const items = invData.items.map((it) => ({
+            item_id: it.item_id ?? "",
             item_name: it.item_name,
+            hscode: it.hscode ?? "",
             price: String(it.price),
             quantity: String(it.quantity),
             total_price: it.total_price,
@@ -144,6 +177,7 @@ export default function EditShippingInvoicePage() {
         if (itemsRes.ok) {
           const itemsData =
             (await itemsRes.json()) as {
+              item_id?: string;
               item_name: string;
               hscode: string;
               internal_code: string | null;
@@ -219,13 +253,36 @@ export default function EditShippingInvoicePage() {
       customer_order_number: shippingForm.customer_order_number.trim(),
       container_number: shippingForm.container_number || null,
       vessel: shippingForm.vessel || null,
+      freight_amount:
+        shippingForm.freight_amount.trim() !== ""
+          ? Number(shippingForm.freight_amount)
+          : null,
+      reference_no: shippingForm.reference_no.trim() || null,
+      total_bags:
+        shippingForm.total_bags.trim() !== ""
+          ? Number(shippingForm.total_bags)
+          : null,
+      total_net_weight:
+        shippingForm.total_net_weight.trim() !== ""
+          ? Number(shippingForm.total_net_weight)
+          : null,
+      total_gross_weight:
+        shippingForm.total_gross_weight.trim() !== ""
+          ? Number(shippingForm.total_gross_weight)
+          : null,
+      final_price:
+        shippingForm.final_price.trim() !== ""
+          ? Number(shippingForm.final_price)
+          : null,
       invoice_remark: shippingForm.invoice_remark || null,
       packing_list_remark: shippingForm.packing_list_remark || null,
       waybill_remark: shippingForm.waybill_remark || null,
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
       items: shippingItems.map((it) => ({
+        item_id: it.item_id || null,
         item_name: it.item_name,
+        hscode: it.hscode?.trim() || null,
         price: Number(it.price) || 0,
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
@@ -438,6 +495,91 @@ export default function EditShippingInvoicePage() {
                 />
               </div>
               <div>
+                <label className="block font-medium mb-1">Reference No</label>
+                <input
+                  value={shippingForm.reference_no}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      reference_no: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Freight Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={shippingForm.freight_amount}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      freight_amount: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Final Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={shippingForm.final_price}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      final_price: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Total Bags</label>
+                <input
+                  type="number"
+                  value={shippingForm.total_bags}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      total_bags: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Total Net Weight</label>
+                <input
+                  type="number"
+                  value={shippingForm.total_net_weight}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      total_net_weight: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Total Gross Weight</label>
+                <input
+                  type="number"
+                  value={shippingForm.total_gross_weight}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      total_gross_weight: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
                 <label className="block font-medium mb-1">Waybill Remark</label>
                 <textarea
                   rows={3}
@@ -502,7 +644,9 @@ export default function EditShippingInvoicePage() {
                     ]);
                     setIsTotalCalculated(false);
                     setShippingItem({
+                      item_id: "",
                       item_name: "",
+                      hscode: "",
                       price: "",
                       quantity: "",
                       total_price: 0,
@@ -548,6 +692,7 @@ export default function EditShippingInvoicePage() {
                     const value = e.target.value;
                     setShippingItem((prev) => ({
                       ...prev,
+                      item_id: "",
                       item_name: value,
                     }));
                     setItemQuery(value);
@@ -579,7 +724,9 @@ export default function EditShippingInvoicePage() {
                           onClick={() => {
                             setShippingItem((prev) => ({
                               ...prev,
+                              item_id: opt.item_id ?? "",
                               item_name: opt.item_name,
+                              hscode: opt.hscode ?? "",
                               grade: opt.internal_code ?? "",
                             }));
                             setItemQuery(opt.item_name);
@@ -596,6 +743,19 @@ export default function EditShippingInvoicePage() {
                       ))}
                   </div>
                 )}
+              </div>
+              <div>
+                <label className="block font-medium mb-1">HS Code</label>
+                <input
+                  value={shippingItem.hscode}
+                  onChange={(e) =>
+                    setShippingItem((prev) => ({
+                      ...prev,
+                      hscode: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
               </div>
               <div>
                 <label className="block font-medium mb-1">Price</label>
@@ -769,7 +929,7 @@ export default function EditShippingInvoicePage() {
                           const value = e.target.value;
                           setShippingItems((prev) => {
                             const next = [...prev];
-                            next[idx] = { ...next[idx], item_name: value };
+                            next[idx] = { ...next[idx], item_name: value, item_id: "" };
                             return next;
                           });
                           setItemQuery(value);
@@ -808,7 +968,9 @@ export default function EditShippingInvoicePage() {
                                     const next = [...prev];
                                     next[idx] = {
                                       ...next[idx],
+                                        item_id: opt.item_id ?? "",
                                       item_name: opt.item_name,
+                                        hscode: opt.hscode ?? "",
                                       grade: opt.internal_code ?? "",
                                     };
                                     return next;
@@ -827,6 +989,21 @@ export default function EditShippingInvoicePage() {
                             ))}
                         </div>
                       )}
+                    </div>
+
+                    <div>
+                      <label className="block font-medium mb-1">HS Code</label>
+                      <input
+                        value={it.hscode}
+                        onChange={(e) =>
+                          setShippingItems((prev) => {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], hscode: e.target.value };
+                            return next;
+                          })
+                        }
+                        className="w-full border rounded-md px-3 py-2 bg-white"
+                      />
                     </div>
 
                     <div>

@@ -35,7 +35,7 @@ interface OrderDetail {
   measurement_type?: string | null;
   payment_terms: string;
   mode_of_transport: string;
-  freight: string;
+  freight?: string | null;
   shipment_type: string;
   status: string;
   items: OrderItem[];
@@ -199,7 +199,7 @@ export default function ProformaInvoicePage() {
               </div>
               <div>
                 <p className="font-semibold">Freight</p>
-                <p>{order.freight}</p>
+                <p>{order.freight ?? "—"}</p>
               </div>
               <div>
                 <p className="font-semibold">Shipment Type</p>

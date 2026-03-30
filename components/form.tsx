@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { cn } from "@/lib/utils";
 import { SearchableDropdown, type DropdownOption } from "./searchable-dropdown";
 
 interface DropdownConfig {
@@ -28,10 +29,12 @@ interface DependentDropdownConfig {
 interface Field<T extends FieldValues> {
   name: Path<T>;
   label: string;
-  type?: string;
+  type?: "text" | "email" | "password" | "number" | "textarea" | string;
   placeholder?: string;
   dropdownConfig?: DropdownConfig;
   dependentDropdownConfig?: DependentDropdownConfig;
+  // Optional blur hook (e.g. uniqueness check with toasts)
+  onBlur?: (value: string) => void | Promise<void>;
 }
 
 interface FormProps<T extends FieldValues> {
@@ -130,14 +133,39 @@ function FormField<T extends FieldValues>({
     );
   }
 
+  if (field.type === "textarea") {
+    return (
+      <div className="flex flex-col gap-1">
+        <Label>{field.label}</Label>
+        <textarea
+          className={cn(
+            "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          )}
+          placeholder={field.placeholder}
+          {...methods.register(field.name)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <Label>{field.label}</Label>
-      <Input
-        type={field.type || "text"}
-        placeholder={field.placeholder}
-        {...methods.register(field.name)}
-      />
+      {(() => {
+        const reg = methods.register(field.name);
+        return (
+          <Input
+            type={field.type || "text"}
+            placeholder={field.placeholder}
+            {...reg}
+            onBlur={(e) => {
+              reg.onBlur?.(e);
+              const nextValue = (e.target as HTMLInputElement).value;
+              void field.onBlur?.(nextValue);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
