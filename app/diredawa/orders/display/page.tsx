@@ -163,10 +163,27 @@ export default function DisplayOrdersPage() {
     }
   };
 
+  const getStatusClasses = (status?: string | null) => {
+    const value = (status || "").toLowerCase();
+    if (value === "pending") {
+      return "bg-amber-100 text-amber-800";
+    }
+    if (value === "approved") {
+      return "bg-blue-100 text-blue-800";
+    }
+    if (value === "completed") {
+      return "bg-emerald-100 text-emerald-800";
+    }
+    if (value === "cancelled") {
+      return "bg-rose-100 text-rose-800";
+    }
+    return "bg-slate-100 text-slate-700";
+  };
+
   return (
-    <div className="max-w-5xl mx-auto mt-4 space-y-6">
+    <div className="max-w-6xl mx-auto mt-4 space-y-6">
       <div className="flex justify-between items-center">
-        <Button onClick={() => router.push("/diredawa/orders/create")}>
+        <Button className="rounded-lg shadow-sm" onClick={() => router.push("/diredawa/orders/create")}>
           Create Sales
         </Button>
         <h1 className="text-2xl font-bold text-center flex-1">
@@ -183,41 +200,41 @@ export default function DisplayOrdersPage() {
       ) : (
         <>
           <div className="flex justify-end mb-4">
-          <TableSearch value={search} onChange={setSearch} placeholder="Search orders, customer, items..." />
-        </div>
-          <div className="border border-border rounded-md overflow-hidden bg-white">
+            <TableSearch value={search} onChange={setSearch} placeholder="Search orders, customer, items..." />
+          </div>
+          <div className="rounded-xl border border-border bg-white shadow-sm overflow-x-auto">
           <table className="w-full text-sm border-collapse">
-            <thead className="bg-muted/60">
+            <thead className="bg-slate-100/80 sticky top-0 z-10">
               <tr>
-                <th className="text-left px-4 py-2 border border-border">
+                <th className="text-left px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Order Number
                 </th>
-                <th className="text-left px-4 py-2 border border-border">
+                <th className="text-left px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Date
                 </th>
-                <th className="text-left px-4 py-2 border border-border">
+                <th className="text-left px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Items
                 </th>
-                <th className="text-right px-4 py-2 border border-border">
+                <th className="text-right px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Quantity
                 </th>
-                <th className="text-right px-4 py-2 border border-border">
+                <th className="text-right px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Unit Price
                 </th>
-                <th className="text-right px-4 py-2 border border-border">
+                <th className="text-right px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Total Price
                 </th>
-                <th className="text-left px-4 py-2 border border-border">
+                <th className="text-left px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Customer Name
                 </th>
-                <th className="text-left px-4 py-2 border border-border">
+                <th className="text-left px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Approved By
                 </th>
-                <th className="text-left px-4 py-2 border border-border">
+                <th className="text-left px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Status
                 </th>
                 {auth?.isAdmin && (
-                  <th className="text-right px-4 py-2 border border-border">
+                  <th className="text-right px-4 py-3 border-b border-border font-semibold text-slate-700">
                     Actions
                   </th>
                 )}
@@ -238,14 +255,14 @@ export default function DisplayOrdersPage() {
                         key={`${order.id}-${idx}`}
                         className={
                           orderIdx > 0 && idx === 0
-                            ? "border-t-4 border-t-border"
-                            : "border-t border-t-border"
+                            ? "border-t-4 border-t-slate-300 bg-white hover:bg-slate-50/60"
+                            : "border-t border-t-slate-200 bg-white hover:bg-slate-50/60"
                         }
                       >
                         {idx === 0 ? (
                           <>
                             <td
-                              className="px-4 py-2 border border-border align-top"
+                              className="px-4 py-2 border-r border-slate-200 align-top font-medium"
                               rowSpan={order.items.length}
                             >
                               {auth?.isStore ? (
@@ -265,7 +282,7 @@ export default function DisplayOrdersPage() {
                               )}
                             </td>
                             <td
-                              className="px-4 py-2 border border-border align-top"
+                              className="px-4 py-2 border-r border-slate-200 align-top text-slate-700"
                               rowSpan={order.items.length}
                             >
                               {new Date(
@@ -274,21 +291,21 @@ export default function DisplayOrdersPage() {
                             </td>
                           </>
                         ) : null}
-                        <td className="px-4 py-2 border border-border">
+                        <td className="px-4 py-2 border-r border-slate-200">
                           {item.item_name}
                         </td>
-                        <td className="px-4 py-2 text-right border border-border">
+                        <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
                           {item.quantity.toLocaleString(undefined, {
                             minimumFractionDigits: 1,
                             maximumFractionDigits: 1,
                           })}
                         </td>
-                        <td className="px-4 py-2 text-right border border-border">
+                        <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
                           {item.price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="px-4 py-2 text-right border border-border">
+                        <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
                           {item.total_price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
                           })}
@@ -296,26 +313,28 @@ export default function DisplayOrdersPage() {
                         {idx === 0 ? (
                           <>
                             <td
-                              className="px-4 py-2 border border-border align-top"
+                              className="px-4 py-2 border-r border-slate-200 align-top"
                               rowSpan={order.items.length}
                             >
                               {order.buyer}
                             </td>
                             <td
-                              className="px-4 py-2 border border-border align-top"
+                              className="px-4 py-2 border-r border-slate-200 align-top"
                               rowSpan={order.items.length}
                             >
                               {order.approved_by ?? "—"}
                             </td>
                             <td
-                              className="px-4 py-2 border border-border capitalize align-top"
+                              className="px-4 py-2 border-r border-slate-200 capitalize align-top"
                               rowSpan={order.items.length}
                             >
-                              {order.status ?? "—"}
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClasses(order.status)}`}>
+                                {order.status ?? "—"}
+                              </span>
                             </td>
                             {auth?.isAdmin && (
                               <td
-                                className="px-4 py-2 text-right border border-border align-top"
+                                className="px-4 py-2 text-right align-top"
                                 rowSpan={order.items.length}
                               >
                                 <div className="flex justify-end gap-2">
@@ -346,7 +365,7 @@ export default function DisplayOrdersPage() {
                     ))
                   : [
                       <tr key={order.id}>
-                        <td className="px-4 py-2 border border-border">
+                        <td className="px-4 py-2 border-r border-slate-200">
                           {auth?.isStore ? (
                             <span>{order.order_number}</span>
                           ) : (
@@ -363,28 +382,30 @@ export default function DisplayOrdersPage() {
                             </button>
                           )}
                         </td>
-                        <td className="px-4 py-2 border border-border">
+                        <td className="px-4 py-2 border-r border-slate-200">
                           {new Date(order.order_date).toLocaleDateString()}
                         </td>
                         <td
-                          className="px-4 py-2 border border-border"
+                          className="px-4 py-2 border-r border-slate-200"
                           colSpan={4}
                         >
                           <span className="text-xs text-muted-foreground">
                             No items
                           </span>
                         </td>
-                        <td className="px-4 py-2 border border-border">
+                        <td className="px-4 py-2 border-r border-slate-200">
                           {order.buyer}
                         </td>
-                        <td className="px-4 py-2 border border-border">
+                        <td className="px-4 py-2 border-r border-slate-200">
                           {order.approved_by ?? "—"}
                         </td>
-                        <td className="px-4 py-2 border border-border capitalize">
-                          {order.status ?? "—"}
+                        <td className="px-4 py-2 border-r border-slate-200 capitalize">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClasses(order.status)}`}>
+                            {order.status ?? "—"}
+                          </span>
                         </td>
                         {auth?.isAdmin && (
-                          <td className="px-4 py-2 text-right border border-border">
+                          <td className="px-4 py-2 text-right">
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="ghost"

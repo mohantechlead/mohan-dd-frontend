@@ -363,6 +363,13 @@ export default function BillOfLadingPage() {
               </tbody>
             </table>
           </div>
+          {invoice.bill_of_lading_remark?.trim() ? (
+            <div className="mt-3 text-xs">
+              <p className="whitespace-pre-wrap text-muted-foreground">
+                {invoice.bill_of_lading_remark}
+              </p>
+            </div>
+          ) : null}
         </div>
       )}
     </div>

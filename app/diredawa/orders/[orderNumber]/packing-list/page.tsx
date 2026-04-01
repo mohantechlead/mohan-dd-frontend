@@ -54,6 +54,10 @@ interface ShippingInvoiceDetail {
   invoice_date: string;
   waybill_number?: string | null;
   customer_order_number: string;
+  invoice_remark?: string | null;
+  packing_list_remark?: string | null;
+  waybill_remark?: string | null;
+  bill_of_lading_remark?: string | null;
   items: {
     item_name: string;
     price: number;
@@ -438,38 +442,13 @@ export default function PackingListPage() {
                 })}
               </tbody>
             </table>
-            <div className="mt-4 text-xs text-muted-foreground">
-              {totalBags > 0 && (
-                <div>
-                  Total No of Packages{" "}
-                  {totalBags.toLocaleString(undefined, {
-                    maximumFractionDigits: 1,
-                  })}{" "}
-                  packages
-                </div>
-              )}
-              {totalNetKg > 0 && (
-                <div className="mt-1">
-                  {totalNetKg.toLocaleString(undefined, {
-                    maximumFractionDigits: 3,
-                  })}{" "}
-                  KG{" "}
-                  {totalBags > 0
-                    ? `(${totalBags.toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })} BAGS) `
-                    : ""}
-                  AS PER PROFORMA INV NO {order.proforma_ref_no} DATED{" "}
-                  {new Date(order.order_date).toLocaleDateString(undefined, {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })}{" "}
-                  PO NO {invoice.customer_order_number} TIN NO 0000050941
-                  HIBRET BANK ADDIS ABABA, ETHIOPIA
-                </div>
-              )}
-            </div>
+            {invoice.packing_list_remark?.trim() ? (
+              <div className="mt-3 text-xs">
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {invoice.packing_list_remark}
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

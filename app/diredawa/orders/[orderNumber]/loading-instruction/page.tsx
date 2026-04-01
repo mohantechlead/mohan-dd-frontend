@@ -47,6 +47,25 @@ interface ShippingInvoiceDetail {
 
 const SHIPPING_INVOICES_API_URL = "/api/inventory/shipping-invoices";
 
+const KG_EQUIVALENTS: Record<string, number> = {
+  kg: 1,
+  kgs: 1,
+  kilogram: 1,
+  kilograms: 1,
+  mt: 1000,
+  ton: 1000,
+  tons: 1000,
+  tonne: 1000,
+  tonnes: 1000,
+  g: 0.001,
+  gram: 0.001,
+  grams: 0.001,
+  lb: 0.45359237,
+  lbs: 0.45359237,
+  pound: 0.45359237,
+  pounds: 0.45359237,
+};
+
 export default function LoadingInstructionPage() {
   const params = useParams<{ orderNumber: string }>();
   const searchParams = useSearchParams();
@@ -56,6 +75,7 @@ export default function LoadingInstructionPage() {
 
   const orderNumber = params.orderNumber;
   const invoiceIdFromQuery = searchParams.get("invoiceId");
+  const fromList = searchParams.get("from") === "loading-instructions";
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [invoice, setInvoice] = useState<ShippingInvoiceDetail | null>(null);
@@ -180,13 +200,19 @@ export default function LoadingInstructionPage() {
           variant="outline"
           onClick={() =>
             router.push(
-              auth?.isStore
+              fromList
+                ? "/diredawa/loading-instructions"
+                : auth?.isStore
                 ? "/diredawa/loading-instructions/authorized"
                 : `/diredawa/orders/${orderNumber}`
             )
           }
         >
-          {auth?.isStore ? "Back to Auth. Loading Instruction" : "Back to Order Detail"}
+          {fromList
+            ? "Back to Loading Instructions"
+            : auth?.isStore
+              ? "Back to Auth. Loading Instruction"
+              : "Back to Order Detail"}
         </Button>
         <div className="flex items-center gap-2">
           {invoice?.authorized_by ? (
@@ -316,16 +342,33 @@ export default function LoadingInstructionPage() {
                       : item.quantity != null
                         ? `${item.quantity} ${item.measurement || ""}`
                         : "—";
-                  const remarks =
-                    item.net_weight != null
-                      ? `${item.net_weight.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
-                        })} kg`
-                      : item.gross_weight != null
-                        ? `${item.gross_weight.toLocaleString(undefined, {
-                            maximumFractionDigits: 3,
-                          })} kg`
-                        : "—";
+
+                  const toKg = (value: number, unit?: string | null) => {
+                    const factor = KG_EQUIVALENTS[(unit || "").trim().toLowerCase()];
+                    return factor != null ? value * factor : value;
+                  };
+
+                  const remarks = (() => {
+                    if (item.net_weight != null) {
+                      const netInKg = toKg(item.net_weight, item.measurement);
+                      return `${netInKg.toLocaleString(undefined, {
+                        maximumFractionDigits: 3,
+                      })} KG`;
+                    }
+                    if (item.gross_weight != null) {
+                      const grossInKg = toKg(item.gross_weight, item.measurement);
+                      return `${grossInKg.toLocaleString(undefined, {
+                        maximumFractionDigits: 3,
+                      })} KG`;
+                    }
+                    if (item.quantity != null) {
+                      const qtyInKg = toKg(item.quantity, item.measurement);
+                      return `${qtyInKg.toLocaleString(undefined, {
+                        maximumFractionDigits: 3,
+                      })} KG`;
+                    }
+                    return "—";
+                  })();
 
                   return (
                     <tr key={index} className="border-b border-black">

@@ -151,7 +151,7 @@ export default function AdminDashboardPage() {
       title: "Loading Instructions to be authorized",
       value: invoicesPendingAuth.length,
       icon: Truck,
-      href: "/diredawa/orders/display",
+      href: "/diredawa/loading-instructions",
       color: "!bg-violet-100 !border-violet-400 dark:!bg-violet-950/60 dark:!border-violet-600",
       iconBg: "bg-violet-400/30",
       iconColor: "text-violet-700 dark:text-violet-400",

@@ -125,7 +125,7 @@ export default function AuthorizedLoadingInstructionsPage() {
                       size="sm"
                       onClick={() =>
                         router.push(
-                          `/diredawa/orders/${inv.order_number}/loading-instruction?invoiceId=${inv.id}`
+                          `/diredawa/orders/${inv.order_number}/loading-instruction?invoiceId=${inv.id}&from=loading-instructions`
                         )
                       }
                     >

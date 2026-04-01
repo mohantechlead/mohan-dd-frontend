@@ -54,6 +54,10 @@ interface ShippingInvoiceDetail {
   invoice_date: string;
   waybill_number?: string | null;
   customer_order_number: string;
+  invoice_remark?: string | null;
+  packing_list_remark?: string | null;
+  waybill_remark?: string | null;
+  bill_of_lading_remark?: string | null;
   items: {
     item_name: string;
     price: number;
@@ -436,6 +440,13 @@ export default function TruckWaybillPage() {
               </tbody>
             </table>
           </div>
+          {invoice.waybill_remark?.trim() ? (
+            <div className="mt-3 text-xs">
+              <p className="whitespace-pre-wrap text-muted-foreground">
+                {invoice.waybill_remark}
+              </p>
+            </div>
+          ) : null}
         </div>
       )}
     </div>

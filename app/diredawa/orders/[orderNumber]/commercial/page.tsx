@@ -177,20 +177,6 @@ export default function CommercialInvoicePage() {
     return [];
   }, [invoice, order]);
 
-  const countriesDisplay = useMemo(() => {
-    if (itemsForTable.length > 0) {
-      const countries = [
-        ...new Set(
-          itemsForTable
-            .map((i) => i.country_of_origin?.trim())
-            .filter((c) => c)
-        ),
-      ];
-      if (countries.length > 0) return countries.join(" | ");
-    }
-    return order?.country_of_origin || "";
-  }, [itemsForTable, order]);
-
   const totalAmount = useMemo(
     () => itemsForTable.reduce((sum, item) => sum + item.total_price, 0),
     [itemsForTable]
@@ -214,7 +200,7 @@ export default function CommercialInvoicePage() {
   }, [itemsForTable]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
+    <div className="commercial-invoice-print w-full max-w-6xl print:max-w-none print:w-full mx-auto print:mx-0 py-8 print:py-1 px-2 print:px-2 space-y-8 print:space-y-2 bg-white font-poppins">
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -245,34 +231,34 @@ export default function CommercialInvoicePage() {
       ) : (
         <div className="space-y-8">
           {/* Header / Company info */}
-          <div className="text-center space-y-1">
+          <div className="text-center space-y-1 print:space-y-0.5">
             <Image
               src="/logo.png"
               alt="Mohan PLC logo"
               width={80}
               height={80}
-              className="mx-auto mb-3"
+              className="mx-auto mb-3 print:mb-1"
             />
             <h1 className="text-2xl font-semibold tracking-wide">Mohan PLC</h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Dire Dawa Free Trade Zone Branch
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Email: harsh@mohanint.com 
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               &nbsp; TEL:+251-11-6621849
             </p>  
           </div>
 
-          <h2 className="text-xl font-semibold text-center tracking-wide">
+          <h2 className="text-xl print:text-xl font-semibold text-center tracking-wide">
             Commercial Invoice
           </h2>
 
           {/* Two rows, three columns layout */}
 
           {/* Row 1: Shipper / Invoice info / Waybill & Customer Order */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 print:grid-cols-3 gap-8 print:gap-4 text-sm print:text-sm mt-4 print:mt-2 leading-tight">
             {/* R1C1: Shipper */}
             <div className="space-y-1">
               <p className="font-semibold">Shipper</p>
@@ -329,7 +315,7 @@ export default function CommercialInvoicePage() {
           <hr className="border-t my-4" />
 
           {/* Row 2: Buyer / Ports+Means+Payment / Country+Destination+Shipment */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 print:grid-cols-3 gap-8 print:gap-4 text-sm print:text-sm leading-tight">
             {/* R2C1: Buyer Details */}
             <div className="space-y-1">
               <p className="font-semibold">Buyer Details</p>
@@ -372,7 +358,7 @@ export default function CommercialInvoicePage() {
               )}
               <div>
                 <p className="font-semibold">Country of Origin</p>
-                <p>{countriesDisplay}</p>
+                <p>{order.country_of_origin || "-"}</p>
               </div>
               <div>
                 <p className="font-semibold">Final Destination</p>
@@ -382,18 +368,19 @@ export default function CommercialInvoicePage() {
           </div>
 
           {/* Items table */}
-          <div className="mt-4">
-            <table className="w-full text-xs border-t">
+          <div className="mt-4 print:mt-1">
+            <table className="w-full text-sm print:text-sm border-t print:break-inside-auto leading-tight">
               <thead>
                 <tr className="border-b">
-                  <th className="px-2 py-2 text-left w-12">Sr. No.</th>
-                  <th className="px-2 py-2 text-left">
+                  <th className="px-2 py-2 print:py-1 text-left w-12">Sr. No.</th>
+                  <th className="px-2 py-2 print:py-1 text-left">
                     Description of Commodities
                   </th>
-                  <th className="px-2 py-2 text-left">Unit</th>
-                  <th className="px-2 py-2 text-right">Qty</th>
-                  <th className="px-2 py-2 text-right">Price</th>
-                  <th className="px-2 py-2 text-right">Amount</th>
+                  <th className="px-2 py-2 print:py-1 text-left">Country of Origin</th>
+                  <th className="px-2 py-2 print:py-1 text-left">Unit</th>
+                  <th className="px-2 py-2 print:py-1 text-right">Qty</th>
+                  <th className="px-2 py-2 print:py-1 text-right">Price</th>
+                  <th className="px-2 py-2 print:py-1 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -403,29 +390,34 @@ export default function CommercialInvoicePage() {
                     null;
                   return (
                     <tr key={index} className="border-b align-top">
-                      <td className="px-2 py-2 text-left">
+                      <td className="px-2 py-2 print:py-1 text-left">
                         {String(index + 1).padStart(2, "0")}
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-2 py-2 print:py-1">
                         <div>{item.item_name}</div>
                         {orderItem?.hs_code ? (
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-xs print:text-xs text-muted-foreground">
                             HS-code:{orderItem.hs_code}
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-2 py-2 print:py-1">
+                        {item.country_of_origin?.trim() ||
+                          order.country_of_origin ||
+                          "-"}
+                      </td>
+                      <td className="px-2 py-2 print:py-1">
                         {item.measurement || orderItem?.measurement || ""}
                       </td>
-                      <td className="px-2 py-2 text-right">
+                      <td className="px-2 py-2 print:py-1 text-right">
                         {item.quantity.toLocaleString()}
                       </td>
-                      <td className="px-2 py-2 text-right">
+                      <td className="px-2 py-2 print:py-1 text-right">
                         ${item.price.toLocaleString(undefined, {
                           maximumFractionDigits: 3,
                         })}
                       </td>
-                      <td className="px-2 py-2 text-right">
+                      <td className="px-2 py-2 print:py-1 text-right">
                         ${item.total_price.toLocaleString(undefined, {
                           maximumFractionDigits: 3,
                         })}
@@ -434,13 +426,13 @@ export default function CommercialInvoicePage() {
                   );
                 })}
                 <tr>
-                  <td className="px-2 py-2 font-semibold" colSpan={5}>
+                  <td className="px-2 py-2 print:py-1 font-semibold" colSpan={6}>
                     Total
-                    <span className="ml-4 text-[10px] text-muted-foreground">
+                    <span className="ml-4 text-xs text-muted-foreground">
                       Amount in Words: USD {amountInWords(totalAmount)} ONLY
                     </span>
                   </td>
-                  <td className="px-2 py-2 text-right font-semibold">
+                  <td className="px-2 py-2 print:py-1 text-right font-semibold">
                     ${totalAmount.toLocaleString(undefined, {
                       maximumFractionDigits: 2,
                     })}
@@ -449,29 +441,51 @@ export default function CommercialInvoicePage() {
               </tbody>
             </table>
 
-            {/* Footer note line (dynamic weights / bags) */}
-            <div className="mt-4 text-[10px] text-muted-foreground">
-              {totalNetKg.toLocaleString(undefined, {
-                maximumFractionDigits: 3,
-              })}{" "}
-              KG{" "}
-              {totalBags > 0
-                ? `(${totalBags.toLocaleString(undefined, {
-                    maximumFractionDigits: 0,
-                  })} BAGS) `
-                : ""}{" "}
-              AS PER PROFORMA INV NO {order.proforma_ref_no} DATED{" "}
-              {new Date(order.order_date).toLocaleDateString(undefined, {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              })}{" "}
-              PO NO {invoice.customer_order_number} TIN NO 0000050941 HIBRET
-              BANK ADDIS ABABA, ETHIOPIA
-            </div>
+            {invoice.invoice_remark?.trim() ? (
+              <div className="mt-3 text-xs">
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {invoice.invoice_remark}
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
+      <style jsx global>{`
+        @media print {
+          @page {
+            margin: 8mm;
+          }
+
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          .commercial-invoice-print {
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+
+          .commercial-invoice-print table,
+          .commercial-invoice-print tr,
+          .commercial-invoice-print td,
+          .commercial-invoice-print th {
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+
+          .commercial-invoice-print thead {
+            display: table-header-group;
+          }
+
+          .commercial-invoice-print tbody tr {
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+        }
+      `}</style>
     </div>
   );
 }
