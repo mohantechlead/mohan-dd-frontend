@@ -214,8 +214,9 @@ export default function ProformaInvoicePage() {
             <div className="space-y-1">
               <p className="font-semibold mb-1">Buyer Details</p>
               <p className="uppercase">{order.buyer}</p>
-              {order.buyer_address && <p>{order.buyer_address}</p>}
-              {order.add_consignee && <p>{order.add_consignee}</p>}
+              <div>
+                <p>{order.buyer_address?.trim() || order.add_consignee?.trim() || "—"}</p>
+              </div>
             </div>
 
             {/* Row2 Col2: Ports + Means of Transport */}
