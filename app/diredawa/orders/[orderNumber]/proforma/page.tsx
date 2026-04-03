@@ -95,7 +95,10 @@ export default function ProformaInvoicePage() {
   }, [order]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
+    <div
+      className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins"
+      data-print-doc="compact"
+    >
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -144,7 +147,7 @@ export default function ProformaInvoicePage() {
               alt="Mohan PLC logo"
               width={80}
               height={80}
-              className="mx-auto mb-3"
+              className="mx-auto mb-3 print:h-28 print:w-28"
             />
             <h1 className="text-2xl font-semibold tracking-wide">Mohan PLC</h1>
             <p className="text-xs text-muted-foreground">
@@ -154,18 +157,20 @@ export default function ProformaInvoicePage() {
               Email: harsh@mohanint.com 
             </p>
             <p className="text-xs text-muted-foreground">
-               &nbsp; TEL:+251-11-6621849
+              TEL:+251-11-6621849
             </p>
           </div>
 
-          <h2 className="text-xl font-semibold text-center tracking-wide mt-6">
+          <h1 className="text-2xl font-semibold text-center tracking-wide">
             Proforma Invoice
-          </h2>
+          </h1>
+
+          <hr className="border-t" />
 
           {/* Rows 1 & 2 with 3 columns each */}
 
           {/* Row 1: Seller / Order / Proforma+Freight */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-xs mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
             {/* Row1 Col1: Seller Details */}
             <div className="space-y-2">
               <p className="font-semibold">Seller Details</p>
@@ -209,13 +214,15 @@ export default function ProformaInvoicePage() {
           </div>
 
           {/* Row 2: Buyer / Ports / Country+Destination+Payment+Shipment */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
             {/* Row2 Col1: Buyer Details */}
             <div className="space-y-1">
               <p className="font-semibold mb-1">Buyer Details</p>
               <p className="uppercase">{order.buyer}</p>
               <div>
-                <p>{order.buyer_address?.trim() || order.add_consignee?.trim() || "—"}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {order.buyer_address?.trim() || order.add_consignee?.trim() || "—"}
+                </p>
               </div>
             </div>
 
@@ -240,7 +247,9 @@ export default function ProformaInvoicePage() {
               {order.shipper_address && (
                 <div>
                   <p className="font-semibold">Shipper Address</p>
-                  <p>{order.shipper_address}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {order.shipper_address}
+                  </p>
                 </div>
               )}
               <div>
@@ -264,8 +273,8 @@ export default function ProformaInvoicePage() {
 
           {/* Order summary table */}
           <div className="mt-4">
-            <p className="text-sm font-semibold mb-2">Order Summary</p>
-            <table className="w-full text-xs">
+            <p className="text-xs font-semibold mb-2 tracking-wide">Order Summary</p>
+            <table className="w-full text-xs border-b">
               <thead>
                 <tr className="border-b text-left">
                   <th className="px-2 py-2 w-10">No.</th>
