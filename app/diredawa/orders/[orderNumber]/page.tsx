@@ -48,6 +48,20 @@ interface ShippingInvoiceSummary {
 
 const SHIPPING_INVOICES_API_URL = "/api/inventory/shipping-invoices";
 
+function normalizeShippingInvoiceList(raw: unknown): ShippingInvoiceSummary[] {
+  if (Array.isArray(raw)) {
+    return raw as ShippingInvoiceSummary[];
+  }
+  if (
+    raw &&
+    typeof raw === "object" &&
+    Array.isArray((raw as { results?: unknown }).results)
+  ) {
+    return (raw as { results: ShippingInvoiceSummary[] }).results;
+  }
+  return [];
+}
+
 export default function OrderDetailPage() {
   const params = useParams<{ orderNumber: string }>();
   const router = useRouter();
@@ -93,14 +107,37 @@ export default function OrderDetailPage() {
           const invRes = await fetch(
             `${SHIPPING_INVOICES_API_URL}?order_number=${encodeURIComponent(
               detail.order_number
-            )}`
+            )}`,
+            { credentials: "include" }
           );
           if (invRes.ok) {
-            const invData = await invRes.json();
-            setShippingInvoices(invData as ShippingInvoiceSummary[]);
+            const invData: unknown = await invRes.json();
+            setShippingInvoices(normalizeShippingInvoiceList(invData));
+          } else {
+            let body: unknown = null;
+            try {
+              body = await invRes.json();
+            } catch {
+              body = null;
+            }
+            const detailMsg =
+              (body as { detail?: string })?.detail ||
+              (body as { message?: string })?.message ||
+              `HTTP ${invRes.status}`;
+            showToast({
+              title: "Could not load shipping invoices",
+              description: String(detailMsg),
+              variant: "error",
+            });
+            setShippingInvoices([]);
           }
         } catch {
-          // ignore invoice load error
+          showToast({
+            title: "Could not load shipping invoices",
+            description: "Network error. Check that the API is reachable.",
+            variant: "error",
+          });
+          setShippingInvoices([]);
         }
       } catch {
         showToast({
@@ -318,7 +355,17 @@ export default function OrderDetailPage() {
                         colSpan={5}
                         className="px-4 py-4 text-sm text-muted-foreground text-center"
                       >
-                        No invoices added yet.
+                        <p className="font-medium text-foreground">
+                          No shipping invoices for this order yet.
+                        </p>
+                        <p className="mt-2 max-w-md mx-auto">
+                          The API returned an empty list for order{" "}
+                          <span className="font-mono">{order.order_number}</span>
+                          . Create one with{" "}
+                          <span className="font-medium">Add Shipping Details</span>
+                          , or import invoices into the database if they only exist
+                          in spreadsheets.
+                        </p>
                       </td>
                     </tr>
                   ) : (

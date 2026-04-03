@@ -48,6 +48,7 @@ export default function ShippingDetailsPage() {
     packing_list_remark: "",
     waybill_remark: "",
     bill_of_lading_remark: "",
+    bank: "",
     sr_no: "",
   });
 
@@ -227,6 +228,7 @@ export default function ShippingDetailsPage() {
       packing_list_remark: shippingForm.packing_list_remark || null,
       waybill_remark: shippingForm.waybill_remark || null,
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
+      bank: shippingForm.bank.trim() || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
       items: shippingItems.map((it) => ({
         item_id: it.item_id || null,
@@ -584,6 +586,21 @@ export default function ShippingDetailsPage() {
                   setShippingForm((prev) => ({
                     ...prev,
                     bill_of_lading_remark: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Bank</label>
+              <textarea
+                rows={3}
+                placeholder="Beneficiary bank name, SWIFT, account no., etc."
+                value={shippingForm.bank}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    bank: e.target.value,
                   }))
                 }
                 className="w-full border rounded-md px-3 py-2"

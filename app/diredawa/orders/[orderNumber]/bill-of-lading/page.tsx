@@ -62,6 +62,7 @@ interface ShippingInvoiceDetail {
   packing_list_remark?: string | null;
   waybill_remark?: string | null;
   bill_of_lading_remark?: string | null;
+  bank?: string | null;
   items: ShippingInvoiceItem[];
 }
 
@@ -250,6 +251,12 @@ export default function BillOfLadingPage() {
               <p>{order.freight}</p>
               <p className="font-semibold mt-2">Shipment Type</p>
               <p>{order.shipment_type}</p>
+              {invoice.bank?.trim() ? (
+                <>
+                  <p className="font-semibold mt-2">Bank</p>
+                  <p className="whitespace-pre-wrap">{invoice.bank}</p>
+                </>
+              ) : null}
             </div>
           </div>
 

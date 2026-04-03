@@ -1,12 +1,11 @@
-"use server"
-import { DJANGO_API_ENDPOINT } from '@/config/defaults'
-import { setRefreshToken, setToken } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { DJANGO_API_ENDPOINT } from "@/config/defaults";
+import { setRefreshToken, setToken } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
-const DJANGO_API_LOGIN_URL = `${DJANGO_API_ENDPOINT}/token/pair`
-const DJANGO_ME_URL = `${DJANGO_API_ENDPOINT}/me`
+const DJANGO_API_LOGIN_URL = `${DJANGO_API_ENDPOINT}/token/pair`;
+const DJANGO_ME_URL = `${DJANGO_API_ENDPOINT}/me`;
 
-export async function POST(request: any) {
+export async function POST(request: Request) {
     const requestData = await request.json()
     const jsonData = JSON.stringify(requestData)
     const requestOptions = {
@@ -33,8 +32,8 @@ export async function POST(request: any) {
             username?: string
         }
         if (typeof access === "string" && typeof refresh === "string") {
-            setToken(access)
-            setRefreshToken(refresh)
+            await setToken(access);
+            await setRefreshToken(refresh);
             // Fetch user id and role server-side so client gets them without relying on cookie in same tick
             let role: string | undefined
             let userId: number | undefined
@@ -58,5 +57,5 @@ export async function POST(request: any) {
             { status: 502 }
         )
     }
-    return NextResponse.json({ loggedIn: false, ...responseData }, { status: 400 })
-}   
+    return NextResponse.json({ loggedIn: false, ...responseData }, { status: 400 });
+}

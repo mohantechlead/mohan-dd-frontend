@@ -58,6 +58,7 @@ interface ShippingInvoiceDetail {
   packing_list_remark?: string | null;
   waybill_remark?: string | null;
   bill_of_lading_remark?: string | null;
+  bank?: string | null;
   items: {
     item_name: string;
     price: number;
@@ -188,7 +189,10 @@ export default function TruckWaybillPage() {
   }, [itemsForTable, order]);
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
+    <div
+      className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins"
+      data-print-doc="compact"
+    >
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -225,7 +229,7 @@ export default function TruckWaybillPage() {
               alt="Mohan PLC logo"
               width={80}
               height={80}
-              className="mx-auto mb-3"
+              className="mx-auto mb-3 print:h-28 print:w-28"
             />
             <h1 className="text-2xl font-semibold tracking-wide">Mohan PLC</h1>
             <p className="text-xs text-muted-foreground">
@@ -303,6 +307,14 @@ export default function TruckWaybillPage() {
                 <p className="font-semibold">Shipment Type</p>
                 <p>{order.shipment_type || "Incoterm 2020"}</p>
               </div>
+              {invoice.bank?.trim() ? (
+                <div>
+                  <p className="font-semibold">Bank</p>
+                  <p className="whitespace-pre-wrap text-[11px]">
+                    {invoice.bank}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
 

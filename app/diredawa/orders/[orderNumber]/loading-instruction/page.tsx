@@ -31,6 +31,7 @@ interface ShippingInvoiceDetail {
   sr_no?: number;
   authorized_by?: string | null;
   authorized_at?: string | null;
+  bank?: string | null;
   items: {
     item_name: string;
     price: number;
@@ -293,6 +294,12 @@ export default function LoadingInstructionPage() {
                 <span className="font-semibold">Invoice No: </span>
                 {invoice.invoice_number}
               </p>
+              {invoice.bank?.trim() ? (
+                <p>
+                  <span className="font-semibold">Bank: </span>
+                  <span className="whitespace-pre-wrap">{invoice.bank}</span>
+                </p>
+              ) : null}
             </div>
             <div className="space-y-1">
               <p>

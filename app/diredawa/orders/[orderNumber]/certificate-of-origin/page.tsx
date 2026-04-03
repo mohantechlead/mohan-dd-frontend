@@ -21,6 +21,7 @@ interface OrderDetail {
   order_date: string;
   buyer: string;
   buyer_address?: string | null;
+  buyer_tin_number?: string | null;
   add_consignee?: string | null;
   proforma_ref_no: string;
   shipper: string;
@@ -56,6 +57,7 @@ interface ShippingInvoiceDetail {
   invoice_date: string;
   waybill_number?: string | null;
   customer_order_number: string;
+  bank?: string | null;
   items: ShippingInvoiceItem[];
 }
 
@@ -165,34 +167,11 @@ export default function CertificateOfOriginPage() {
     return [];
   }, [invoice, order]);
 
-  const mainOrderItem = useMemo(() => {
-    if (!order || itemsForTable.length === 0) return null;
-    const first = itemsForTable[0];
-    const byName =
-      order.items.find((o) => o.item_name === first.item_name) || null;
-    return byName || order.items[0] || null;
-  }, [order, itemsForTable]);
-
-  const { totalNetKg, totalGrossKg } = useMemo(() => {
-    let net = 0;
-    let gross = 0;
-    for (const item of itemsForTable) {
-      if (item.net_weight != null) {
-        net += item.net_weight;
-      } else if (item.quantity != null) {
-        net += item.quantity;
-      }
-      if (item.gross_weight != null) {
-        gross += item.gross_weight;
-      } else if (item.quantity != null) {
-        gross += item.quantity;
-      }
-    }
-    return { totalNetKg: net, totalGrossKg: gross };
-  }, [itemsForTable]);
-
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins">
+    <div
+      className="max-w-6xl mx-auto py-8 space-y-8 bg-white font-poppins"
+      data-print-doc="large"
+    >
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -229,7 +208,7 @@ export default function CertificateOfOriginPage() {
               alt="Mohan PLC logo"
               width={80}
               height={80}
-              className="mx-auto mb-3"
+              className="mx-auto mb-3 print:h-28 print:w-28"
             />
             <h1 className="text-2xl font-semibold tracking-wide">Mohan PLC</h1>
             <p className="text-xs text-muted-foreground">
@@ -252,17 +231,23 @@ export default function CertificateOfOriginPage() {
             produced that the following goods is:
           </div>
 
-          {/* Brands / Description / Country of Origin / Weight table */}
+          {/* Seller / Buyer / Descriptions / Weight */}
           <div className="mt-4">
-            <table className="w-full text-xs border-t border-b">
+            <table className="w-full text-xs border border-collapse uppercase">
               <thead>
                 <tr className="border-b">
-                  <th className="px-3 py-2 text-left w-1/5">Brands</th>
-                  <th className="px-3 py-2 text-left w-2/5">
-                    Description of Goods
+                  <th className="px-3 py-2 text-left w-[22%] align-top border-r border-border">
+                    Seller
                   </th>
-                  <th className="px-3 py-2 text-left w-1/5">Country of Origin</th>
-                  <th className="px-3 py-2 text-left w-1/5">Weight</th>
+                  <th className="px-3 py-2 text-left w-[22%] align-top border-r border-border">
+                    Buyer
+                  </th>
+                  <th className="px-3 py-2 text-left w-[36%] align-top border-r border-border">
+                    Descriptions
+                  </th>
+                  <th className="px-3 py-2 text-left w-[20%] align-top">
+                    Weight
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -280,74 +265,146 @@ export default function CertificateOfOriginPage() {
                         : item.quantity != null
                           ? item.quantity
                           : 0;
+                    const orderLine = order.items.find(
+                      (o) => o.item_name === item.item_name
+                    );
+                    const hsCode = orderLine?.hs_code ?? "";
+                    const unit = (
+                      orderLine?.measurement ||
+                      item.measurement ||
+                      "KG"
+                    )
+                      .trim()
+                      .toUpperCase() || "KG";
+                    const bagsSuffix =
+                      item.bags != null && item.bags > 0
+                        ? ` (${item.bags.toLocaleString()} ${
+                            item.bags === 1 ? "Bag" : "Bags"
+                          })`
+                        : "";
+                    const rowSpan = itemsForTable.length;
                     return (
-                      <tr key={idx} className="align-top border-b last:border-b-0">
-                        <td className="px-3 py-3">
-                          {idx === 0 ? (
-                            <>
-                              <div className="font-semibold uppercase">
-                                {order.shipper}
+                      <tr key={idx} className="align-top">
+                        {idx === 0 ? (
+                          <td
+                            className="px-3 py-3 border-r border-border align-top"
+                            rowSpan={rowSpan}
+                          >
+                            <div className="font-semibold uppercase">
+                              {order.shipper}
+                            </div>
+                            {order.shipper_address ? (
+                              <div className="text-[11px] text-muted-foreground mt-1 whitespace-pre-wrap">
+                                {order.shipper_address}
                               </div>
-                              {order.shipper_address && (
-                                <div className="text-[11px] text-muted-foreground">
-                                  {order.shipper_address}
-                                </div>
-                              )}
-                              <div className="text-[11px] text-muted-foreground">
-                                DIRE DAWA FREE TRADE ZONE BRANCH
+                            ) : null}
+                            <div className="text-[11px] text-muted-foreground mt-1">
+                              Mohan PLC, Dire Dawa Free Trade Zone Branch
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              Dire Dawa Free Trade Zone
+                            </div>
+                          </td>
+                        ) : null}
+                        {idx === 0 ? (
+                          <td
+                            className="px-3 py-3 border-r border-border align-top"
+                            rowSpan={rowSpan}
+                          >
+                            <div className="font-semibold uppercase">
+                              {order.buyer}
+                            </div>
+                            {order.buyer_address ? (
+                              <div className="text-[11px] text-muted-foreground mt-1 whitespace-pre-wrap">
+                                {order.buyer_address}
                               </div>
-                            </>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-3 py-3">
-                          <div>
+                            ) : null}
+                            {order.add_consignee?.trim() ? (
+                              <div className="text-[11px] text-muted-foreground mt-1 whitespace-pre-wrap">
+                                {order.add_consignee}
+                              </div>
+                            ) : null}
+                            {order.notify_party?.trim() ? (
+                              <div className="mt-2">
+                                <span className="font-semibold text-[11px]">
+                                  Notify:{" "}
+                                </span>
+                                <span className="text-[11px] whitespace-pre-wrap">
+                                  {order.notify_party}
+                                </span>
+                              </div>
+                            ) : null}
+                            {order.add_notify_party?.trim() ? (
+                              <div className="text-[11px] text-muted-foreground mt-1 whitespace-pre-wrap">
+                                {order.add_notify_party}
+                              </div>
+                            ) : null}
+                          </td>
+                        ) : null}
+                        <td className="px-3 py-3 border-r border-border align-top">
+                          <div className="font-medium">
                             {netKg.toLocaleString(undefined, {
                               maximumFractionDigits: 3,
                             })}{" "}
-                            KG {item.item_name}
+                            {unit}
+                            {bagsSuffix} {item.item_name}
                           </div>
-                          {idx === 0 && (
-                            <>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Country of origin:{" "}
+                            {item.country_of_origin?.trim() ||
+                              order.country_of_origin ||
+                              "—"}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            AS PER PROFORMA INV NO {order.proforma_ref_no} DATED{" "}
+                            {new Date(order.order_date).toLocaleDateString(
+                              undefined,
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              }
+                            )}
+                          </div>
+                          {idx === 0 ? (
+                            <div className="mt-2 space-y-1 text-[11px]">
                               <div>
-                                AS PER PROFORMA INV NO {order.proforma_ref_no}{" "}
-                                DATED{" "}
-                                {new Date(order.order_date).toLocaleDateString(
-                                  undefined,
-                                  {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  }
-                                )}
+                                HS Code: {hsCode?.trim() || "-"}
                               </div>
                               <div>
-                                PO NUMBER: {invoice.customer_order_number}
+                                TIN No: {order.buyer_tin_number?.trim() || "-"}
                               </div>
                               <div>
-                                HS CODE: {mainOrderItem?.hs_code ?? ""}
+                                PO Number: {invoice.customer_order_number}
                               </div>
-                            </>
+                              {invoice.bank?.trim() ? (
+                                <div className="whitespace-pre-wrap">
+                                  {invoice.bank.trim()}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : (
+                            hsCode && (
+                              <div className="mt-1 text-[11px]">
+                                HS CODE: {hsCode}
+                              </div>
+                            )
                           )}
                         </td>
-                        <td className="px-3 py-3">
-                          {item.country_of_origin || "CHINA"}
-                        </td>
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-3 align-top">
                           <div>
                             NW{" "}
                             {netKg.toLocaleString(undefined, {
                               maximumFractionDigits: 3,
                             })}{" "}
-                            KG
+                            {unit}
                           </div>
                           <div>
                             GW{" "}
                             {grossKg.toLocaleString(undefined, {
                               maximumFractionDigits: 3,
                             })}{" "}
-                            KG
+                            {unit}
                           </div>
                         </td>
                       </tr>
@@ -389,25 +446,16 @@ export default function CertificateOfOriginPage() {
               </div>
               <div className="text-left space-y-1 min-w-[200px]">
                 <div>
-                  Destination{" "}
-                  <span className="font-semibold">
-                    {order.buyer ? (
-                      <>
-                        {order.buyer}
-                        {order.buyer_address && (
-                          <span className="block font-normal mt-0.5">
-                            {order.buyer_address}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      order.final_destination || "MOHAN INTERNATIONAL WAREHOUSE, ADDIS ABABA"
-                    )}
+                  <span className="font-semibold">Destination</span>{" "}
+                  <span>
+                    {order.final_destination?.trim() ||
+                      order.port_of_discharge?.trim() ||
+                      "—"}
                   </span>
                 </div>
                 <div>
-                  Addis Ababa,{" "}
-                  {new Date(order.order_date).toLocaleDateString(undefined, {
+                  <span className="font-semibold">Date</span>{" "}
+                  {new Date(invoice.invoice_date).toLocaleDateString(undefined, {
                     day: "2-digit",
                     month: "2-digit",
                     year: "numeric",

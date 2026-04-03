@@ -43,6 +43,7 @@ interface ShippingInvoiceDetail {
   packing_list_remark?: string | null;
   waybill_remark?: string | null;
   bill_of_lading_remark?: string | null;
+  bank?: string | null;
   sr_no?: number;
   items: {
     item_id?: string | null;
@@ -87,6 +88,7 @@ export default function EditShippingInvoicePage() {
     packing_list_remark: "",
     waybill_remark: "",
     bill_of_lading_remark: "",
+    bank: "",
     sr_no: "",
   });
 
@@ -149,6 +151,7 @@ export default function EditShippingInvoicePage() {
             packing_list_remark: invData.packing_list_remark || "",
             waybill_remark: invData.waybill_remark || "",
             bill_of_lading_remark: invData.bill_of_lading_remark || "",
+            bank: invData.bank || "",
             sr_no: invData.sr_no != null ? String(invData.sr_no) : "",
           });
           const items = invData.items.map((it) => ({
@@ -278,6 +281,7 @@ export default function EditShippingInvoicePage() {
       packing_list_remark: shippingForm.packing_list_remark || null,
       waybill_remark: shippingForm.waybill_remark || null,
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
+      bank: shippingForm.bank.trim() || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
       items: shippingItems.map((it) => ({
         item_id: it.item_id || null,
@@ -604,6 +608,21 @@ export default function EditShippingInvoicePage() {
                     setShippingForm((prev) => ({
                       ...prev,
                       bill_of_lading_remark: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Bank</label>
+                <textarea
+                  rows={3}
+                  placeholder="Beneficiary bank name, SWIFT, account no., etc."
+                  value={shippingForm.bank}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      bank: e.target.value,
                     }))
                   }
                   className="w-full border rounded-md px-3 py-2"

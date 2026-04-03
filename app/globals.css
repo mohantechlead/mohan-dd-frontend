@@ -105,4 +105,70 @@
     width: 100%;
     min-height: 100%;
   }
+
+  /* Shipping docs: avoid compounded 0.85 on html+body; tune type by profile */
+  html:has([data-print-doc="large"]),
+  html:has([data-print-doc="large"]) body,
+  html:has([data-print-doc="compact"]),
+  html:has([data-print-doc="compact"]) body {
+    transform: none !important;
+  }
+
+  /* Certificate of origin — larger print */
+  [data-print-doc="large"] h1 {
+    font-size: 28pt !important;
+    line-height: 1.15 !important;
+  }
+
+  [data-print-doc="large"] h2 {
+    font-size: 22pt !important;
+    line-height: 1.2 !important;
+  }
+
+  [data-print-doc="large"] table th,
+  [data-print-doc="large"] table td {
+    font-size: 15pt !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-print-doc="large"] .text-xs {
+    font-size: 14pt !important;
+  }
+
+  [data-print-doc="large"] .text-\[11px\] {
+    font-size: 13pt !important;
+  }
+
+  [data-print-doc="large"] .text-\[10px\] {
+    font-size: 12pt !important;
+  }
+
+  /* Truck waybill, packing list — slightly smaller than certificate */
+  [data-print-doc="compact"] h1 {
+    font-size: 23pt !important;
+    line-height: 1.15 !important;
+  }
+
+  [data-print-doc="compact"] h2 {
+    font-size: 18pt !important;
+    line-height: 1.2 !important;
+  }
+
+  [data-print-doc="compact"] table th,
+  [data-print-doc="compact"] table td {
+    font-size: 12.5pt !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-print-doc="compact"] .text-xs {
+    font-size: 11.5pt !important;
+  }
+
+  [data-print-doc="compact"] .text-\[11px\] {
+    font-size: 10.5pt !important;
+  }
+
+  [data-print-doc="compact"] .text-\[10px\] {
+    font-size: 10pt !important;
+  }
 }

@@ -64,6 +64,7 @@ interface ShippingInvoiceDetail {
   packing_list_remark?: string | null;
   waybill_remark?: string | null;
   bill_of_lading_remark?: string | null;
+  bank?: string | null;
   items: ShippingInvoiceItem[];
 }
 
@@ -348,7 +349,7 @@ export default function CommercialInvoicePage() {
               </div>
             </div>
 
-            {/* R2C3: Country of Origin, Final Destination, Shipper Address */}
+            {/* R2C3: Country of Origin, Final Destination, Shipper Address, Bank */}
             <div className="space-y-1">
               {order.shipper_address && (
                 <div>
@@ -356,6 +357,12 @@ export default function CommercialInvoicePage() {
                   <p>{order.shipper_address}</p>
                 </div>
               )}
+              {invoice.bank?.trim() ? (
+                <div>
+                  <p className="font-semibold">Bank</p>
+                  <p className="whitespace-pre-wrap">{invoice.bank}</p>
+                </div>
+              ) : null}
               <div>
                 <p className="font-semibold">Country of Origin</p>
                 <p>{order.country_of_origin || "-"}</p>
