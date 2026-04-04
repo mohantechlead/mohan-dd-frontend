@@ -1,12 +1,19 @@
  "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Form } from "@/components/form";
 import { ItemsForm } from "@/components/itemsform";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
+import { useFormContext } from "react-hook-form";
 import { OverUnderNotification } from "@/components/over-under-notification";
+import {
+  fetchDisplayValueSet,
+  fetchInventoryItemNameSet,
+  isInSet,
+} from "@/lib/referenceListValidation";
+import { resolveGrnDnLinesFromInventory } from "@/lib/resolveGrnDnInventoryItems";
 
 interface DnFormValues {
   date: string;
@@ -21,7 +28,9 @@ interface DnFormValues {
   receiver_name: string;
   receiver_phone: string;
   authorized_by: string;
+  total_quantity?: number;
   items: {
+    item_id?: string;
     item_name: string;
     quantity: number;
     unit_measurement: string;
@@ -50,13 +59,114 @@ export default function DN() {
   } | null>(null);
   const [dnNoDuplicate, setDnNoDuplicate] = useState(false);
   const [checkingDnNo, setCheckingDnNo] = useState(false);
+  const [isTotalCalculated, setIsTotalCalculated] = useState(false);
+
+  function TotalQuantityCalculator({ onCalculated }: { onCalculated: (qty: number) => void }) {
+    const { watch } = useFormContext<DnFormValues>();
+    const items = watch("items") || [];
+
+    const computedTotal = useMemo(() => {
+      return (items as Array<{ quantity?: number | string | null }>).reduce((sum, it) => {
+        const n = Number(it.quantity ?? 0);
+        return sum + (Number.isFinite(n) ? n : 0);
+      }, 0);
+    }, [items]);
+
+    return (
+      <div className="flex flex-col gap-2 mt-4 border-t pt-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold">Total Quantity: {computedTotal}</span>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              onCalculated(computedTotal);
+            }}
+          >
+            Calculate Total
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Click <span className="font-medium">Calculate Total</span> before submitting.
+        </p>
+      </div>
+    );
+  }
+
   const handleSubmit = async (values: DnFormValues) => {
     console.log("Form submitted:", values);
+
+    if (!isTotalCalculated) {
+      showToast({
+        title: "Calculate total first",
+        description: "Please click Calculate Total before submitting.",
+        variant: "error",
+      });
+      return;
+    }
 
     if (dnNoDuplicate) {
       showToast({
         title: "Delivery Note number already exists",
         description: "Please enter a different DN number.",
+        variant: "error",
+      });
+      return;
+    }
+
+    try {
+      const [orderSet, customerSet, itemNameSet] = await Promise.all([
+        fetchDisplayValueSet("/api/orders", "order_number"),
+        fetchDisplayValueSet("/api/partners/customers", "name"),
+        fetchInventoryItemNameSet(),
+      ]);
+      const salesNo = String(values.sales_no ?? "").trim();
+      if (!isInSet(salesNo, orderSet)) {
+        showToast({
+          title: "Invalid order number",
+          description: "Choose an order from the dropdown list.",
+          variant: "error",
+        });
+        return;
+      }
+      const customer = String(values.customer_name ?? "").trim();
+      if (!isInSet(customer, customerSet)) {
+        showToast({
+          title: "Invalid customer",
+          description: "Choose a customer from the dropdown list.",
+          variant: "error",
+        });
+        return;
+      }
+      const invoiceUrl = `/api/inventory/shipping-invoices?order_number=${encodeURIComponent(salesNo)}`;
+      const invoiceSet = await fetchDisplayValueSet(invoiceUrl, "invoice_number");
+      const inv = String(values.invoice_no ?? "").trim();
+      if (!isInSet(inv, invoiceSet)) {
+        showToast({
+          title: "Invalid invoice number",
+          description:
+            invoiceSet.size === 0
+              ? "There are no shipping invoices for this order. Add shipping details first, then pick an invoice from the list."
+              : "Choose an invoice number from the dropdown list for the selected order.",
+          variant: "error",
+        });
+        return;
+      }
+      for (const it of values.items ?? []) {
+        const nm = String(it.item_name ?? "").trim();
+        if (nm && !isInSet(nm, itemNameSet)) {
+          showToast({
+            title: "Invalid item",
+            description: `Each line must use an item from the list. "${nm}" is not recognized.`,
+            variant: "error",
+          });
+          return;
+        }
+      }
+    } catch {
+      showToast({
+        title: "Could not verify selections",
+        description: "Please check your connection and try again.",
         variant: "error",
       });
       return;
@@ -74,20 +184,30 @@ export default function DN() {
 
     const hasInvalidItems = items.some((it) => {
       const itemName = String(it.item_name ?? "").trim();
-      const internalCode = String(it.internal_code ?? "").trim();
       const qty = Number(it.quantity ?? 0);
-      return !itemName || !internalCode || !Number.isFinite(qty) || qty <= 0;
+      return !itemName || !Number.isFinite(qty) || qty <= 0;
     });
 
     if (hasInvalidItems) {
       showToast({
         title: "Select valid items",
-        description: "Each DN item must be selected from the item list and have quantity > 0.",
+        description:
+          "Each DN line needs an item chosen from the list and a quantity greater than zero.",
         variant: "error",
       });
       return;
     }
-  
+
+    const resolvedItems = await resolveGrnDnLinesFromInventory(values.items ?? []);
+    if (!resolvedItems.ok) {
+      showToast({
+        title: "Invalid items",
+        description: resolvedItems.message,
+        variant: "error",
+      });
+      return;
+    }
+
     // Transform values to match backend schema exactly
     const payload = {
       customer_name: values.customer_name,
@@ -101,12 +221,13 @@ export default function DN() {
       despathcher_name: values.despathcher_name,
       receiver_name: values.receiver_name,
       authorized_by: values.authorized_by,
-      items: values.items.map(item => ({
-        item_name: item.item_name,
-        quantity: Number(item.quantity), // convert string → int
-        unit_measurement: String(item.unit_measurement),
-        bags: Number(item.bags),
-        internal_code: String(item.internal_code),
+      items: resolvedItems.lines.map((line) => ({
+        ...(line.item_id ? { item_id: line.item_id } : {}),
+        item_name: line.item_name,
+        quantity: line.quantity,
+        unit_measurement: line.unit_measurement,
+        bags: Number(line.bags),
+        internal_code: line.internal_code,
       })),
     };
   
@@ -116,7 +237,8 @@ export default function DN() {
       const res = await fetch(DN_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload), // send raw object
+        credentials: "include",
+        body: JSON.stringify(payload),
       });
   
       let data: unknown;
@@ -184,15 +306,19 @@ export default function DN() {
         <Button onClick={() => router.push('/diredawa/inventory/dn/display')}>Display Delivery Notes</Button>
       </div>
 
-      <h1 className="text-2xl font-bold mb-6 text-center">Create Delivery Note</h1>
+      <h1 className="text-2xl font-bold mb-2 text-center">Create Delivery Note</h1>
+      <p className="text-sm text-muted-foreground text-center mb-6">
+        Fields marked <span className="text-destructive">*</span> are required. Each item line must be chosen from the inventory list.
+      </p>
 
       <Form<DnFormValues>
         defaultValues={{ items: [] }}
         fields={[
-          { name: "date", label: "Date", type: "date", placeholder: "Enter Date" },
+          { name: "date", label: "Date", type: "date", placeholder: "Enter Date", required: true },
           {
             name: "dn_no",
             label: "Delivery Number",
+            required: true,
             placeholder: "Enter Delivery Number",
             onBlur: async (val) => {
               const v = String(val ?? "").trim();
@@ -221,12 +347,22 @@ export default function DN() {
               }
             },
           },
-          { name: "customer_name", label: "Customer Name", placeholder: "Search customer...", dropdownConfig: { url: "/api/partners/customers", displayKey: "name" } },
+          { name: "customer_name", label: "Customer Name", required: true, placeholder: "Search customer...", dropdownConfig: { url: "/api/partners/customers", displayKey: "name" } },
           { name: "plate_no", label: "Plate No", placeholder: "Enter Plate No" },
-          { name: "sales_no", label: "Order No", placeholder: "Search order...", dropdownConfig: { url: "/api/orders", displayKey: "order_number" } },
+          { name: "sales_no", label: "Order No", required: true, placeholder: "Search order...", dropdownConfig: { url: "/api/orders", displayKey: "order_number" } },
           { name: "ECD_no", label: "ECD No", placeholder: "Enter ECD No" },
           { name: "gatepass_no", label: "Gate Pass Number", placeholder: "Enter Gate Pass Number" },
-          { name: "invoice_no", label: "Invoice Number", placeholder: "Search invoice...", dependentDropdownConfig: { dependsOn: "sales_no", urlTemplate: "/api/inventory/shipping-invoices?order_number={value}", displayKey: "invoice_number" } },
+          {
+            name: "invoice_no",
+            label: "Invoice Number",
+            required: true,
+            placeholder: "Search invoice...",
+            dependentDropdownConfig: {
+              dependsOn: "sales_no",
+              urlTemplate: "/api/inventory/shipping-invoices?order_number={value}",
+              displayKey: "invoice_number",
+            },
+          },
           { name: "despathcher_name", label: "Despatcher Name", placeholder: "Enter Despatcher Name" },
           { name: "receiver_name", label: "Reciever Name", placeholder: "Enter Reciever Name" },
           { name: "authorized_by", label: "Authorized By", placeholder: "Enter Authorized By" },
@@ -234,8 +370,18 @@ export default function DN() {
         onSubmit={handleSubmit}
         submitText="Submit Delivery Note"
       >
-        <h2 className="text-center font-semibold mt-4">Delivery Note Items</h2>
+        <h2 className="text-center font-semibold mt-4">
+          Delivery Note Items <span className="text-destructive">*</span>
+        </h2>
+        <p className="text-xs text-center text-muted-foreground mb-2">
+          At least one line: item from list, quantity, unit, bags — then Calculate Total.
+        </p>
         <ItemsForm />
+        <TotalQuantityCalculator
+          onCalculated={() => {
+            setIsTotalCalculated(true);
+          }}
+        />
       </Form>
 
       {overUnderData && (

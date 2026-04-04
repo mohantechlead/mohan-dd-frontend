@@ -10,6 +10,7 @@ import {
   parseInventoryItemsJson,
   type InventoryItemOption,
 } from "@/lib/parseInventoryItems";
+import { validateLineItemsAgainstInventory } from "@/lib/referenceListValidation";
 
 type MeasurementType =
   | "Metric Tons"
@@ -388,6 +389,16 @@ export default function CreateOrderPage() {
       showToast({
         title: "No items added",
         description: "Please add at least one item to the order.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const itemListCheck = await validateLineItemsAgainstInventory(items, "sales");
+    if (!itemListCheck.ok) {
+      showToast({
+        title: itemListCheck.title,
+        description: itemListCheck.description,
         variant: "error",
       });
       return;

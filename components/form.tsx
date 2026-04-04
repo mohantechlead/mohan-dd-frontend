@@ -29,12 +29,27 @@ interface DependentDropdownConfig {
 interface Field<T extends FieldValues> {
   name: Path<T>;
   label: string;
+  /** Show a required asterisk next to the label */
+  required?: boolean;
   type?: "text" | "email" | "password" | "number" | "textarea" | string;
   placeholder?: string;
   dropdownConfig?: DropdownConfig;
   dependentDropdownConfig?: DependentDropdownConfig;
   // Optional blur hook (e.g. uniqueness check with toasts)
   onBlur?: (value: string) => void | Promise<void>;
+}
+
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <Label>
+      {label}
+      {required ? (
+        <span className="text-destructive ml-0.5" aria-hidden>
+          *
+        </span>
+      ) : null}
+    </Label>
+  );
 }
 
 interface FormProps<T extends FieldValues> {
@@ -61,7 +76,11 @@ function FormField<T extends FieldValues>({
   useEffect(() => {
     if (field.dropdownConfig) {
       const { url, displayKey } = field.dropdownConfig;
-      fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } })
+      fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      })
         .then((res) => (res.ok ? res.json() : []))
         .then((data: Record<string, unknown>[]) => {
           setOptions(
@@ -82,7 +101,11 @@ function FormField<T extends FieldValues>({
         return;
       }
       const url = urlTemplate.replace("{value}", encodeURIComponent(depVal));
-      fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } })
+      fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      })
         .then((res) => (res.ok ? res.json() : []))
         .then((data: Record<string, unknown>[]) => {
           const newOptions = data.map((item) => ({
@@ -117,7 +140,7 @@ function FormField<T extends FieldValues>({
     const isDisabled = field.dependentDropdownConfig && !dependentValue?.trim();
     return (
       <div className="flex flex-col gap-1">
-        <Label>{field.label}</Label>
+        <FieldLabel label={field.label} required={field.required} />
         <SearchableDropdown
           value={value || ""}
           onChange={(val) => methods.setValue(field.name, val as PathValue<T, Path<T>>)}
@@ -136,7 +159,7 @@ function FormField<T extends FieldValues>({
   if (field.type === "textarea") {
     return (
       <div className="flex flex-col gap-1">
-        <Label>{field.label}</Label>
+        <FieldLabel label={field.label} required={field.required} />
         <textarea
           className={cn(
             "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
@@ -150,7 +173,7 @@ function FormField<T extends FieldValues>({
 
   return (
     <div className="flex flex-col gap-1">
-      <Label>{field.label}</Label>
+      <FieldLabel label={field.label} required={field.required} />
       {(() => {
         const reg = methods.register(field.name);
         return (

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { validateLineItemsAgainstInventory } from "@/lib/referenceListValidation";
 
 const CUSTOMERS_API_URL = "/api/partners/customers";
 const SUPPLIERS_API_URL = "/api/partners/suppliers";
@@ -236,6 +237,16 @@ export default function EditOrderPage() {
       showToast({
         title: "No items",
         description: "Please add at least one item to the order.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const itemListCheck = await validateLineItemsAgainstInventory(orderItems, "sales");
+    if (!itemListCheck.ok) {
+      showToast({
+        title: itemListCheck.title,
+        description: itemListCheck.description,
         variant: "error",
       });
       return;

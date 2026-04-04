@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { validateLineItemsAgainstInventory } from "@/lib/referenceListValidation";
 
 interface PurchaseItem {
   item_id?: string | null;
@@ -140,6 +141,17 @@ export default function EditPurchasePage() {
       });
       return;
     }
+
+    const itemListCheck = await validateLineItemsAgainstInventory(items, "purchase");
+    if (!itemListCheck.ok) {
+      showToast({
+        title: itemListCheck.title,
+        description: itemListCheck.description,
+        variant: "error",
+      });
+      return;
+    }
+
     const payload = {
       proforma_ref_no: form.proforma_ref_no,
       buyer: form.buyer,

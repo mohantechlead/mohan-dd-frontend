@@ -76,7 +76,11 @@ export default function LoadingInstructionPage() {
 
   const orderNumber = params.orderNumber;
   const invoiceIdFromQuery = searchParams.get("invoiceId");
-  const fromList = searchParams.get("from") === "loading-instructions";
+  const fromParam = searchParams.get("from");
+  const fromLoadingInstructionsList =
+    fromParam === "loading-instructions";
+  const fromAuthorizedLoadingInstructionsList =
+    fromParam === "authorized-loading-instructions";
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [invoice, setInvoice] = useState<ShippingInvoiceDetail | null>(null);
@@ -201,19 +205,23 @@ export default function LoadingInstructionPage() {
           variant="outline"
           onClick={() =>
             router.push(
-              fromList
-                ? "/diredawa/loading-instructions"
-                : auth?.isStore
+              fromAuthorizedLoadingInstructionsList
                 ? "/diredawa/loading-instructions/authorized"
-                : `/diredawa/orders/${orderNumber}`
+                : fromLoadingInstructionsList
+                  ? "/diredawa/loading-instructions"
+                  : auth?.isStore
+                    ? "/diredawa/loading-instructions/authorized"
+                    : `/diredawa/orders/${orderNumber}`
             )
           }
         >
-          {fromList
-            ? "Back to Loading Instructions"
-            : auth?.isStore
-              ? "Back to Auth. Loading Instruction"
-              : "Back to Order Detail"}
+          {fromAuthorizedLoadingInstructionsList
+            ? "Back to Authorized Loading Instructions"
+            : fromLoadingInstructionsList
+              ? "Back to Loading Instructions"
+              : auth?.isStore
+                ? "Back to Auth. Loading Instruction"
+                : "Back to Order Detail"}
         </Button>
         <div className="flex items-center gap-2">
           {invoice?.authorized_by ? (
