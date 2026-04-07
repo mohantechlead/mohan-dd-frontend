@@ -421,7 +421,7 @@ export default function PackingListPage() {
                         })
                       : "";
                   const unitLabel =
-                    orderItem?.measurement || item.measurement || "KG";
+                    item.measurement || orderItem?.measurement || "KG";
 
                   return (
                     <tr

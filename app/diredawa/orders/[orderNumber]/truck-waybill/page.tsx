@@ -431,7 +431,7 @@ export default function TruckWaybillPage() {
                           {item.quantity.toLocaleString(undefined, {
                             maximumFractionDigits: 3,
                           })}{" "}
-                          {orderItem?.measurement || item.measurement}{" "}
+                          {item.measurement || orderItem?.measurement || "-"}{" "}
                           {item.item_name}
                         </div>
                         {orderItem?.hs_code ? (
