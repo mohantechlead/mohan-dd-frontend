@@ -10,9 +10,8 @@ export function amountInWords(n: number): string {
   const ones = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"];
   const tens = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
   const teens = ["TEN", "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"];
-  const whole = Math.round(n);
-  if (whole === 0) return "ZERO";
-  if (whole < 0 || whole >= 1e9) return whole.toLocaleString();
+  if (!Number.isFinite(n)) return "ZERO";
+  if (n < 0 || n >= 1e9) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
   function upTo99(x: number): string {
     if (x < 10) return ones[x];
@@ -39,5 +38,14 @@ export function amountInWords(n: number): string {
     const r = x % 1e6;
     return upTo999(m) + " MILLION" + (r ? " " + upTo999999(r) : "");
   }
-  return upTo999999999(whole);
+
+  const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+  const whole = Math.floor(rounded);
+  const cents = Math.round((rounded - whole) * 100);
+
+  const wholeWords = whole === 0 ? "ZERO" : upTo999999999(whole);
+  if (cents === 0) return wholeWords;
+
+  const centsWords = upTo99(cents);
+  return `${wholeWords} AND ${centsWords} CENTS`;
 }
