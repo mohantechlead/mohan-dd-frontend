@@ -407,17 +407,19 @@ export default function TruckWaybillPage() {
                     item.bags != null
                       ? `${item.bags.toLocaleString()} packages`
                       : "-";
+                  const unitLabel =
+                    item.measurement || orderItem?.measurement || "-";
                   const netLabel =
                     item.net_weight != null
                       ? `${item.net_weight.toLocaleString(undefined, {
                           maximumFractionDigits: 3,
-                        })} KG`
+                        })} ${unitLabel}`
                       : "";
                   const grossLabel =
                     item.gross_weight != null
                       ? `${item.gross_weight.toLocaleString(undefined, {
                           maximumFractionDigits: 3,
-                        })} KG`
+                        })} ${unitLabel}`
                       : "";
 
                   return (
@@ -431,7 +433,7 @@ export default function TruckWaybillPage() {
                           {item.quantity.toLocaleString(undefined, {
                             maximumFractionDigits: 3,
                           })}{" "}
-                          {item.measurement || orderItem?.measurement || "-"}{" "}
+                          {unitLabel}{" "}
                           {item.item_name}
                         </div>
                         {orderItem?.hs_code ? (

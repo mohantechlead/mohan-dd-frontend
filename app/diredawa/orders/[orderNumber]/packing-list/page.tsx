@@ -421,7 +421,7 @@ export default function PackingListPage() {
                         })
                       : "";
                   const unitLabel =
-                    item.measurement || orderItem?.measurement || "KG";
+                    item.measurement || orderItem?.measurement || "-";
 
                   return (
                     <tr
@@ -444,7 +444,7 @@ export default function PackingListPage() {
                       </td>
                       <td className="px-3 py-2">{unitLabel}</td>
                       <td className="px-3 py-2 text-right">
-                        {grossLabel && `${grossLabel} KG`}
+                        {grossLabel && `${grossLabel} ${unitLabel}`}
                       </td>
                       <td className="px-3 py-2">
                         {item.country_of_origin || countriesDisplay}
