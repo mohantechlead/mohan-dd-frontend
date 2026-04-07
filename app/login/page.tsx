@@ -76,7 +76,7 @@ export function LoginForm({
       });
       await auth?.login(
         data?.username as string | undefined,
-        "/diredawa/inventory/grn/create",
+        undefined,
         data?.role as string | undefined,
         data?.userId as number | undefined
       );

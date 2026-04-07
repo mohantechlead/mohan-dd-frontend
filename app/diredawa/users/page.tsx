@@ -29,7 +29,7 @@ import {
 import { KeyRound, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 
 const USERS_API = "/api/users";
-const ROLES = ["admin", "logistics", "store"] as const;
+const ROLES = ["admin", "logistics", "store", "accounting"] as const;
 
 interface User {
   id: number;

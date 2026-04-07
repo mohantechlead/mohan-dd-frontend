@@ -14,6 +14,7 @@ interface AuthContextType {
     userId: number | null;
     isAdmin: boolean;
     isStore: boolean;
+    isAccounting: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -25,6 +26,15 @@ const LOCAL_STORAGE_KEY = "is-logged-in"
 const LOCAL_USERNAME_KEY = "username"
 const LOCAL_ROLE_KEY = "role"
 const LOCAL_USER_ID_KEY = "userId"
+
+function getRoleDefaultRedirect(roleRaw: string | null | undefined): string {
+    const role = String(roleRaw ?? "").toLowerCase();
+    if (role === "admin") return "/diredawa/dashboard";
+    if (role === "store") return "/diredawa/inventory/grn/create";
+    if (role === "logistics") return "/diredawa/orders/create";
+    if (role === "accounting") return "/diredawa/accounting/expense-payments/create";
+    return LOGIN_REDIRECT_URL;
+}
 
 interface AuthProviderProps {
     children: ReactNode;
@@ -102,10 +112,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             localStorage.setItem(LOCAL_USER_ID_KEY, String(userIdFromServer));
         }
         // Use role from login response (fetched server-side) so admin menu shows immediately
+        let effectiveRole = "";
         if (roleFromServer != null && roleFromServer !== "") {
             const r = String(roleFromServer).toLowerCase();
             setRole(r);
             localStorage.setItem(LOCAL_ROLE_KEY, r);
+            effectiveRole = r;
         } else {
             try {
                 const res = await fetch("/api/me", { credentials: "include" });
@@ -114,6 +126,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     const r = String(data.role).toLowerCase();
                     setRole(r);
                     localStorage.setItem(LOCAL_ROLE_KEY, r);
+                    effectiveRole = r;
                 }
                 if (data?.id != null) {
                     const id = Number(data.id);
@@ -134,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else if (redirectPath && redirectPath.startsWith("/") && !invalidNextUrl.includes(redirectPath)) {
             router.replace(redirectPath);
         } else {
-            router.replace(LOGIN_REDIRECT_URL);
+            router.replace(getRoleDefaultRedirect(effectiveRole || roleFromServer));
         }
     };
 
@@ -161,7 +174,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return (
         <AuthContext.Provider value={{ isAuthenticated, login, logout, loginRequiredRedirect, username, role, userId, isAdmin: (role || "").toLowerCase() === "admin",
-        isStore: (role || "").toLowerCase() === "store" }}>
+        isStore: (role || "").toLowerCase() === "store", isAccounting: (role || "").toLowerCase() === "accounting" }}>
             {children}
         </AuthContext.Provider>
     );

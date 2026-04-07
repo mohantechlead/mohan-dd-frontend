@@ -48,9 +48,20 @@ const baseNavMain = [
     icon: ClipboardList,
     isActive: true,
     adminOnly: true,
+    accountingVisible: true,
     items: [
       { title: "Order Status", url: "/diredawa/status/orders" },
       { title: "Purchase Status", url: "/diredawa/status/purchases" },
+      {
+        title: "Payment Status",
+        url: "#",
+        accountingVisible: true,
+        items: [
+          { title: "Received Payment Status", url: "/diredawa/status/received-payments" },
+          { title: "Vendor Payment Status", url: "/diredawa/status/vendor-payments" },
+          { title: "Expense Payment Status", url: "/diredawa/status/expense-payments" },
+        ],
+      },
     ],
   },
   {
@@ -95,6 +106,44 @@ const baseNavMain = [
     ],
   },
   {
+    title: "Accounting",
+    url: "#",
+    icon: ClipboardList,
+    accountingVisible: true,
+    items: [
+      {
+        title: "Received Payments",
+        url: "#",
+        items: [
+          { title: "Create Received Payment", url: "/diredawa/accounting/received-payments/create" },
+          { title: "Display Received Payment", url: "/diredawa/accounting/received-payments/display" },
+          { title: "Rejected Received Payments", url: "/diredawa/accounting/received-payments/rejected" },
+          { title: "Completed Received Payments", url: "/diredawa/accounting/received-payments/completed" },
+        ],
+      },
+      {
+        title: "Vendor Payments",
+        url: "#",
+        items: [
+          { title: "Create Vendor Payment", url: "/diredawa/accounting/vendor-payments/create" },
+          { title: "Display Vendor Payment", url: "/diredawa/accounting/vendor-payments/display" },
+          { title: "Rejected Vendor Payments", url: "/diredawa/accounting/vendor-payments/rejected" },
+          { title: "Completed Vendor Payments", url: "/diredawa/accounting/vendor-payments/completed" },
+        ],
+      },
+      {
+        title: "Expense Payments",
+        url: "#",
+        items: [
+          { title: "Create Expense Payment", url: "/diredawa/accounting/expense-payments/create" },
+          { title: "Display Expense Payment", url: "/diredawa/accounting/expense-payments/display" },
+          { title: "Rejected Expense Payments", url: "/diredawa/accounting/expense-payments/rejected" },
+          { title: "Completed Expense Payments", url: "/diredawa/accounting/expense-payments/completed" },
+        ],
+      },
+    ],
+  },
+  {
     title: "Inventory",
     url: "#",
     icon: Package,
@@ -112,9 +161,20 @@ const baseNavMain = [
     url: "#",
     icon: CheckSquare,
     adminOnly: true,
+    accountingVisible: true,
     items: [
       { title: "Order Approval", url: "/diredawa/approvals/orders" },
       { title: "Purchase Approval", url: "/diredawa/approvals/purchases" },
+      {
+        title: "Payment Approvals",
+        url: "#",
+        accountingVisible: true,
+        items: [
+          { title: "Received Payment Approval", url: "/diredawa/approvals/received-payments" },
+          { title: "Vendor Payment Approval", url: "/diredawa/approvals/vendor-payments" },
+          { title: "Expense Payment Approval", url: "/diredawa/approvals/expense-payments" },
+        ],
+      },
     ],
   },
   {
@@ -159,9 +219,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => setMounted(true), []);
   const isAdmin = mounted ? (auth?.isAdmin ?? false) : false;
   const isStore = mounted ? (auth?.isStore ?? false) : false;
+  const isAccounting = mounted ? (auth?.isAccounting ?? false) : false;
 
   const navMain = React.useMemo(() => {
-    let items = baseNavMain.filter((item) => !(item as { adminOnly?: boolean }).adminOnly || isAdmin);
+    const filterAccountingItems = (
+      items: Array<Record<string, unknown>>,
+      inheritVisible = false
+    ): Array<Record<string, unknown>> =>
+      items
+        .filter((item) => inheritVisible || Boolean(item.accountingVisible))
+        .map((item) => {
+          const children = Array.isArray(item.items)
+            ? filterAccountingItems(
+                item.items as Array<Record<string, unknown>>,
+                inheritVisible || Boolean(item.accountingVisible)
+              )
+            : undefined;
+          return {
+            ...item,
+            ...(children ? { items: children } : {}),
+          };
+        })
+        .filter((item) => !Array.isArray(item.items) || item.items.length > 0);
+
+    let items = baseNavMain.filter((item) => {
+      const adminOnly = Boolean((item as { adminOnly?: boolean }).adminOnly);
+      if (!adminOnly) return true;
+      return isAdmin || isAccounting;
+    });
     if (isStore) {
       items = items
         .filter((section) => {
@@ -174,6 +259,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             (sub) => (sub as { storeVisible?: boolean }).storeVisible
           ),
         })) as typeof baseNavMain;
+    } else if (isAccounting && !isAdmin) {
+      items = items.filter((section) => section.title === "Accounting") as typeof baseNavMain;
     } else {
       // Admin and logistics: hide items with adminLogisticsHidden
       items = items.map((section) => ({
@@ -184,7 +271,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       })) as typeof baseNavMain;
     }
     return items;
-  }, [isAdmin, isStore]);
+  }, [isAdmin, isStore, isAccounting]);
 
   return (
     <Sidebar collapsible="icon" {...props}>

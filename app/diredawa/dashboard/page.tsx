@@ -298,6 +298,30 @@ export default function AdminDashboardPage() {
               <Button
                 variant="outline"
                 size="lg"
+                className="h-11 rounded-lg border-2 border-amber-300 dark:border-amber-700 transition-all hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                onClick={() => router.push("/diredawa/approvals/received-payments")}
+              >
+                Approve Received Payments
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-11 rounded-lg border-2 border-amber-300 dark:border-amber-700 transition-all hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                onClick={() => router.push("/diredawa/approvals/vendor-payments")}
+              >
+                Approve Vendor Payments
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-11 rounded-lg border-2 border-amber-300 dark:border-amber-700 transition-all hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                onClick={() => router.push("/diredawa/approvals/expense-payments")}
+              >
+                Approve Expense Payments
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
                 className="h-11 rounded-lg border-2 border-blue-300 dark:border-blue-700 transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                 onClick={() => router.push("/diredawa/status/orders")}
               >
@@ -310,6 +334,30 @@ export default function AdminDashboardPage() {
                 onClick={() => router.push("/diredawa/status/purchases")}
               >
                 Purchase Status
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-11 rounded-lg border-2 border-blue-300 dark:border-blue-700 transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                onClick={() => router.push("/diredawa/status/received-payments")}
+              >
+                Received Payment Status
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-11 rounded-lg border-2 border-blue-300 dark:border-blue-700 transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                onClick={() => router.push("/diredawa/status/vendor-payments")}
+              >
+                Vendor Payment Status
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-11 rounded-lg border-2 border-blue-300 dark:border-blue-700 transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                onClick={() => router.push("/diredawa/status/expense-payments")}
+              >
+                Expense Payment Status
               </Button>
               <Button
                 variant="outline"

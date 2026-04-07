@@ -21,6 +21,20 @@ import {
   SidebarMenuSubItem,
 } from "./ui/sidebar";
 
+type NavSubItem = {
+  title: string;
+  url: string;
+  items?: NavSubItem[];
+};
+
+type NavItem = {
+  title: string;
+  url: string;
+  icon?: LucideIcon;
+  isActive?: boolean;
+  items?: NavSubItem[];
+};
+
 function isItemActive(pathname: string, url: string): boolean {
   if (pathname === url) return true;
   // Detail pages under "display" routes (e.g. /grn/123 → Display GRN, /orders/M103 → Display Sales)
@@ -30,19 +44,15 @@ function isItemActive(pathname: string, url: string): boolean {
   return false;
 }
 
+function hasActiveDescendant(pathname: string, items?: NavSubItem[]): boolean {
+  if (!items || items.length === 0) return false;
+  return items.some((it) => isItemActive(pathname, it.url) || hasActiveDescendant(pathname, it.items));
+}
+
 export function NavMain({
   items,
 }: {
-  items: {
-    title: string;
-    url: string;
-    icon?: LucideIcon;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
-  }[];
+  items: NavItem[];
 }) {
   const pathname = usePathname();
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
@@ -52,7 +62,7 @@ export function NavMain({
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const hasActiveChild = item.items?.some((sub) => isItemActive(pathname, sub.url));
+          const hasActiveChild = hasActiveDescendant(pathname, item.items);
           const isOpen =
             item.title in openSections
               ? openSections[item.title]
@@ -76,6 +86,51 @@ export function NavMain({
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items?.map((subItem) => {
+                      const hasNested = !!subItem.items?.length;
+                      if (hasNested) {
+                        const nestedKey = `${item.title}::${subItem.title}`;
+                        const hasActiveNested = hasActiveDescendant(pathname, subItem.items);
+                        const nestedOpen =
+                          nestedKey in openSections
+                            ? openSections[nestedKey]
+                            : hasActiveNested;
+                        return (
+                          <Collapsible
+                            key={nestedKey}
+                            asChild
+                            open={nestedOpen}
+                            onOpenChange={(open) =>
+                              setOpenSections((prev) => ({ ...prev, [nestedKey]: open }))
+                            }
+                            className="group/collapsible"
+                          >
+                            <SidebarMenuSubItem>
+                              <CollapsibleTrigger asChild>
+                                <SidebarMenuSubButton>
+                                  <span>{subItem.title}</span>
+                                  <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                </SidebarMenuSubButton>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <SidebarMenuSub className="ml-3 border-l pl-2">
+                                  {subItem.items?.map((leaf) => {
+                                    const nestedActive = isItemActive(pathname, leaf.url);
+                                    return (
+                                      <SidebarMenuSubItem key={`${nestedKey}::${leaf.title}`}>
+                                        <SidebarMenuSubButton asChild isActive={nestedActive}>
+                                          <Link href={leaf.url}>
+                                            <span>{leaf.title}</span>
+                                          </Link>
+                                        </SidebarMenuSubButton>
+                                      </SidebarMenuSubItem>
+                                    );
+                                  })}
+                                </SidebarMenuSub>
+                              </CollapsibleContent>
+                            </SidebarMenuSubItem>
+                          </Collapsible>
+                        );
+                      }
                       const active = isItemActive(pathname, subItem.url);
                       return (
                         <SidebarMenuSubItem key={subItem.title}>
