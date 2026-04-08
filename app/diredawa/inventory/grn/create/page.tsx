@@ -165,16 +165,17 @@ export default function HomePage() {
 
     const hasInvalidItems = items.some((it) => {
       const itemName = String(it.item_name ?? "").trim();
+      const code = String(it.code ?? "").trim();
       const qty = Number(it.quantity ?? 0);
       // Item name is already validated against inventory; internal_code may be empty for some items.
-      return !itemName || !Number.isFinite(qty) || qty <= 0;
+      return !itemName || !code || !Number.isFinite(qty) || qty <= 0;
     });
 
     if (hasInvalidItems) {
       showToast({
         title: "Select valid items",
         description:
-          "Each GRN line needs an item chosen from the list and a quantity greater than zero.",
+          "Each GRN line needs an item, code, and quantity greater than zero.",
         variant: "error",
       });
       return;

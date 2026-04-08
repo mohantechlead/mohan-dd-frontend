@@ -66,7 +66,7 @@ export async function resolveGrnDnLinesFromInventory(
         : "";
     const enteredCode = String(it.code ?? "").trim();
     const out: GrnDnLinePayload = {
-      code: enteredCode || internal,
+      code: enteredCode,
       item_name: row.item_name,
       quantity: Number(it.quantity),
       unit_measurement: String(it.unit_measurement ?? ""),
