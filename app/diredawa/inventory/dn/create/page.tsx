@@ -31,6 +31,7 @@ interface DnFormValues {
   total_quantity?: number;
   items: {
     item_id?: string;
+    code?: string;
     item_name: string;
     quantity: number;
     unit_measurement: string;
@@ -223,6 +224,7 @@ export default function DN() {
       authorized_by: values.authorized_by,
       items: resolvedItems.lines.map((line) => ({
         ...(line.item_id ? { item_id: line.item_id } : {}),
+        code: line.code,
         item_name: line.item_name,
         quantity: line.quantity,
         unit_measurement: line.unit_measurement,

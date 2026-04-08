@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
 interface GrnItem {
+  code?: string | null;
   item_name: string;
   quantity: number;
   unit_measurement?: string | null;
@@ -183,7 +184,7 @@ export default function GrnDetailPage() {
                   <th className="px-4 py-2 text-left">Item Name</th>
                   <th className="px-4 py-2 text-right">Quantity</th>
                   <th className="px-4 py-2 text-left">Unit</th>
-                  <th className="px-4 py-2 text-left">Internal Code</th>
+                  <th className="px-4 py-2 text-left">Code</th>
                   <th className="px-4 py-2 text-right">Bags</th>
                 </tr>
               </thead>
@@ -203,7 +204,7 @@ export default function GrnDetailPage() {
                       <td className="px-4 py-2">{item.item_name}</td>
                       <td className="px-4 py-2 text-right">{item.quantity}</td>
                       <td className="px-4 py-2">{item.unit_measurement || "—"}</td>
-                      <td className="px-4 py-2">{item.internal_code || "—"}</td>
+                      <td className="px-4 py-2">{item.code || item.internal_code || "—"}</td>
                       <td className="px-4 py-2 text-right">
                         {item.bags != null ? item.bags : "—"}
                       </td>

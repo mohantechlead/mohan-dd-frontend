@@ -28,6 +28,7 @@ interface GrnFormValues {
   transporter_name: string;
   items: {
     item_id?: string;
+    code?: string;
     item_name: string;
     quantity: number;
     unit_measurement: string;
@@ -209,6 +210,7 @@ export default function HomePage() {
       transporter_name: values.transporter_name,
       items: resolvedItems.lines.map((line) => ({
         ...(line.item_id ? { item_id: line.item_id } : {}),
+        code: line.code,
         item_name: line.item_name,
         quantity: line.quantity,
         unit_measurement: line.unit_measurement,

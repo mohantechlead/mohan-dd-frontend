@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Eye, Pencil, Trash2 } from "lucide-react"
 
 export type GRNItem = {
+  code?: string
   item_name: string
   quantity: number
   unit_measurement?: string
+  internal_code?: string
 }
 
 export type GRN = {
@@ -66,7 +68,7 @@ export function getGRNColumns(
           <ul className="list-disc ml-5">
             {items?.map((item, idx) => (
               <li key={idx}>
-                {item.item_name} - {item.quantity} {item.unit_measurement ?? ""}
+                {item.item_name} - Code: {item.code || item.internal_code || "-"} - {item.quantity} {item.unit_measurement ?? ""}
               </li>
             ))}
           </ul>
@@ -125,7 +127,7 @@ export const columns: ColumnDef<GRN>[] = [
         <ul className="list-disc ml-5">
           {items?.map((item, idx) => (
             <li key={idx}>
-              {item.item_name} - {item.quantity} {item.unit_measurement ?? ""}
+              {item.item_name} - Code: {item.code || item.internal_code || "-"} - {item.quantity} {item.unit_measurement ?? ""}
             </li>
           ))}
         </ul>

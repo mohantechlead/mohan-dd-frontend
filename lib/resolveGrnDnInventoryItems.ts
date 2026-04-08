@@ -2,6 +2,7 @@ import { parseInventoryItemsJson, type InventoryItemOption } from "@/lib/parseIn
 
 export type GrnDnLineInput = {
   item_id?: string;
+  code?: string;
   item_name: string;
   quantity: number | string;
   unit_measurement: string;
@@ -11,6 +12,7 @@ export type GrnDnLineInput = {
 
 export type GrnDnLinePayload = {
   item_id?: string;
+  code?: string;
   item_name: string;
   quantity: number;
   unit_measurement: string;
@@ -20,8 +22,7 @@ export type GrnDnLinePayload = {
 
 /**
  * Re-fetch inventory and rebuild each line from the canonical row (by item_id, else exact item_name).
- * Ensures the backend receives names and internal_code exactly as stored, which satisfies
- * "must be selected from the item list" checks that look up InventoryItem.
+ * Keeps the user-entered `code` separate from inventory `internal_code`.
  */
 export async function resolveGrnDnLinesFromInventory(
   items: GrnDnLineInput[]
@@ -63,7 +64,9 @@ export async function resolveGrnDnLinesFromInventory(
       row.internal_code != null && String(row.internal_code).trim() !== ""
         ? String(row.internal_code).trim()
         : "";
+    const enteredCode = String(it.code ?? "").trim();
     const out: GrnDnLinePayload = {
+      code: enteredCode || internal,
       item_name: row.item_name,
       quantity: Number(it.quantity),
       unit_measurement: String(it.unit_measurement ?? ""),

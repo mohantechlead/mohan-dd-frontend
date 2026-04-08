@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 
 export type Items = {
   item_name: string
+  code?: string
   quantity: string
   package: string
 }
@@ -15,8 +16,8 @@ export const columns: ColumnDef<Items>[] = [
       },
   
       {
-        accessorKey: "internal_code",
-        header: "Internal Code",
+        accessorKey: "code",
+        header: "Code",
       },
   {
     accessorKey: "quantity",

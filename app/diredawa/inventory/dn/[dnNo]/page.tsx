@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
 interface DnItem {
+  code?: string | null;
   item_name: string;
   quantity: number;
   unit_measurement?: string | null;
+  internal_code?: string | null;
 }
 
 interface OverUnderItem {
@@ -191,13 +193,14 @@ export default function DnDetailPage() {
                   <th className="px-4 py-2 text-left">Item Name</th>
                   <th className="px-4 py-2 text-right">Quantity</th>
                   <th className="px-4 py-2 text-left">Unit</th>
+                  <th className="px-4 py-2 text-left">Code</th>
                 </tr>
               </thead>
               <tbody>
                 {dn.items?.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={3}
+                      colSpan={4}
                       className="px-4 py-4 text-muted-foreground text-center"
                     >
                       No items
@@ -210,6 +213,9 @@ export default function DnDetailPage() {
                       <td className="px-4 py-2 text-right">{item.quantity}</td>
                       <td className="px-4 py-2">
                         {item.unit_measurement || "—"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {item.code || item.internal_code || "—"}
                       </td>
                     </tr>
                   ))
