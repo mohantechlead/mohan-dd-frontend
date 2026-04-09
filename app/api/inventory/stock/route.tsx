@@ -5,7 +5,9 @@ import { DJANGO_API_ENDPOINT } from "@/config/defaults";
 const DJANGO_API_GRN = `${DJANGO_API_ENDPOINT}/inventory/stock`;
 
 export async function GET(request: NextRequest) {
-  const { data, status } = await ApiProxy.get(DJANGO_API_GRN, true);
+  const query = request.nextUrl.searchParams.toString();
+  const url = query ? `${DJANGO_API_GRN}?${query}` : DJANGO_API_GRN;
+  const { data, status } = await ApiProxy.get(url, true);
   return NextResponse.json(data, { status });
 }
 

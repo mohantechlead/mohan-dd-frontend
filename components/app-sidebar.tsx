@@ -154,7 +154,7 @@ const baseNavMain = [
       { title: "Display DN", url: "/diredawa/inventory/dn/display", storeVisible: true },
       { title: "GIT", url: "/diredawa/inventory/git/display" },
       { title: "Items", url: "/diredawa/inventory/items/create" },
-      { title: "Stock", url: "/diredawa/inventory/stock" },
+      { title: "Stock", url: "/diredawa/inventory/stock", storeVisible: true },
     ],
   },
   {
