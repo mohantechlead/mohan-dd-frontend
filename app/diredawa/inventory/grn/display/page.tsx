@@ -40,6 +40,18 @@ export default function DemoPage() {
   const [editPurchaseNo, setEditPurchaseNo] = useState("");
   const [editStoreName, setEditStoreName] = useState("");
   const [editStoreKeeper, setEditStoreKeeper] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editEcdNo, setEditEcdNo] = useState("");
+  const [editTransporterName, setEditTransporterName] = useState("");
+  const [editItems, setEditItems] = useState<
+    Array<{
+      item_name: string;
+      quantity: number | string;
+      unit_measurement: string;
+      code: string;
+      bags: number | string;
+    }>
+  >([]);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -86,15 +98,37 @@ export default function DemoPage() {
         setEditReceivedFrom(detail.received_from || "");
         setEditStoreName(detail.store_name || "");
         setEditStoreKeeper(detail.store_keeper || "");
+        setEditDate(detail.date || "");
+        setEditEcdNo(detail.ECD_no || "");
+        setEditTransporterName(detail.transporter_name || "");
+        setEditItems(
+          Array.isArray(detail.items)
+            ? detail.items.map((item: Record<string, unknown>) => ({
+                item_name: String(item.item_name || ""),
+                quantity: Number(item.quantity || 0),
+                unit_measurement: String(item.unit_measurement || ""),
+                code: String(item.code || ""),
+                bags: Number(item.bags || 0),
+              }))
+            : []
+        );
       } else {
         setEditTruckNo("");
         setEditStoreName("");
         setEditStoreKeeper("");
+        setEditDate("");
+        setEditEcdNo("");
+        setEditTransporterName("");
+        setEditItems([]);
       }
     } catch {
       setEditTruckNo("");
       setEditStoreName("");
       setEditStoreKeeper("");
+      setEditDate("");
+      setEditEcdNo("");
+      setEditTransporterName("");
+      setEditItems([]);
     }
     setEditOpen(true);
   };
@@ -119,8 +153,18 @@ export default function DemoPage() {
           received_from: editReceivedFrom || null,
           truck_no: editTruckNo || null,
           purchase_no: editPurchaseNo,
+          date: editDate || null,
           store_name: editStoreName || null,
           store_keeper: editStoreKeeper || null,
+          ECD_no: editEcdNo || null,
+          transporter_name: editTransporterName || null,
+          items: editItems.map((item) => ({
+            item_name: item.item_name,
+            quantity: Number(item.quantity || 0),
+            unit_measurement: item.unit_measurement || "",
+            code: item.code || "",
+            bags: Number(item.bags || 0),
+          })),
         }),
       });
       const data = await res.json();
@@ -203,7 +247,7 @@ export default function DemoPage() {
       <DataTable columns={columns} data={filteredData} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit GRN</DialogTitle>
           </DialogHeader>
@@ -226,6 +270,10 @@ export default function DemoPage() {
                 <Input value={editPurchaseNo} onChange={(e) => setEditPurchaseNo(e.target.value)} required />
               </Field>
               <Field>
+                <FieldLabel>Date</FieldLabel>
+                <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+              </Field>
+              <Field>
                 <FieldLabel>Store Name</FieldLabel>
                 <Input value={editStoreName} onChange={(e) => setEditStoreName(e.target.value)} />
               </Field>
@@ -233,7 +281,105 @@ export default function DemoPage() {
                 <FieldLabel>Store Keeper</FieldLabel>
                 <Input value={editStoreKeeper} onChange={(e) => setEditStoreKeeper(e.target.value)} />
               </Field>
+              <Field>
+                <FieldLabel>ECD No</FieldLabel>
+                <Input value={editEcdNo} onChange={(e) => setEditEcdNo(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Transporter Name</FieldLabel>
+                <Input
+                  value={editTransporterName}
+                  onChange={(e) => setEditTransporterName(e.target.value)}
+                />
+              </Field>
             </FieldGroup>
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Items</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setEditItems((prev) => [
+                      ...prev,
+                      {
+                        item_name: "",
+                        quantity: "",
+                        unit_measurement: "",
+                        code: "",
+                        bags: "",
+                      },
+                    ])
+                  }
+                >
+                  + Add Item
+                </Button>
+              </div>
+              {editItems.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                  <Input
+                    placeholder="Item name"
+                    value={item.item_name}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) => (i === idx ? { ...r, item_name: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Qty"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) => (i === idx ? { ...r, quantity: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <Input
+                    placeholder="Unit"
+                    value={item.unit_measurement}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, unit_measurement: e.target.value } : r
+                        )
+                      )
+                    }
+                  />
+                  <Input
+                    placeholder="Code"
+                    value={item.code}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) => (i === idx ? { ...r, code: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Bags"
+                      value={item.bags}
+                      onChange={(e) =>
+                        setEditItems((prev) =>
+                          prev.map((r, i) => (i === idx ? { ...r, bags: e.target.value } : r))
+                        )
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setEditItems((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                 Cancel

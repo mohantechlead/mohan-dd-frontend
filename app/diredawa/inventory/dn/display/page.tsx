@@ -44,6 +44,23 @@ export default function DemoPage() {
   const [selectedDN, setSelectedDN] = useState<DN | null>(null);
   const [editCustomerName, setEditCustomerName] = useState("");
   const [editSalesNo, setEditSalesNo] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editPlateNo, setEditPlateNo] = useState("");
+  const [editEcdNo, setEditEcdNo] = useState("");
+  const [editInvoiceNo, setEditInvoiceNo] = useState("");
+  const [editGatepassNo, setEditGatepassNo] = useState("");
+  const [editDispatcherName, setEditDispatcherName] = useState("");
+  const [editReceiverName, setEditReceiverName] = useState("");
+  const [editAuthorizedBy, setEditAuthorizedBy] = useState("");
+  const [editItems, setEditItems] = useState<
+    Array<{
+      item_name: string;
+      quantity: number | string;
+      unit_measurement: string;
+      code: string;
+      bags: number | string;
+    }>
+  >([]);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [overUnderOpen, setOverUnderOpen] = useState(false);
@@ -74,10 +91,39 @@ export default function DemoPage() {
     }
   }, [auth, error]);
 
-  const openEdit = (row: DN) => {
+  const openEdit = async (row: DN) => {
     setSelectedDN(row);
     setEditCustomerName(row.customer_name);
     setEditSalesNo(row.sales_no);
+    try {
+      const res = await fetch(`${DN_API_URL}/${encodeURIComponent(row.dn_no)}`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const detail = await res.json();
+        setEditDate(detail.date || "");
+        setEditPlateNo(detail.plate_no || "");
+        setEditEcdNo(detail.ECD_no || "");
+        setEditInvoiceNo(detail.invoice_no || "");
+        setEditGatepassNo(detail.gatepass_no || "");
+        setEditDispatcherName(detail.despathcher_name || "");
+        setEditReceiverName(detail.receiver_name || "");
+        setEditAuthorizedBy(detail.authorized_by || "");
+        setEditItems(
+          Array.isArray(detail.items)
+            ? detail.items.map((item: Record<string, unknown>) => ({
+                item_name: String(item.item_name || ""),
+                quantity: Number(item.quantity || 0),
+                unit_measurement: String(item.unit_measurement || ""),
+                code: String(item.code || ""),
+                bags: Number(item.bags || 0),
+              }))
+            : []
+        );
+      }
+    } catch {
+      // keep defaults
+    }
     setEditOpen(true);
   };
 
@@ -98,6 +144,21 @@ export default function DemoPage() {
         body: JSON.stringify({
           customer_name: editCustomerName,
           sales_no: editSalesNo,
+          date: editDate || null,
+          plate_no: editPlateNo || null,
+          ECD_no: editEcdNo || null,
+          invoice_no: editInvoiceNo || null,
+          gatepass_no: editGatepassNo || null,
+          despathcher_name: editDispatcherName || null,
+          receiver_name: editReceiverName || null,
+          authorized_by: editAuthorizedBy || null,
+          items: editItems.map((item) => ({
+            item_name: item.item_name,
+            quantity: Number(item.quantity || 0),
+            unit_measurement: item.unit_measurement || "",
+            code: item.code || "",
+            bags: Number(item.bags || 0),
+          })),
         }),
       });
       const data = await res.json();
@@ -191,7 +252,7 @@ export default function DemoPage() {
       <DataTable columns={columns} data={filteredData} />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Delivery Note</DialogTitle>
           </DialogHeader>
@@ -205,7 +266,129 @@ export default function DemoPage() {
                 <FieldLabel>Sales No</FieldLabel>
                 <Input value={editSalesNo} onChange={(e) => setEditSalesNo(e.target.value)} required />
               </Field>
+              <Field>
+                <FieldLabel>Date</FieldLabel>
+                <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Plate No</FieldLabel>
+                <Input value={editPlateNo} onChange={(e) => setEditPlateNo(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>ECD No</FieldLabel>
+                <Input value={editEcdNo} onChange={(e) => setEditEcdNo(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Invoice No</FieldLabel>
+                <Input value={editInvoiceNo} onChange={(e) => setEditInvoiceNo(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Gatepass No</FieldLabel>
+                <Input value={editGatepassNo} onChange={(e) => setEditGatepassNo(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Dispatcher Name</FieldLabel>
+                <Input
+                  value={editDispatcherName}
+                  onChange={(e) => setEditDispatcherName(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Receiver Name</FieldLabel>
+                <Input value={editReceiverName} onChange={(e) => setEditReceiverName(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Authorized By</FieldLabel>
+                <Input value={editAuthorizedBy} onChange={(e) => setEditAuthorizedBy(e.target.value)} />
+              </Field>
             </FieldGroup>
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Items</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setEditItems((prev) => [
+                      ...prev,
+                      {
+                        item_name: "",
+                        quantity: "",
+                        unit_measurement: "",
+                        code: "",
+                        bags: "",
+                      },
+                    ])
+                  }
+                >
+                  + Add Item
+                </Button>
+              </div>
+              {editItems.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                  <Input
+                    placeholder="Item name"
+                    value={item.item_name}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) => (i === idx ? { ...r, item_name: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Qty"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) => (i === idx ? { ...r, quantity: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <Input
+                    placeholder="Unit"
+                    value={item.unit_measurement}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, unit_measurement: e.target.value } : r
+                        )
+                      )
+                    }
+                  />
+                  <Input
+                    placeholder="Code"
+                    value={item.code}
+                    onChange={(e) =>
+                      setEditItems((prev) =>
+                        prev.map((r, i) => (i === idx ? { ...r, code: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Bags"
+                      value={item.bags}
+                      onChange={(e) =>
+                        setEditItems((prev) =>
+                          prev.map((r, i) => (i === idx ? { ...r, bags: e.target.value } : r))
+                        )
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setEditItems((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                 Cancel
