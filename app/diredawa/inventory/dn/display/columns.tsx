@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { Eye, Pencil, Trash2 } from "lucide-react"
+import { formatQuantityDisplay } from "@/lib/inventoryQuantity"
 
 export type DNItem = {
   code?: string
@@ -16,6 +17,7 @@ export type DN = {
   dn_no: string
   customer_name: string
   sales_no: string
+  remark?: string | null
   items: DNItem[]
 }
 
@@ -56,7 +58,8 @@ export function getDNColumns(
           <ul className="list-disc ml-5">
             {items?.map((item, idx) => (
               <li key={idx}>
-                {item.item_name} - Code: {item.code || item.internal_code || "-"} - {item.quantity} {item.unit_measurement ?? ""}
+                {item.item_name} - Code: {item.code || item.internal_code || "-"} -{" "}
+                {formatQuantityDisplay(item.quantity)} {item.unit_measurement ?? ""}
               </li>
             ))}
           </ul>
@@ -110,7 +113,8 @@ export const columns: ColumnDef<DN>[] = [
         <ul className="list-disc ml-5">
           {items?.map((item, idx) => (
             <li key={idx}>
-              {item.item_name} - Code: {item.code || item.internal_code || "-"} - {item.quantity} {item.unit_measurement ?? ""}
+              {item.item_name} - Code: {item.code || item.internal_code || "-"} -{" "}
+              {formatQuantityDisplay(item.quantity)} {item.unit_measurement ?? ""}
             </li>
           ))}
         </ul>

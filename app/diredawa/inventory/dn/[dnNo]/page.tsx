@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
 
 interface DnItem {
   code?: string | null;
@@ -33,6 +34,7 @@ interface DnDetail {
   despathcher_name?: string | null;
   receiver_name?: string | null;
   authorized_by?: string | null;
+  remark?: string | null;
   items: DnItem[];
   over_items?: OverUnderItem[];
   under_items?: OverUnderItem[];
@@ -179,6 +181,14 @@ export default function DnDetailPage() {
                   </td>
                   <td className="px-4 py-2">{dn.authorized_by || "—"}</td>
                 </tr>
+                <tr className="border-t">
+                  <td className="px-4 py-2 text-muted-foreground align-top">
+                    Remark
+                  </td>
+                  <td className="px-4 py-2 whitespace-pre-wrap">
+                    {dn.remark?.trim() ? dn.remark : "—"}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -210,7 +220,7 @@ export default function DnDetailPage() {
                   dn.items?.map((item, idx) => (
                     <tr key={idx} className="border-t">
                       <td className="px-4 py-2">{item.item_name}</td>
-                      <td className="px-4 py-2 text-right">{item.quantity}</td>
+                      <td className="px-4 py-2 text-right">{formatQuantityDisplay(item.quantity)}</td>
                       <td className="px-4 py-2">
                         {item.unit_measurement || "—"}
                       </td>

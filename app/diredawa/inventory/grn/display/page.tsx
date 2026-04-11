@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { TableSearch } from "@/components/table-search";
+import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
+import { cn } from "@/lib/utils";
 
 const GRN_API_URL = "/api/inventory/grn";
 
@@ -43,6 +45,7 @@ export default function DemoPage() {
   const [editDate, setEditDate] = useState("");
   const [editEcdNo, setEditEcdNo] = useState("");
   const [editTransporterName, setEditTransporterName] = useState("");
+  const [editRemark, setEditRemark] = useState("");
   const [editItems, setEditItems] = useState<
     Array<{
       item_name: string;
@@ -69,6 +72,7 @@ export default function DemoPage() {
         (g.truck_no?.toLowerCase().includes(q) ?? false) ||
         g.purchase_no.toLowerCase().includes(q) ||
         (g.store_keeper?.toLowerCase().includes(q) ?? false) ||
+        (g.remark?.toLowerCase().includes(q) ?? false) ||
         g.items.some((i) => i.item_name.toLowerCase().includes(q))
     );
   }, [data, search]);
@@ -101,14 +105,19 @@ export default function DemoPage() {
         setEditDate(detail.date || "");
         setEditEcdNo(detail.ECD_no || "");
         setEditTransporterName(detail.transporter_name || "");
+        setEditRemark(typeof detail.remark === "string" ? detail.remark : "");
         setEditItems(
           Array.isArray(detail.items)
             ? detail.items.map((item: Record<string, unknown>) => ({
                 item_name: String(item.item_name || ""),
-                quantity: Number(item.quantity || 0),
+                quantity:
+                  item.quantity === null || item.quantity === undefined
+                    ? ""
+                    : String(item.quantity),
                 unit_measurement: String(item.unit_measurement || ""),
                 code: String(item.code || ""),
-                bags: Number(item.bags || 0),
+                bags:
+                  item.bags === null || item.bags === undefined ? "" : String(item.bags),
               }))
             : []
         );
@@ -119,6 +128,7 @@ export default function DemoPage() {
         setEditDate("");
         setEditEcdNo("");
         setEditTransporterName("");
+        setEditRemark("");
         setEditItems([]);
       }
     } catch {
@@ -128,6 +138,7 @@ export default function DemoPage() {
       setEditDate("");
       setEditEcdNo("");
       setEditTransporterName("");
+      setEditRemark("");
       setEditItems([]);
     }
     setEditOpen(true);
@@ -142,6 +153,17 @@ export default function DemoPage() {
     e.preventDefault();
     if (!selectedGRN) return;
     const grnNo = String(selectedGRN.grn_no);
+    for (const row of editItems) {
+      const q = parseDecimalQuantity(row.quantity);
+      if (!Number.isFinite(q) || q <= 0) {
+        showToast({
+          title: "Invalid quantity",
+          description: "Each line needs a quantity greater than zero.",
+          variant: "error",
+        });
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`${GRN_API_URL}/${encodeURIComponent(grnNo)}`, {
@@ -158,13 +180,22 @@ export default function DemoPage() {
           store_keeper: editStoreKeeper || null,
           ECD_no: editEcdNo || null,
           transporter_name: editTransporterName || null,
-          items: editItems.map((item) => ({
-            item_name: item.item_name,
-            quantity: Number(item.quantity || 0),
-            unit_measurement: item.unit_measurement || "",
-            code: item.code || "",
-            bags: Number(item.bags || 0),
-          })),
+          remark: editRemark.trim(),
+          items: editItems.map((item) => {
+            const qty = parseDecimalQuantity(item.quantity);
+            const bagsRaw = item.bags;
+            const bagsParsed =
+              bagsRaw === "" || bagsRaw === null || bagsRaw === undefined
+                ? null
+                : parseDecimalQuantity(bagsRaw);
+            return {
+              item_name: item.item_name,
+              quantity: qty,
+              unit_measurement: item.unit_measurement || "",
+              code: item.code || "",
+              bags: bagsParsed !== null && Number.isFinite(bagsParsed) ? bagsParsed : null,
+            };
+          }),
         }),
       });
       const data = await res.json();
@@ -292,6 +323,17 @@ export default function DemoPage() {
                   onChange={(e) => setEditTransporterName(e.target.value)}
                 />
               </Field>
+              <Field className="md:col-span-2">
+                <FieldLabel>Remark (optional)</FieldLabel>
+                <textarea
+                  className={cn(
+                    "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  )}
+                  value={editRemark}
+                  onChange={(e) => setEditRemark(e.target.value)}
+                  placeholder="Optional notes"
+                />
+              </Field>
             </FieldGroup>
             <div className="mt-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -328,6 +370,8 @@ export default function DemoPage() {
                   />
                   <Input
                     type="number"
+                    inputMode="decimal"
+                    step="any"
                     min="0"
                     placeholder="Qty"
                     value={item.quantity}
@@ -360,6 +404,8 @@ export default function DemoPage() {
                   <div className="flex gap-2">
                     <Input
                       type="number"
+                      inputMode="decimal"
+                      step="any"
                       min="0"
                       placeholder="Bags"
                       value={item.bags}

@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { Eye, Pencil, Trash2 } from "lucide-react"
+import { formatQuantityDisplay } from "@/lib/inventoryQuantity"
 
 export type GRNItem = {
   code?: string
@@ -23,6 +24,7 @@ export type GRN = {
   total_quantity?: number | null
   store_name?: string | null
   store_keeper?: string | null
+  remark?: string | null
   items: GRNItem[]
 }
 
@@ -58,7 +60,11 @@ export function getGRNColumns(
     { accessorKey: "purchase_no", header: "Purchase No" },
     { accessorKey: "store_name", header: "Store Name" },
     { accessorKey: "store_keeper", header: "Store Keeper" },
-    { accessorKey: "total_quantity", header: "Total Quantity" },
+    {
+      accessorKey: "total_quantity",
+      header: "Total Quantity",
+      cell: ({ row }) => formatQuantityDisplay(row.original.total_quantity ?? null),
+    },
     {
       accessorKey: "items",
       header: "Items",
@@ -68,7 +74,8 @@ export function getGRNColumns(
           <ul className="list-disc ml-5">
             {items?.map((item, idx) => (
               <li key={idx}>
-                {item.item_name} - Code: {item.code || item.internal_code || "-"} - {item.quantity} {item.unit_measurement ?? ""}
+                {item.item_name} - Code: {item.code || item.internal_code || "-"} -{" "}
+                {formatQuantityDisplay(item.quantity)} {item.unit_measurement ?? ""}
               </li>
             ))}
           </ul>
@@ -117,7 +124,11 @@ export const columns: ColumnDef<GRN>[] = [
   { accessorKey: "purchase_no", header: "Purchase No" },
   { accessorKey: "store_name", header: "Store Name" },
   { accessorKey: "store_keeper", header: "Store Keeper" },
-  { accessorKey: "total_quantity", header: "Total Quantity" },
+  {
+    accessorKey: "total_quantity",
+    header: "Total Quantity",
+    cell: ({ row }) => formatQuantityDisplay(row.original.total_quantity ?? null),
+  },
   {
     accessorKey: "items",
     header: "Items",
@@ -127,7 +138,8 @@ export const columns: ColumnDef<GRN>[] = [
         <ul className="list-disc ml-5">
           {items?.map((item, idx) => (
             <li key={idx}>
-              {item.item_name} - Code: {item.code || item.internal_code || "-"} - {item.quantity} {item.unit_measurement ?? ""}
+              {item.item_name} - Code: {item.code || item.internal_code || "-"} -{" "}
+              {formatQuantityDisplay(item.quantity)} {item.unit_measurement ?? ""}
             </li>
           ))}
         </ul>

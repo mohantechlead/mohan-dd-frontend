@@ -24,7 +24,9 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { TableSearch } from "@/components/table-search";
+import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 import { OverUnderNotification } from "@/components/over-under-notification";
+import { cn } from "@/lib/utils";
 
 interface OverUnderItem {
   item_name: string;
@@ -52,6 +54,7 @@ export default function DemoPage() {
   const [editDispatcherName, setEditDispatcherName] = useState("");
   const [editReceiverName, setEditReceiverName] = useState("");
   const [editAuthorizedBy, setEditAuthorizedBy] = useState("");
+  const [editRemark, setEditRemark] = useState("");
   const [editItems, setEditItems] = useState<
     Array<{
       item_name: string;
@@ -81,6 +84,7 @@ export default function DemoPage() {
         d.dn_no.toLowerCase().includes(q) ||
         d.customer_name.toLowerCase().includes(q) ||
         d.sales_no.toLowerCase().includes(q) ||
+        (d.remark?.toLowerCase().includes(q) ?? false) ||
         d.items.some((i) => i.item_name.toLowerCase().includes(q))
     );
   }, [data, search]);
@@ -109,14 +113,19 @@ export default function DemoPage() {
         setEditDispatcherName(detail.despathcher_name || "");
         setEditReceiverName(detail.receiver_name || "");
         setEditAuthorizedBy(detail.authorized_by || "");
+        setEditRemark(typeof detail.remark === "string" ? detail.remark : "");
         setEditItems(
           Array.isArray(detail.items)
             ? detail.items.map((item: Record<string, unknown>) => ({
                 item_name: String(item.item_name || ""),
-                quantity: Number(item.quantity || 0),
+                quantity:
+                  item.quantity === null || item.quantity === undefined
+                    ? ""
+                    : String(item.quantity),
                 unit_measurement: String(item.unit_measurement || ""),
                 code: String(item.code || ""),
-                bags: Number(item.bags || 0),
+                bags:
+                  item.bags === null || item.bags === undefined ? "" : String(item.bags),
               }))
             : []
         );
@@ -135,6 +144,17 @@ export default function DemoPage() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDN?.dn_no) return;
+    for (const row of editItems) {
+      const q = parseDecimalQuantity(row.quantity);
+      if (!Number.isFinite(q) || q <= 0) {
+        showToast({
+          title: "Invalid quantity",
+          description: "Each line needs a quantity greater than zero.",
+          variant: "error",
+        });
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`${DN_API_URL}/${encodeURIComponent(selectedDN.dn_no)}`, {
@@ -152,13 +172,22 @@ export default function DemoPage() {
           despathcher_name: editDispatcherName || null,
           receiver_name: editReceiverName || null,
           authorized_by: editAuthorizedBy || null,
-          items: editItems.map((item) => ({
-            item_name: item.item_name,
-            quantity: Number(item.quantity || 0),
-            unit_measurement: item.unit_measurement || "",
-            code: item.code || "",
-            bags: Number(item.bags || 0),
-          })),
+          remark: editRemark.trim(),
+          items: editItems.map((item) => {
+            const qty = parseDecimalQuantity(item.quantity);
+            const bagsRaw = item.bags;
+            const bagsParsed =
+              bagsRaw === "" || bagsRaw === null || bagsRaw === undefined
+                ? null
+                : parseDecimalQuantity(bagsRaw);
+            return {
+              item_name: item.item_name,
+              quantity: qty,
+              unit_measurement: item.unit_measurement || "",
+              code: item.code || "",
+              bags: bagsParsed !== null && Number.isFinite(bagsParsed) ? bagsParsed : null,
+            };
+          }),
         }),
       });
       const data = await res.json();
@@ -301,6 +330,17 @@ export default function DemoPage() {
                 <FieldLabel>Authorized By</FieldLabel>
                 <Input value={editAuthorizedBy} onChange={(e) => setEditAuthorizedBy(e.target.value)} />
               </Field>
+              <Field className="w-full">
+                <FieldLabel>Remark (optional)</FieldLabel>
+                <textarea
+                  className={cn(
+                    "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  )}
+                  value={editRemark}
+                  onChange={(e) => setEditRemark(e.target.value)}
+                  placeholder="Optional notes"
+                />
+              </Field>
             </FieldGroup>
             <div className="mt-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -337,6 +377,8 @@ export default function DemoPage() {
                   />
                   <Input
                     type="number"
+                    inputMode="decimal"
+                    step="any"
                     min="0"
                     placeholder="Qty"
                     value={item.quantity}
@@ -369,6 +411,8 @@ export default function DemoPage() {
                   <div className="flex gap-2">
                     <Input
                       type="number"
+                      inputMode="decimal"
+                      step="any"
                       min="0"
                       placeholder="Bags"
                       value={item.bags}

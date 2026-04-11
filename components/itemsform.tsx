@@ -121,7 +121,13 @@ export function ItemsForm() {
             <Label>
               Quantity <span className="text-destructive">*</span>
             </Label>
-            <Input type="number" {...register(`items.${index}.quantity` as const)} />
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min={0}
+              {...register(`items.${index}.quantity` as const)}
+            />
           </div>
 
           <div>
@@ -135,7 +141,13 @@ export function ItemsForm() {
             <Label>
               Bags/Cartoon <span className="text-destructive">*</span>
             </Label>
-            <Input type="number" {...register(`items.${index}.bags` as const)} />
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min={0}
+              {...register(`items.${index}.bags` as const)}
+            />
           </div>
 
           <div className="flex gap-4 md:col-span-2">

@@ -13,6 +13,7 @@ import {
   isInSet,
 } from "@/lib/referenceListValidation";
 import { resolveGrnDnLinesFromInventory } from "@/lib/resolveGrnDnInventoryItems";
+import { formatQuantityDisplay, parseDecimalQuantity } from "@/lib/inventoryQuantity";
 
 interface GrnFormValues {
   date: string;
@@ -26,6 +27,7 @@ interface GrnFormValues {
   total_quantity?: number;
   ECD_no: string;
   transporter_name: string;
+  remark?: string;
   items: {
     item_id?: string;
     code?: string;
@@ -52,7 +54,7 @@ export default function HomePage() {
 
     const computedTotal = useMemo(() => {
       return (items as Array<{ quantity?: number | string | null }>).reduce((sum, it) => {
-        const n = Number(it.quantity ?? 0);
+        const n = parseDecimalQuantity(it.quantity);
         return sum + (Number.isFinite(n) ? n : 0);
       }, 0);
     }, [items]);
@@ -60,7 +62,9 @@ export default function HomePage() {
     return (
       <div className="flex flex-col gap-2 mt-4 border-t pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold">Total Quantity: {computedTotal}</span>
+          <span className="text-sm font-semibold">
+            Total Quantity: {formatQuantityDisplay(computedTotal)}
+          </span>
           <Button
             type="button"
             variant="outline"
@@ -166,7 +170,7 @@ export default function HomePage() {
     const hasInvalidItems = items.some((it) => {
       const itemName = String(it.item_name ?? "").trim();
       const code = String(it.code ?? "").trim();
-      const qty = Number(it.quantity ?? 0);
+      const qty = parseDecimalQuantity(it.quantity);
       // Item name is already validated against inventory; internal_code may be empty for some items.
       return !itemName || !code || !Number.isFinite(qty) || qty <= 0;
     });
@@ -182,7 +186,7 @@ export default function HomePage() {
     }
 
     const computedTotalQuantity = items.reduce((sum, it) => {
-      const n = Number(it.quantity ?? 0);
+      const n = parseDecimalQuantity(it.quantity);
       return sum + (Number.isFinite(n) ? n : 0);
     }, 0);
 
@@ -195,6 +199,8 @@ export default function HomePage() {
       });
       return;
     }
+
+    const remarkTrimmed = String(values.remark ?? "").trim();
 
     // Transform values to match backend schema exactly
     const payload = {
@@ -209,6 +215,7 @@ export default function HomePage() {
       date: values.date, // ISO string is fine
       ECD_no: values.ECD_no, // ensure correct case
       transporter_name: values.transporter_name,
+      ...(remarkTrimmed ? { remark: remarkTrimmed } : {}),
       items: resolvedItems.lines.map((line) => ({
         ...(line.item_id ? { item_id: line.item_id } : {}),
         code: line.code,
@@ -332,6 +339,12 @@ export default function HomePage() {
           { name: "transporter_name", label: "Transporter Name", placeholder: "Enter Transporter Name" },
           { name: "store_name", label: "Store Name", placeholder: "Enter Store Name" },
           { name: "store_keeper", label: "Store Keeper", placeholder: "Enter Store Keeper" },
+          {
+            name: "remark",
+            label: "Remark (optional)",
+            type: "textarea",
+            placeholder: "Optional notes",
+          },
         ]}
         onSubmit={handleSubmit}
         submitText="Submit GRN"

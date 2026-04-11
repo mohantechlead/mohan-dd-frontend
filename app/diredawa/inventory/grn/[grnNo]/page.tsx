@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
 
 interface GrnItem {
   code?: string | null;
@@ -28,6 +29,7 @@ interface GrnDetail {
   date?: string | null;
   ECD_no?: string | null;
   transporter_name?: string | null;
+  remark?: string | null;
   items: GrnItem[];
 }
 
@@ -144,7 +146,7 @@ export default function GrnDetailPage() {
                 </tr>
                 <tr className="border-t">
                   <td className="px-4 py-2 text-muted-foreground w-48">Total Quantity</td>
-                  <td className="px-4 py-2">{grn.total_quantity ?? "—"}</td>
+                  <td className="px-4 py-2">{formatQuantityDisplay(grn.total_quantity ?? null)}</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 text-muted-foreground w-48">
@@ -169,6 +171,14 @@ export default function GrnDetailPage() {
                     Store Keeper
                   </td>
                   <td className="px-4 py-2">{grn.store_keeper || "—"}</td>
+                </tr>
+                <tr className="border-t">
+                  <td className="px-4 py-2 text-muted-foreground align-top">
+                    Remark
+                  </td>
+                  <td className="px-4 py-2 whitespace-pre-wrap">
+                    {grn.remark?.trim() ? grn.remark : "—"}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -202,11 +212,11 @@ export default function GrnDetailPage() {
                   grn.items?.map((item, idx) => (
                     <tr key={idx} className="border-t">
                       <td className="px-4 py-2">{item.item_name}</td>
-                      <td className="px-4 py-2 text-right">{item.quantity}</td>
+                      <td className="px-4 py-2 text-right">{formatQuantityDisplay(item.quantity)}</td>
                       <td className="px-4 py-2">{item.unit_measurement || "—"}</td>
                       <td className="px-4 py-2">{item.code || item.internal_code || "—"}</td>
                       <td className="px-4 py-2 text-right">
-                        {item.bags != null ? item.bags : "—"}
+                        {item.bags != null ? formatQuantityDisplay(item.bags) : "—"}
                       </td>
                     </tr>
                   ))

@@ -1,4 +1,5 @@
 import { parseInventoryItemsJson, type InventoryItemOption } from "@/lib/parseInventoryItems";
+import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 
 export type GrnDnLineInput = {
   item_id?: string;
@@ -65,10 +66,18 @@ export async function resolveGrnDnLinesFromInventory(
         ? String(row.internal_code).trim()
         : "";
     const enteredCode = String(it.code ?? "").trim();
+    const qty = parseDecimalQuantity(it.quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      const label = String(it.item_name ?? "").trim() || id || "Unknown";
+      return {
+        ok: false,
+        message: `Enter a valid quantity greater than zero for "${label}".`,
+      };
+    }
     const out: GrnDnLinePayload = {
       code: enteredCode,
       item_name: row.item_name,
-      quantity: Number(it.quantity),
+      quantity: qty,
       unit_measurement: String(it.unit_measurement ?? ""),
       bags: String(it.bags ?? ""),
       internal_code: internal,

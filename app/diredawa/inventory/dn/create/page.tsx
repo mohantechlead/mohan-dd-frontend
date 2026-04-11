@@ -14,6 +14,7 @@ import {
   isInSet,
 } from "@/lib/referenceListValidation";
 import { resolveGrnDnLinesFromInventory } from "@/lib/resolveGrnDnInventoryItems";
+import { formatQuantityDisplay, parseDecimalQuantity } from "@/lib/inventoryQuantity";
 
 interface DnFormValues {
   date: string;
@@ -28,6 +29,7 @@ interface DnFormValues {
   receiver_name: string;
   receiver_phone: string;
   authorized_by: string;
+  remark?: string;
   total_quantity?: number;
   items: {
     item_id?: string;
@@ -68,7 +70,7 @@ export default function DN() {
 
     const computedTotal = useMemo(() => {
       return (items as Array<{ quantity?: number | string | null }>).reduce((sum, it) => {
-        const n = Number(it.quantity ?? 0);
+        const n = parseDecimalQuantity(it.quantity);
         return sum + (Number.isFinite(n) ? n : 0);
       }, 0);
     }, [items]);
@@ -76,7 +78,9 @@ export default function DN() {
     return (
       <div className="flex flex-col gap-2 mt-4 border-t pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold">Total Quantity: {computedTotal}</span>
+          <span className="text-sm font-semibold">
+            Total Quantity: {formatQuantityDisplay(computedTotal)}
+          </span>
           <Button
             type="button"
             variant="outline"
@@ -186,7 +190,7 @@ export default function DN() {
     const hasInvalidItems = items.some((it) => {
       const itemName = String(it.item_name ?? "").trim();
       const code = String(it.code ?? "").trim();
-      const qty = Number(it.quantity ?? 0);
+      const qty = parseDecimalQuantity(it.quantity);
       return !itemName || !code || !Number.isFinite(qty) || qty <= 0;
     });
 
@@ -210,6 +214,8 @@ export default function DN() {
       return;
     }
 
+    const remarkTrimmed = String(values.remark ?? "").trim();
+
     // Transform values to match backend schema exactly
     const payload = {
       customer_name: values.customer_name,
@@ -223,6 +229,7 @@ export default function DN() {
       despathcher_name: values.despathcher_name,
       receiver_name: values.receiver_name,
       authorized_by: values.authorized_by,
+      ...(remarkTrimmed ? { remark: remarkTrimmed } : {}),
       items: resolvedItems.lines.map((line) => ({
         ...(line.item_id ? { item_id: line.item_id } : {}),
         code: line.code,
@@ -369,6 +376,12 @@ export default function DN() {
           { name: "despathcher_name", label: "Despatcher Name", placeholder: "Enter Despatcher Name" },
           { name: "receiver_name", label: "Reciever Name", placeholder: "Enter Reciever Name" },
           { name: "authorized_by", label: "Authorized By", placeholder: "Enter Authorized By" },
+          {
+            name: "remark",
+            label: "Remark (optional)",
+            type: "textarea",
+            placeholder: "Optional notes",
+          },
         ]}
         onSubmit={handleSubmit}
         submitText="Submit Delivery Note"
