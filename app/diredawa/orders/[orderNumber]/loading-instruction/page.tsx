@@ -299,6 +299,10 @@ export default function LoadingInstructionPage() {
                 {order.buyer}
               </p>
               <p>
+                <span className="font-semibold">Order No: </span>
+                {order.order_number}
+              </p>
+              <p>
                 <span className="font-semibold">Invoice No: </span>
                 {invoice.invoice_number}
               </p>
