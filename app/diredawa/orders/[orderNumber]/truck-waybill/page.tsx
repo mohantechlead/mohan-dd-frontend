@@ -303,10 +303,6 @@ export default function TruckWaybillPage() {
                 <p className="font-semibold">Freight</p>
                 <p>{order.freight}</p>
               </div>
-              <div>
-                <p className="font-semibold">Shipment Type</p>
-                <p>{order.shipment_type || "Incoterm 2020"}</p>
-              </div>
               {invoice.bank?.trim() ? (
                 <div>
                   <p className="font-semibold">Bank</p>
@@ -366,19 +362,14 @@ export default function TruckWaybillPage() {
 
           <hr className="border-t" />
 
-          {/* Row 3: Payment terms + Shipment Terms / Incoterm */}
+          {/* Row 3: Payment terms */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
             <div />
             <div className="space-y-1">
               <p className="font-semibold">Payment Terms</p>
               <p>{order.payment_terms}</p>
-              <p className="font-semibold mt-2">Shipment Terms</p>
-              <p>{order.shipment_type || "Incoterm 2020"}</p>
             </div>
-            <div className="space-y-1">
-              <p className="font-semibold">Incoterm</p>
-              <p>{order.shipment_type || "Incoterm 2020"}</p>
-            </div>
+            <div />
           </div>
 
           {/* Particulars furnished by shipper */}
