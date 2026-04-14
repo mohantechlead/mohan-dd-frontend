@@ -141,6 +141,10 @@ const baseNavMain = [
           { title: "Completed Expense Payments", url: "/diredawa/accounting/expense-payments/completed" },
         ],
       },
+      {
+        title: "Ledger",
+        url: "/diredawa/accounting/ledger",
+      },
     ],
   },
   {
