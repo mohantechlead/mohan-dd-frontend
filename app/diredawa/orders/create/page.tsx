@@ -971,6 +971,7 @@ export default function CreateOrderPage() {
                 value={currentItem.quantity}
                 onChange={handleItemChange}
                 className="w-full border rounded-md px-3 py-2"
+                step="any"
               />
             </div>
             <div>

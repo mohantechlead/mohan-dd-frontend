@@ -277,7 +277,7 @@ export default function EditOrderPage() {
         item_name: it.item_name,
         hs_code: it.hs_code,
         price: Number(it.price) || 0,
-        quantity: Math.floor(Number(it.quantity) || 0),
+        quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
         measurement: it.measurement,
       })),
@@ -757,6 +757,7 @@ export default function EditOrderPage() {
                 <label className="block font-medium mb-1">Price</label>
                 <input
                   type="number"
+                  step="any"
                   value={currentItem.price}
                   onChange={(e) =>
                     setCurrentItem((prev) => ({
@@ -774,6 +775,7 @@ export default function EditOrderPage() {
                 <label className="block font-medium mb-1">Quantity</label>
                 <input
                   type="number"
+                  step="any"
                   value={currentItem.quantity}
                   onChange={(e) =>
                     setCurrentItem((prev) => ({
@@ -969,6 +971,7 @@ export default function EditOrderPage() {
                         <label className="block font-medium mb-1">Price</label>
                         <input
                           type="number"
+                          step="any"
                           value={it.price}
                           onChange={(e) => {
                             const priceStr = e.target.value;
@@ -991,6 +994,7 @@ export default function EditOrderPage() {
                         <label className="block font-medium mb-1">Quantity</label>
                         <input
                           type="number"
+                          step="any"
                           value={it.quantity}
                           onChange={(e) => {
                             const qtyStr = e.target.value;
