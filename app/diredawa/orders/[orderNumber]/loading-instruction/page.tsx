@@ -230,10 +230,16 @@ export default function LoadingInstructionPage() {
   };
 
   return (
-    <div
-      className="w-full py-8 px-2 md:px-3 space-y-8 bg-white font-poppins print:px-1 print:text-[22px]"
-      style={{ fontFamily: "Poppins, sans-serif" }}
-    >
+    <>
+      <style jsx global>{`
+        @page {
+          margin: 8mm 6mm 8mm 4mm;
+        }
+      `}</style>
+      <div
+        className="w-full py-8 px-2 md:px-3 space-y-8 bg-white font-poppins print:px-0 print:py-2 print:text-[22px]"
+        style={{ fontFamily: "Poppins, sans-serif" }}
+      >
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -468,7 +474,7 @@ export default function LoadingInstructionPage() {
           </div>
 
           {/* Footer - signature section */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm print:text-lg">
             <div>
               <p className="font-semibold mb-1">
                 Instruction Given Name and Signature :
@@ -484,6 +490,7 @@ export default function LoadingInstructionPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
