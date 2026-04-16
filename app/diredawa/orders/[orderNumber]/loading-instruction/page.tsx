@@ -39,6 +39,8 @@ interface ShippingInvoiceDetail {
     quantity: number;
     total_price: number;
     measurement: string;
+    package?: number | null;
+    drums?: number | null;
     bags?: number | null;
     net_weight?: number | null;
     gross_weight?: number | null;
@@ -228,7 +230,10 @@ export default function LoadingInstructionPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8 bg-white font-poppins">
+    <div
+      className="w-full py-8 px-2 md:px-3 space-y-8 bg-white font-poppins print:px-1 print:text-[22px]"
+      style={{ fontFamily: "Poppins, sans-serif" }}
+    >
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -310,14 +315,14 @@ export default function LoadingInstructionPage() {
           first.
         </p>
       ) : (
-        <div className="space-y-6 px-8">
+        <div className="space-y-6">
           {/* Title */}
-          <h1 className="text-xl font-bold text-center uppercase tracking-wide">
+          <h1 className="text-xl font-bold text-center uppercase tracking-wide print:text-3xl">
             Loading Instruction
           </h1>
 
           {/* Header - two columns */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm print:text-lg">
             <div className="space-y-1">
               <p>
                 <span className="font-semibold">Date: </span>
@@ -356,28 +361,31 @@ export default function LoadingInstructionPage() {
 
           {/* Items table */}
           <div className="mt-6">
-            <table className="w-full text-sm border-collapse border border-black">
+            <table className="w-full text-sm border-collapse border border-black print:text-lg">
               <thead>
                 <tr className="bg-muted/60">
-                  <th className="border border-black px-3 py-2 text-left w-16">
+                  <th className="border border-black px-3 py-2 text-left w-16 print:py-5">
                     Sr. No
                   </th>
-                  <th className="border border-black px-3 py-2 text-left">
+                  <th className="border border-black px-3 py-2 text-left print:py-5">
                     Description
                   </th>
-                  <th className="border border-black px-3 py-2 text-left w-24">
+                  <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
                     Grade
                   </th>
-                  <th className="border border-black px-3 py-2 text-left w-24">
+                  <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
                     Brand
                   </th>
-                  <th className="border border-black px-3 py-2 text-left w-24">
+                  <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
                     Unit of Measurement
                   </th>
-                  <th className="border border-black px-3 py-2 text-left w-24">
+                  <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
+                    Weight/Package
+                  </th>
+                  <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
                     No of Unit
                   </th>
-                  <th className="border border-black px-3 py-2 text-left w-24">
+                  <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
                     Remarks
                   </th>
                 </tr>
@@ -387,6 +395,8 @@ export default function LoadingInstructionPage() {
                   const noOfUnit =
                     item.bags != null
                       ? `${item.bags.toLocaleString()} bags`
+                      : item.drums != null
+                        ? `${item.drums.toLocaleString()} drums`
                       : item.quantity != null
                         ? `${item.quantity} ${item.measurement || ""}`
                         : "—";
@@ -419,28 +429,35 @@ export default function LoadingInstructionPage() {
                   })();
 
                   return (
-                    <tr key={index} className="border-b border-black">
-                      <td className="border border-black px-3 py-2">
+                    <tr key={index} className="border-b border-black print:h-20">
+                      <td className="border border-black px-3 py-2 print:py-5">
                         {invoice.sr_no != null
                           ? `${Number(invoice.sr_no)}-${index + 1}`
                           : `${index + 1}`}
                       </td>
-                      <td className="border border-black px-3 py-2">
+                      <td className="border border-black px-3 py-2 print:py-5">
                         {item.item_name}
                       </td>
-                      <td className="border border-black px-3 py-2">
+                      <td className="border border-black px-3 py-2 print:py-5">
                         {item.grade || "—"}
                       </td>
-                      <td className="border border-black px-3 py-2">
+                      <td className="border border-black px-3 py-2 print:py-5">
                         {item.brand || "—"}
                       </td>
-                      <td className="border border-black px-3 py-2">
+                      <td className="border border-black px-3 py-2 print:py-5">
                         {item.measurement || "—"}
                       </td>
-                      <td className="border border-black px-3 py-2">
+                      <td className="border border-black px-3 py-2 print:py-5">
+                        {item.package != null
+                          ? item.package.toLocaleString(undefined, {
+                              maximumFractionDigits: 3,
+                            })
+                          : "—"}
+                      </td>
+                      <td className="border border-black px-3 py-2 print:py-5">
                         {noOfUnit}
                       </td>
-                      <td className="border border-black px-3 py-2">
+                      <td className="border border-black px-3 py-2 print:py-5">
                         {remarks}
                       </td>
                     </tr>

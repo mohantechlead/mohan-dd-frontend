@@ -16,6 +16,8 @@ interface ShippingItemState {
   quantity: number;
   total_price: number;
   measurement: string;
+  package: string;
+  drums: string;
   bags: string;
   net_weight: string;
   gross_weight: string;
@@ -67,6 +69,8 @@ export default function ShippingDetailsPage() {
     quantity: "",
     total_price: 0,
     measurement: "",
+    package: "",
+    drums: "",
     bags: "",
     net_weight: "",
     gross_weight: "",
@@ -94,6 +98,15 @@ export default function ShippingDetailsPage() {
   >([]);
   const [itemQuery, setItemQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
+
+  const hasMutuallyExclusivePackageCount = (item: {
+    drums?: string | number | null;
+    bags?: string | number | null;
+  }) => {
+    const hasDrums = String(item.drums ?? "").trim() !== "";
+    const hasBags = String(item.bags ?? "").trim() !== "";
+    return hasDrums && hasBags;
+  };
 
   useEffect(() => {
     if (!orderNumber) return;
@@ -195,6 +208,14 @@ export default function ShippingDetailsPage() {
       });
       return;
     }
+    if (shippingItems.some((item) => hasMutuallyExclusivePackageCount(item))) {
+      showToast({
+        title: "Invalid package count",
+        description: "For each item, use either Drums or Bags, not both.",
+        variant: "error",
+      });
+      return;
+    }
 
     const payload = {
       order_number: orderNumber,
@@ -240,6 +261,8 @@ export default function ShippingDetailsPage() {
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
         measurement: it.measurement,
+        package: it.package ? Number(it.package) : null,
+        drums: it.drums ? Number(it.drums) : null,
         bags: it.bags ? Number(it.bags) : null,
         net_weight: it.net_weight ? Number(it.net_weight) : null,
         gross_weight: it.gross_weight ? Number(it.gross_weight) : null,
@@ -760,9 +783,40 @@ export default function ShippingDetailsPage() {
               />
             </div>
             <div>
+              <label className="block font-medium mb-1">Package</label>
+              <input
+                type="number"
+                step="any"
+                value={shippingItem.package}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    package: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Drums</label>
+              <input
+                type="number"
+                step="any"
+                value={shippingItem.drums}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    drums: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
               <label className="block font-medium mb-1">Bags</label>
               <input
                 type="number"
+                step="any"
                 value={shippingItem.bags}
                 onChange={(e) =>
                   setShippingItem((prev) => ({
@@ -873,6 +927,14 @@ export default function ShippingDetailsPage() {
                   });
                   return;
                 }
+                if (hasMutuallyExclusivePackageCount(shippingItem)) {
+                  showToast({
+                    title: "Invalid package count",
+                    description: "For each item, use either Drums or Bags, not both.",
+                    variant: "error",
+                  });
+                  return;
+                }
                 const total = priceNum * qtyNum;
                 setShippingItems((prev) => [
                   ...prev,
@@ -892,6 +954,8 @@ export default function ShippingDetailsPage() {
                   quantity: "",
                   total_price: 0,
                   measurement: "",
+                  package: "",
+                  drums: "",
                   bags: "",
                   net_weight: "",
                   gross_weight: "",

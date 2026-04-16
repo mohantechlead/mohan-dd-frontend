@@ -16,6 +16,8 @@ interface ShippingItemState {
   quantity: number | string;
   total_price: number;
   measurement: string;
+  package: string;
+  drums: string;
   bags: string;
   net_weight: string;
   gross_weight: string;
@@ -54,6 +56,8 @@ interface ShippingInvoiceDetail {
     quantity: number;
     total_price: number;
     measurement: string;
+    package?: number | null;
+    drums?: number | null;
     bags?: number | null;
     net_weight?: number | null;
     gross_weight?: number | null;
@@ -105,6 +109,8 @@ export default function EditShippingInvoicePage() {
     quantity: "",
     total_price: 0,
     measurement: "",
+    package: "",
+    drums: "",
     bags: "",
     net_weight: "",
     gross_weight: "",
@@ -119,6 +125,15 @@ export default function EditShippingInvoicePage() {
   const [itemQuery, setItemQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
+
+  const hasMutuallyExclusivePackageCount = (item: {
+    drums?: string | number | null;
+    bags?: string | number | null;
+  }) => {
+    const hasDrums = String(item.drums ?? "").trim() !== "";
+    const hasBags = String(item.bags ?? "").trim() !== "";
+    return hasDrums && hasBags;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -165,6 +180,8 @@ export default function EditShippingInvoicePage() {
             quantity: String(it.quantity),
             total_price: it.total_price,
             measurement: it.measurement,
+            package: it.package != null ? String(it.package) : "",
+            drums: it.drums != null ? String(it.drums) : "",
             bags: it.bags != null ? String(it.bags) : "",
             net_weight: it.net_weight != null ? String(it.net_weight) : "",
             gross_weight:
@@ -252,6 +269,14 @@ export default function EditShippingInvoicePage() {
       });
       return;
     }
+    if (shippingItems.some((item) => hasMutuallyExclusivePackageCount(item))) {
+      showToast({
+        title: "Invalid package count",
+        description: "For each item, use either Drums or Bags, not both.",
+        variant: "error",
+      });
+      return;
+    }
 
     const payload = {
       invoice_date: shippingForm.invoice_date,
@@ -295,6 +320,8 @@ export default function EditShippingInvoicePage() {
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
         measurement: it.measurement,
+        package: it.package ? Number(it.package) : null,
+        drums: it.drums ? Number(it.drums) : null,
         bags: it.bags ? Number(it.bags) : null,
         net_weight: it.net_weight ? Number(it.net_weight) : null,
         gross_weight: it.gross_weight ? Number(it.gross_weight) : null,
@@ -670,6 +697,14 @@ export default function EditShippingInvoicePage() {
                       });
                       return;
                     }
+                    if (hasMutuallyExclusivePackageCount(shippingItem)) {
+                      showToast({
+                        title: "Invalid package count",
+                        description: "For each item, use either Drums or Bags, not both.",
+                        variant: "error",
+                      });
+                      return;
+                    }
                     const total =
                       shippingItem.total_price ||
                       (Number(shippingItem.price) || 0) *
@@ -687,6 +722,8 @@ export default function EditShippingInvoicePage() {
                       quantity: "",
                       total_price: 0,
                       measurement: "",
+                      package: "",
+                      drums: "",
                       bags: "",
                       net_weight: "",
                       gross_weight: "",
@@ -850,9 +887,40 @@ export default function EditShippingInvoicePage() {
                 />
               </div>
               <div>
+                <label className="block font-medium mb-1">Package</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={shippingItem.package}
+                  onChange={(e) =>
+                    setShippingItem((prev) => ({
+                      ...prev,
+                      package: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Drums</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={shippingItem.drums}
+                  onChange={(e) =>
+                    setShippingItem((prev) => ({
+                      ...prev,
+                      drums: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
                 <label className="block font-medium mb-1">Bags</label>
                 <input
                   type="number"
+                  step="any"
                   value={shippingItem.bags}
                   onChange={(e) =>
                     setShippingItem((prev) => ({
@@ -1114,9 +1182,44 @@ export default function EditShippingInvoicePage() {
                     </div>
 
                     <div>
+                      <label className="block font-medium mb-1">Package</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={it.package}
+                        onChange={(e) =>
+                          setShippingItems((prev) => {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], package: e.target.value };
+                            return next;
+                          })
+                        }
+                        className="w-full border rounded-md px-3 py-2 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-medium mb-1">Drums</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={it.drums}
+                        onChange={(e) =>
+                          setShippingItems((prev) => {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], drums: e.target.value };
+                            return next;
+                          })
+                        }
+                        className="w-full border rounded-md px-3 py-2 bg-white"
+                      />
+                    </div>
+
+                    <div>
                       <label className="block font-medium mb-1">Bags</label>
                       <input
                         type="number"
+                        step="any"
                         value={it.bags}
                         onChange={(e) =>
                           setShippingItems((prev) => {
