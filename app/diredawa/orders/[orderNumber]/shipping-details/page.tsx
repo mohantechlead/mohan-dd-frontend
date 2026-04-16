@@ -35,6 +35,7 @@ export default function ShippingDetailsPage() {
     invoice_number: "",
     invoice_date: "",
     waybill_number: "",
+    ecd_no: "",
     customer_order_number: "",
     container_number: "",
     vessel: "",
@@ -200,6 +201,7 @@ export default function ShippingDetailsPage() {
       invoice_number: shippingForm.invoice_number.trim(),
       invoice_date: shippingForm.invoice_date,
       waybill_number: shippingForm.waybill_number || null,
+      ecd_no: shippingForm.ecd_no.trim() || null,
       customer_order_number: shippingForm.customer_order_number.trim(),
       container_number: shippingForm.container_number || null,
       vessel: shippingForm.vessel || null,
@@ -375,6 +377,19 @@ export default function ShippingDetailsPage() {
                   setShippingForm((prev) => ({
                     ...prev,
                     waybill_number: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">ECD No</label>
+              <input
+                value={shippingForm.ecd_no}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    ecd_no: e.target.value,
                   }))
                 }
                 className="w-full border rounded-md px-3 py-2"

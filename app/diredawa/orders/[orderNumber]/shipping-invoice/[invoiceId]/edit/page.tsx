@@ -30,6 +30,7 @@ interface ShippingInvoiceDetail {
   invoice_number: string;
   invoice_date: string;
   waybill_number?: string | null;
+  ecd_no?: string | null;
   customer_order_number: string;
   container_number?: string | null;
   vessel?: string | null;
@@ -75,6 +76,7 @@ export default function EditShippingInvoicePage() {
   const [shippingForm, setShippingForm] = useState({
     invoice_date: "",
     waybill_number: "",
+    ecd_no: "",
     customer_order_number: "",
     container_number: "",
     vessel: "",
@@ -131,6 +133,7 @@ export default function EditShippingInvoicePage() {
           setShippingForm({
             invoice_date: invData.invoice_date,
             waybill_number: invData.waybill_number || "",
+            ecd_no: invData.ecd_no || "",
             customer_order_number: invData.customer_order_number,
             container_number: invData.container_number || "",
             vessel: invData.vessel || "",
@@ -253,6 +256,7 @@ export default function EditShippingInvoicePage() {
     const payload = {
       invoice_date: shippingForm.invoice_date,
       waybill_number: shippingForm.waybill_number || null,
+      ecd_no: shippingForm.ecd_no.trim() || null,
       customer_order_number: shippingForm.customer_order_number.trim(),
       container_number: shippingForm.container_number || null,
       vessel: shippingForm.vessel || null,
@@ -399,6 +403,19 @@ export default function EditShippingInvoicePage() {
                     setShippingForm((prev) => ({
                       ...prev,
                       waybill_number: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">ECD No</label>
+                <input
+                  value={shippingForm.ecd_no}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      ecd_no: e.target.value,
                     }))
                   }
                   className="w-full border rounded-md px-3 py-2"

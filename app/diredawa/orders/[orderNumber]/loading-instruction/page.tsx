@@ -28,6 +28,7 @@ interface ShippingInvoiceDetail {
   invoice_number: string;
   invoice_date: string;
   customer_order_number: string;
+  ecd_no?: string | null;
   sr_no?: number;
   authorized_by?: string | null;
   authorized_at?: string | null;
@@ -66,6 +67,34 @@ const KG_EQUIVALENTS: Record<string, number> = {
   pound: 0.45359237,
   pounds: 0.45359237,
 };
+
+function formatAuthorizedDate(value?: string | null): string {
+  if (!value) return "";
+  const datePart = value.split("T")[0]?.trim();
+  if (!datePart) return "";
+  const [y, m, d] = datePart.split("-");
+  if (!y || !m || !d) return datePart;
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const monthIndex = Number(m) - 1;
+  const monthLabel =
+    monthIndex >= 0 && monthIndex < monthNames.length
+      ? monthNames[monthIndex]
+      : m;
+  return `${monthLabel} ${Number(d)}, ${y}`;
+}
 
 export default function LoadingInstructionPage() {
   const params = useParams<{ orderNumber: string }>();
@@ -292,7 +321,7 @@ export default function LoadingInstructionPage() {
             <div className="space-y-1">
               <p>
                 <span className="font-semibold">Date: </span>
-
+                {formatAuthorizedDate(invoice.authorized_at)}
               </p>
               <p>
                 <span className="font-semibold">Customer Name: </span>
@@ -320,7 +349,7 @@ export default function LoadingInstructionPage() {
               </p>
               <p>
                 <span className="font-semibold">Ecd. No: </span>
-                _______________
+                {invoice.ecd_no?.trim() || ""}
               </p>
             </div>
           </div>
@@ -393,8 +422,8 @@ export default function LoadingInstructionPage() {
                     <tr key={index} className="border-b border-black">
                       <td className="border border-black px-3 py-2">
                         {invoice.sr_no != null
-                          ? Number(invoice.sr_no) + index
-                          : ""}
+                          ? `${Number(invoice.sr_no)}-${index + 1}`
+                          : `${index + 1}`}
                       </td>
                       <td className="border border-black px-3 py-2">
                         {item.item_name}
@@ -432,7 +461,7 @@ export default function LoadingInstructionPage() {
             </div>
             <div className="flex flex-col justify-end">
               <p className="font-semibold">
-                Date:
+                Date: {formatAuthorizedDate(invoice.authorized_at)}
               </p>
             </div>
           </div>
