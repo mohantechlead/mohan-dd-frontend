@@ -30,6 +30,49 @@ interface PurchaseDetail {
   items: PurchaseItem[];
 }
 
+/** Coerce GET purchase JSON into `items` + numeric fields (handles alternate API keys). */
+function parsePurchaseDetailFromApi(data: unknown): PurchaseDetail | null {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  const headerPn = String(d.purchase_number ?? "");
+  const rawList: unknown[] = Array.isArray(d.items)
+    ? d.items
+    : Array.isArray(d.line_items)
+      ? (d.line_items as unknown[])
+      : Array.isArray(d.purchase_items)
+        ? (d.purchase_items as unknown[])
+        : [];
+
+  const items: PurchaseItem[] = rawList.map((row) => {
+    const r = row as Record<string, unknown>;
+    const hscodeRaw = r.hscode ?? r.hs_code;
+    const hscode =
+      hscodeRaw != null && String(hscodeRaw).trim()
+        ? String(hscodeRaw).trim()
+        : null;
+    return {
+      purchase_number: String(r.purchase_number ?? headerPn),
+      item_name: String(r.item_name ?? ""),
+      price: Number(r.price ?? 0),
+      quantity: Number(r.quantity ?? 0),
+      remaining: Number(
+        r.remaining !== undefined && r.remaining !== null
+          ? r.remaining
+          : (r.quantity ?? 0)
+      ),
+      total_price: Number(r.total_price ?? 0),
+      before_vat:
+        r.before_vat !== undefined && r.before_vat !== null && r.before_vat !== ""
+          ? Number(r.before_vat)
+          : undefined,
+      hscode,
+      measurement: String(r.measurement ?? ""),
+    };
+  });
+
+  return { ...(data as PurchaseDetail), items };
+}
+
 export default function PurchaseDetailPage() {
   const params = useParams<{ purchaseNumber: string }>();
   const router = useRouter();
@@ -60,7 +103,10 @@ export default function PurchaseDetailPage() {
           return;
         }
 
-        setPurchase(data as PurchaseDetail);
+        const parsed = parsePurchaseDetailFromApi(data);
+        if (parsed) {
+          setPurchase(parsed);
+        }
       } catch {
         showToast({
           title: "Failed to load purchase",
@@ -183,37 +229,48 @@ export default function PurchaseDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {purchase.items.map((line, idx) => (
-                  <tr key={idx} className="border-t">
-                    <td className="px-4 py-2 font-mono text-xs">
-                      {line.purchase_number}
-                    </td>
-                    <td className="px-4 py-2">{line.item_name}</td>
-                    <td className="px-4 py-2 font-mono text-xs">
-                      {line.hscode ?? "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right">{line.quantity}</td>
-                    <td className="px-4 py-2 text-right">
-                      {line.remaining ?? line.quantity}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {line.price.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {line.total_price.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {(line.before_vat ?? line.total_price).toLocaleString(
-                        undefined,
-                        { maximumFractionDigits: 2 }
-                      )}
+                {purchase.items.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-6 text-center text-sm text-muted-foreground"
+                    >
+                      No line items on this purchase yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  purchase.items.map((line, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="px-4 py-2 font-mono text-xs">
+                        {line.purchase_number}
+                      </td>
+                      <td className="px-4 py-2">{line.item_name}</td>
+                      <td className="px-4 py-2 font-mono text-xs">
+                        {line.hscode ?? "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right">{line.quantity}</td>
+                      <td className="px-4 py-2 text-right">
+                        {line.remaining ?? line.quantity}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {line.price.toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {line.total_price.toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {(line.before_vat ?? line.total_price).toLocaleString(
+                          undefined,
+                          { maximumFractionDigits: 2 }
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

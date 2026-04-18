@@ -38,12 +38,13 @@ type Freight = "Payable at Destination" | "Pre-paid";
 
 type ShipmentType = "FOB" | "CFR" | "FCA" | "CIF" | "Air Freight";
 
+/** Line item while creating — mirrors sales (order) create shape; `hscode` is sent to the API. */
 interface PurchaseItem {
   item_id?: string | null;
   /** Mirrors header purchase number for each line (server stores on item). */
   purchase_number?: string;
   item_name: string;
-  hscode?: string;
+  hs_code: string;
   price: number;
   quantity: number;
   /** Defaults to quantity until receipts reduce it */
@@ -58,7 +59,7 @@ interface PurchaseItem {
 interface PurchaseItemForm {
   item_id: string;
   item_name: string;
-  hscode: string;
+  hs_code: string;
   price: string;
   quantity: string;
   total_price: number;
@@ -124,7 +125,7 @@ export default function CreatePurchasePage() {
   const [currentItem, setCurrentItem] = useState<PurchaseItemForm>({
     item_id: "",
     item_name: "",
-    hscode: "",
+    hs_code: "",
     price: "",
     quantity: "",
     total_price: 0,
@@ -283,7 +284,7 @@ export default function CreatePurchasePage() {
               ? Number(value)
               : value,
       } as PurchaseItemForm;
-      if (name === "item_name") {
+      if (name === "item_name" || name === "hs_code") {
         next.item_id = "";
       }
       // Auto-calculate Total Price when price or quantity changes
@@ -321,15 +322,16 @@ export default function CreatePurchasePage() {
       currentItem.total_price || priceVal * qtyVal;
 
     const itemToAdd: PurchaseItem = {
-      ...currentItem,
       item_id: currentItem.item_id.trim() || undefined,
       purchase_number: form.purchase_number.trim() || undefined,
-      hscode: currentItem.hscode.trim() || undefined,
+      item_name: currentItem.item_name,
+      hs_code: currentItem.hs_code.trim(),
       price: priceVal,
       quantity: qtyVal,
       remaining: qtyVal,
       total_price: total,
       before_vat: total,
+      measurement: currentItem.measurement,
     };
 
     setItems((prev) => [...prev, itemToAdd]);
@@ -337,7 +339,7 @@ export default function CreatePurchasePage() {
     setCurrentItem({
       item_id: "",
       item_name: "",
-      hscode: "",
+      hs_code: "",
       price: "",
       quantity: "",
       total_price: 0,
@@ -449,7 +451,7 @@ export default function CreatePurchasePage() {
         measurement: it.measurement,
         remaining: it.remaining ?? it.quantity,
         before_vat: it.before_vat ?? it.total_price,
-        hscode: it.hscode?.trim() || null,
+        hscode: it.hs_code?.trim() || null,
       })),
     };
 
@@ -482,6 +484,18 @@ export default function CreatePurchasePage() {
         description: "The purchase has been created successfully.",
         variant: "success",
       });
+
+      const created = data as { purchase_number?: string };
+      const num =
+        typeof created?.purchase_number === "string" &&
+        created.purchase_number.trim()
+          ? created.purchase_number.trim()
+          : form.purchase_number.trim();
+      if (num) {
+        router.push(`/diredawa/purchase/${encodeURIComponent(num)}`);
+      } else {
+        router.push("/diredawa/purchase/display");
+      }
     } catch (error) {
       showToast({
         title: "Failed to create purchase",
@@ -964,7 +978,7 @@ export default function CreatePurchasePage() {
                       .map((opt) => (
                         <button
                           type="button"
-                          key={opt.item_id ?? opt.internal_code ?? opt.item_name}
+                          key={opt.internal_code ?? opt.item_name}
                           className="block w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
                           style={{ backgroundColor: "#ffffff" }}
                           onClick={() => {
@@ -972,7 +986,7 @@ export default function CreatePurchasePage() {
                               ...prev,
                               item_id: opt.item_id ?? "",
                               item_name: opt.item_name,
-                              hscode: opt.hscode ?? "",
+                              hs_code: opt.hscode,
                             }));
                             setItemQuery(opt.item_name);
                             setShowItemDropdown(false);
@@ -990,10 +1004,12 @@ export default function CreatePurchasePage() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">HS CODE</label>
+                <label className="block text-sm font-medium mb-1">
+                  HS CODE
+                </label>
                 <input
-                  name="hscode"
-                  value={currentItem.hscode}
+                  name="hs_code"
+                  value={currentItem.hs_code}
                   onChange={handleItemChange}
                   className="w-full border rounded-md px-3 py-2"
                   autoComplete="off"
@@ -1074,30 +1090,19 @@ export default function CreatePurchasePage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/60">
                     <tr>
-                      <th className="text-left px-3 py-2">Purchase No.</th>
                       <th className="text-left px-3 py-2">Item</th>
-                      <th className="text-left px-3 py-2">HS Code</th>
+                      <th className="text-left px-3 py-2">HS CODE</th>
                       <th className="text-right px-3 py-2">Qty</th>
-                      <th className="text-right px-3 py-2">Remaining</th>
                       <th className="text-right px-3 py-2">Price</th>
                       <th className="text-right px-3 py-2">Total</th>
-                      <th className="text-right px-3 py-2">Before VAT</th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((it, idx) => (
                       <tr key={idx} className="border-t">
-                        <td className="px-3 py-2 font-mono text-xs">
-                          {(it.purchase_number ?? form.purchase_number) || "—"}
-                        </td>
                         <td className="px-3 py-2">{it.item_name}</td>
-                        <td className="px-3 py-2 font-mono text-xs">
-                          {it.hscode ?? "—"}
-                        </td>
+                        <td className="px-3 py-2">{it.hs_code}</td>
                         <td className="px-3 py-2 text-right">{it.quantity}</td>
-                        <td className="px-3 py-2 text-right">
-                          {it.remaining ?? it.quantity}
-                        </td>
                         <td className="px-3 py-2 text-right">
                           {it.price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
@@ -1107,12 +1112,6 @@ export default function CreatePurchasePage() {
                           {it.total_price.toLocaleString(undefined, {
                             maximumFractionDigits: 2,
                           })}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {(it.before_vat ?? it.total_price).toLocaleString(
-                            undefined,
-                            { maximumFractionDigits: 2 }
-                          )}
                         </td>
                       </tr>
                     ))}
