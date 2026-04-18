@@ -5,10 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { validateLineItemsAgainstInventory } from "@/lib/referenceListValidation";
+import {
+  parseInventoryItemsJson,
+  type InventoryItemOption,
+} from "@/lib/parseInventoryItems";
 
-interface PurchaseItem {
+const ITEMS_API_URL = "/api/inventory/items";
+
+interface PurchaseItemApi {
   item_id?: string | null;
-  purchase_number: string;
+  purchase_number?: string;
   item_name: string;
   price: number;
   quantity: number;
@@ -16,6 +22,7 @@ interface PurchaseItem {
   total_price: number;
   before_vat?: number;
   hscode?: string | null;
+  hs_code?: string | null;
   measurement: string;
 }
 
@@ -36,14 +43,48 @@ interface PurchaseDetail {
   port_of_discharge: string;
   measurement_type: string;
   payment_type: string;
-  /** Legacy/alternate field from API */
   payment_terms?: string | null;
   mode_of_transport: string;
   freight: string;
   freight_price?: number | null;
   insurance?: string | null;
   shipment_type: string;
-  items: PurchaseItem[];
+  items: PurchaseItemApi[];
+}
+
+/** Editable line — same shape as sales edit rows, plus purchase-only fields. */
+interface PurchaseItemForm {
+  item_id: string;
+  item_name: string;
+  hs_code: string;
+  price: string;
+  quantity: string;
+  total_price: number;
+  remaining: string;
+  before_vat: number;
+  measurement: string;
+}
+
+function mapApiLineToForm(it: PurchaseItemApi): PurchaseItemForm {
+  const hs = (it.hscode ?? it.hs_code ?? "").toString();
+  const qty = Number(it.quantity) || 0;
+  const rem = it.remaining ?? qty;
+  const total = Number(it.total_price) || 0;
+  const before = Number(it.before_vat ?? it.total_price) || total;
+  return {
+    item_id:
+      it.item_id != null && String(it.item_id).trim() !== ""
+        ? String(it.item_id)
+        : "",
+    item_name: it.item_name,
+    hs_code: hs,
+    price: String(it.price),
+    quantity: String(it.quantity),
+    total_price: total,
+    remaining: String(rem),
+    before_vat: before,
+    measurement: it.measurement ?? "",
+  };
 }
 
 export default function EditPurchasePage() {
@@ -75,7 +116,49 @@ export default function EditPurchasePage() {
     insurance: "",
     shipment_type: "",
   });
-  const [items, setItems] = useState<PurchaseItem[]>([]);
+
+  const [purchaseItems, setPurchaseItems] = useState<PurchaseItemForm[]>([]);
+  const [itemsTotal, setItemsTotal] = useState(0);
+  const [isTotalCalculated, setIsTotalCalculated] = useState(false);
+
+  const [currentItem, setCurrentItem] = useState<PurchaseItemForm>({
+    item_id: "",
+    item_name: "",
+    hs_code: "",
+    price: "",
+    quantity: "",
+    total_price: 0,
+    remaining: "",
+    before_vat: 0,
+    measurement: "",
+  });
+  const [itemOptions, setItemOptions] = useState<InventoryItemOption[]>([]);
+  const [itemQuery, setItemQuery] = useState("");
+  const [showItemDropdown, setShowItemDropdown] = useState(false);
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
+    null
+  );
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const res = await fetch(ITEMS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setItemOptions([]);
+          return;
+        }
+        setItemOptions(parseInventoryItemsJson(data));
+      } catch {
+        setItemOptions([]);
+      }
+    };
+    fetchItems();
+  }, []);
 
   useEffect(() => {
     const fetchPurchase = async () => {
@@ -117,7 +200,16 @@ export default function EditPurchasePage() {
           insurance: p.insurance || "",
           shipment_type: p.shipment_type,
         });
-        setItems(p.items);
+        const lines = (p.items ?? []).map(mapApiLineToForm);
+        setPurchaseItems(lines);
+        if (lines.length > 0) {
+          const sum = lines.reduce((s, it) => s + (Number(it.total_price) || 0), 0);
+          setItemsTotal(sum);
+          setIsTotalCalculated(true);
+        } else {
+          setItemsTotal(0);
+          setIsTotalCalculated(false);
+        }
       } catch {
         showToast({
           title: "Failed to load purchase",
@@ -131,9 +223,28 @@ export default function EditPurchasePage() {
     if (purchaseNumber) fetchPurchase();
   }, [purchaseNumber, showToast]);
 
+  const handleCalculateTotal = () => {
+    const total = purchaseItems.reduce(
+      (sum, it) => sum + (Number(it.total_price) || 0),
+      0
+    );
+    setItemsTotal(total);
+    setIsTotalCalculated(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (items.length === 0) {
+
+    if (!isTotalCalculated) {
+      showToast({
+        title: "Calculate total first",
+        description: "Please click Calculate Total before saving.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (purchaseItems.length === 0) {
       showToast({
         title: "No items",
         description: "Purchase must have at least one item.",
@@ -142,7 +253,10 @@ export default function EditPurchasePage() {
       return;
     }
 
-    const itemListCheck = await validateLineItemsAgainstInventory(items, "purchase");
+    const itemListCheck = await validateLineItemsAgainstInventory(
+      purchaseItems,
+      "purchase"
+    );
     if (!itemListCheck.ok) {
       showToast({
         title: itemListCheck.title,
@@ -174,16 +288,28 @@ export default function EditPurchasePage() {
       freight_price: form.freight_price ? Number(form.freight_price) : null,
       insurance: form.insurance || null,
       shipment_type: form.shipment_type,
-      items: items.map((it) => ({
-        item_id: it.item_id ?? null,
-        item_name: it.item_name,
-        price: it.price,
-        quantity: it.quantity,
-        total_price: it.total_price,
-        measurement: it.measurement,
-        remaining: it.remaining ?? it.quantity,
-      })),
+      items: purchaseItems.map((it) => {
+        const qty = Number(it.quantity) || 0;
+        const price = Number(it.price) || 0;
+        const total = Number(it.total_price) || 0;
+        const remStr = it.remaining.trim();
+        const rem = remStr === "" ? qty : Number(remStr);
+        const remaining = Number.isFinite(rem) ? Math.min(rem, qty) : qty;
+        const beforeVat = Number(it.before_vat);
+        return {
+          item_id: it.item_id.trim() || null,
+          item_name: it.item_name,
+          price,
+          quantity: qty,
+          total_price: total,
+          measurement: it.measurement,
+          remaining,
+          before_vat: Number.isFinite(beforeVat) ? beforeVat : total,
+          hscode: it.hs_code.trim() || null,
+        };
+      }),
     };
+
     try {
       setSubmitting(true);
       const res = await fetch(
@@ -409,70 +535,497 @@ export default function EditPurchasePage() {
             </div>
           </div>
 
-          <div>
-            <h2 className="font-semibold mb-2">Items (read-only)</h2>
-            <div className="border rounded-md overflow-hidden">
-              <table className="w-full text-xs">
-                <thead className="bg-muted/60">
-                  <tr>
-                    <th className="px-2 py-1 text-left">Purchase No.</th>
-                    <th className="px-2 py-1 text-left">Item</th>
-                    <th className="px-2 py-1 text-left">HS Code</th>
-                    <th className="px-2 py-1 text-right">Qty</th>
-                    <th className="px-2 py-1 text-right">Remaining</th>
-                    <th className="px-2 py-1 text-right">Price</th>
-                    <th className="px-2 py-1 text-right">Total</th>
-                    <th className="px-2 py-1 text-right">Before VAT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((it, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="px-2 py-1 font-mono text-[11px]">
-                        {it.purchase_number}
-                      </td>
-                      <td className="px-2 py-1">{it.item_name}</td>
-                      <td className="px-2 py-1 font-mono text-[11px]">
-                        {it.hscode ?? "—"}
-                      </td>
-                      <td className="px-2 py-1 text-right">{it.quantity}</td>
-                      <td className="px-2 py-1 text-right">
-                        {it.remaining ?? it.quantity}
-                      </td>
-                      <td className="px-2 py-1 text-right">
-                        {it.price.toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="px-2 py-1 text-right">
-                        {it.total_price.toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="px-2 py-1 text-right">
-                        {(it.before_vat ?? it.total_price).toLocaleString(
-                          undefined,
-                          { maximumFractionDigits: 2 }
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {/* Items — same pattern as sales (order) edit */}
+          <div className="border rounded-md p-4 space-y-4">
+            <h2 className="font-semibold text-sm">Purchase items</h2>
 
-          <div className="flex justify-end gap-3 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/20 border rounded-lg p-4">
+              <div className="relative">
+                <label className="block font-medium mb-1">Item name</label>
+                <input
+                  value={currentItem.item_name}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      item_name: value,
+                      item_id: "",
+                    }));
+                    setItemQuery(value);
+                    setShowItemDropdown(true);
+                  }}
+                  onFocus={() => setShowItemDropdown(true)}
+                  onBlur={() =>
+                    setTimeout(() => setShowItemDropdown(false), 150)
+                  }
+                  autoComplete="off"
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+                {showItemDropdown && itemOptions.length > 0 && (
+                  <div
+                    className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                    style={{ backgroundColor: "#ffffff" }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    {itemOptions
+                      .filter((opt) =>
+                        (opt.item_name ?? "")
+                          .toLowerCase()
+                          .includes(itemQuery.toLowerCase())
+                      )
+                      .slice(0, 20)
+                      .map((opt) => (
+                        <button
+                          type="button"
+                          key={opt.internal_code ?? opt.item_name}
+                          className="block w-full text-left px-3 py-1.5 text-sm bg-white hover:bg-gray-100"
+                          onClick={() => {
+                            setCurrentItem((prev) => ({
+                              ...prev,
+                              item_id: opt.item_id ?? "",
+                              item_name: opt.item_name,
+                              hs_code: opt.hscode,
+                            }));
+                            setItemQuery(opt.item_name);
+                            setShowItemDropdown(false);
+                          }}
+                        >
+                          {opt.item_name}
+                          {opt.hscode ? (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {opt.hscode}
+                            </span>
+                          ) : null}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block font-medium mb-1">HS CODE</label>
+                <input
+                  value={currentItem.hs_code}
+                  onChange={(e) =>
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      hs_code: e.target.value,
+                      item_id: "",
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Price</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={currentItem.price}
+                  onChange={(e) => {
+                    const price = Number(e.target.value) || 0;
+                    const qty = Number(currentItem.quantity) || 0;
+                    const total = price * qty;
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      price: e.target.value,
+                      total_price: total,
+                      before_vat: total,
+                    }));
+                  }}
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Quantity</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={currentItem.quantity}
+                  onChange={(e) => {
+                    const qty = Number(e.target.value) || 0;
+                    const price = Number(currentItem.price) || 0;
+                    const total = price * qty;
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      quantity: e.target.value,
+                      total_price: total,
+                      before_vat: total,
+                      remaining: e.target.value,
+                    }));
+                  }}
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Total Price</label>
+                <input
+                  type="number"
+                  value={currentItem.total_price}
+                  readOnly
+                  className="w-full border rounded-md px-3 py-2 bg-muted/40"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Measurement</label>
+                <input
+                  value={currentItem.measurement}
+                  onChange={(e) =>
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      measurement: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+            </div>
             <Button
               type="button"
-              variant="outline"
-              onClick={() => router.push(`/diredawa/purchase/${purchaseNumber}`)}
+              size="sm"
+              onClick={() => {
+                const priceNum = parseFloat(String(currentItem.price)) || 0;
+                const qtyNum = parseFloat(String(currentItem.quantity)) || 0;
+                if (
+                  !currentItem.item_name ||
+                  !String(currentItem.quantity).trim() ||
+                  !String(currentItem.price).trim()
+                ) {
+                  showToast({
+                    title: "Incomplete item",
+                    description:
+                      "Please fill Item name, Price and Quantity before adding.",
+                    variant: "error",
+                  });
+                  return;
+                }
+                if (priceNum <= 0 || qtyNum <= 0) {
+                  showToast({
+                    title: "Invalid values",
+                    description: "Price and Quantity must be greater than 0.",
+                    variant: "error",
+                  });
+                  return;
+                }
+                const total = priceNum * qtyNum;
+                setPurchaseItems((prev) => [
+                  ...prev,
+                  {
+                    ...currentItem,
+                    price: String(priceNum),
+                    quantity: String(qtyNum),
+                    total_price: total,
+                    remaining: String(qtyNum),
+                    before_vat: total,
+                  },
+                ]);
+                setIsTotalCalculated(false);
+                setCurrentItem({
+                  item_id: "",
+                  item_name: "",
+                  hs_code: "",
+                  price: "",
+                  quantity: "",
+                  total_price: 0,
+                  remaining: "",
+                  before_vat: 0,
+                  measurement: "",
+                });
+              }}
             >
-              Cancel
+              Add Item
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Changes"}
-            </Button>
+
+            {purchaseItems.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {purchaseItems.map((it, idx) => (
+                  <div
+                    key={idx}
+                    className="border rounded-lg p-4 bg-white relative"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setPurchaseItems((prev) =>
+                          prev.filter((_, i) => i !== idx)
+                        );
+                        setOpenDropdownIndex(null);
+                        setIsTotalCalculated(false);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative pr-20">
+                        <label className="block font-medium mb-1">Item name</label>
+                        <input
+                          value={it.item_name}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setPurchaseItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                item_name: value,
+                                item_id: "",
+                              };
+                              return next;
+                            });
+                            setItemQuery(value);
+                            setOpenDropdownIndex(idx);
+                          }}
+                          onFocus={() => {
+                            setItemQuery(it.item_name);
+                            setOpenDropdownIndex(idx);
+                          }}
+                          onBlur={() =>
+                            setTimeout(() => setOpenDropdownIndex(null), 150)
+                          }
+                          autoComplete="off"
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                        {openDropdownIndex === idx && itemOptions.length > 0 && (
+                          <div
+                            className="absolute z-20 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-md border shadow-lg bg-white"
+                            style={{ backgroundColor: "#ffffff" }}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            {itemOptions
+                              .filter((opt) =>
+                                (opt.item_name ?? "")
+                                  .toLowerCase()
+                                  .includes(it.item_name.toLowerCase())
+                              )
+                              .slice(0, 20)
+                              .map((opt) => (
+                                <button
+                                  type="button"
+                                  key={opt.internal_code ?? opt.item_name}
+                                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 bg-white"
+                                  onClick={() => {
+                                    setPurchaseItems((prev) => {
+                                      const next = [...prev];
+                                      const row = next[idx];
+                                      const price = Number(row.price) || 0;
+                                      const qty = Number(row.quantity) || 0;
+                                      const total = price * qty;
+                                      next[idx] = {
+                                        ...row,
+                                        item_id: opt.item_id ?? "",
+                                        item_name: opt.item_name,
+                                        hs_code: opt.hscode ?? "",
+                                        total_price: total,
+                                        before_vat: total,
+                                      };
+                                      return next;
+                                    });
+                                    setItemQuery("");
+                                    setOpenDropdownIndex(null);
+                                    setIsTotalCalculated(false);
+                                  }}
+                                >
+                                  {opt.item_name}
+                                  {opt.hscode ? (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      {opt.hscode}
+                                    </span>
+                                  ) : null}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">HS CODE</label>
+                        <input
+                          value={it.hs_code}
+                          onChange={(e) =>
+                            setPurchaseItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                hs_code: e.target.value,
+                                item_id: "",
+                              };
+                              return next;
+                            })
+                          }
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Price</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={it.price}
+                          onChange={(e) => {
+                            const priceStr = e.target.value;
+                            const price = Number(priceStr) || 0;
+                            const qty = Number(it.quantity) || 0;
+                            const total = qty * price;
+                            setPurchaseItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                price: priceStr,
+                                total_price: total,
+                                before_vat: total,
+                              };
+                              return next;
+                            });
+                            setIsTotalCalculated(false);
+                          }}
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Quantity</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={it.quantity}
+                          onChange={(e) => {
+                            const qtyStr = e.target.value;
+                            const qty = Number(qtyStr) || 0;
+                            const price = Number(it.price) || 0;
+                            const total = qty * price;
+                            const prevRem = Number(it.remaining) || 0;
+                            const newRem = Math.min(prevRem, qty);
+                            setPurchaseItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                quantity: qtyStr,
+                                total_price: total,
+                                before_vat: total,
+                                remaining: String(newRem),
+                              };
+                              return next;
+                            });
+                            setIsTotalCalculated(false);
+                          }}
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Remaining</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={it.remaining}
+                          onChange={(e) => {
+                            const qty = Number(it.quantity) || 0;
+                            let rem = Number(e.target.value) || 0;
+                            if (rem > qty) rem = qty;
+                            if (rem < 0) rem = 0;
+                            setPurchaseItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                remaining: String(rem),
+                              };
+                              return next;
+                            });
+                            setIsTotalCalculated(false);
+                          }}
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Total Price</label>
+                        <input
+                          type="number"
+                          value={it.total_price}
+                          readOnly
+                          className="w-full border rounded-md px-3 py-2 bg-muted/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Before VAT</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={it.before_vat}
+                          onChange={(e) => {
+                            const v = Number(e.target.value) || 0;
+                            setPurchaseItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = { ...next[idx], before_vat: v };
+                              return next;
+                            });
+                            setIsTotalCalculated(false);
+                          }}
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Measurement</label>
+                        <input
+                          value={it.measurement}
+                          onChange={(e) =>
+                            setPurchaseItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                measurement: e.target.value,
+                              };
+                              return next;
+                            })
+                          }
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-4 mt-6 -mx-6 -mb-6 px-6 py-5 bg-black rounded-b-md">
+            <span className="text-white text-lg font-semibold">
+              Total Price: $
+              {itemsTotal.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+            <div className="flex items-center gap-4">
+              <Button
+                type="button"
+                size="lg"
+                onClick={handleCalculateTotal}
+                variant="cta"
+                className="animate-pulse"
+              >
+                Calculate Total
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white text-white hover:bg-white/10"
+                onClick={() =>
+                  router.push(`/diredawa/purchase/${purchaseNumber}`)
+                }
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  submitting ||
+                  !isTotalCalculated ||
+                  purchaseItems.length === 0 ||
+                  purchaseItems.some((it) => !(Number(it.total_price) > 0))
+                }
+                className="bg-white text-black hover:bg-gray-200 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {submitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </div>
         </form>
       )}
