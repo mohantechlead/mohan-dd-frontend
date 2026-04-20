@@ -101,6 +101,31 @@ export default function PurchaseOrderPage() {
     }
   }, [purchaseNumber, showToast]);
 
+  useEffect(() => {
+    const previousTitle = document.title;
+
+    const setPrintTitleBlank = () => {
+      document.title = "";
+    };
+
+    const restoreTitle = () => {
+      document.title = previousTitle;
+    };
+
+    // Keep tab title clean while on this route.
+    setPrintTitleBlank();
+
+    // Ensure title is blank exactly at print time in case Next/head rewrites it.
+    window.addEventListener("beforeprint", setPrintTitleBlank);
+    window.addEventListener("afterprint", restoreTitle);
+
+    return () => {
+      window.removeEventListener("beforeprint", setPrintTitleBlank);
+      window.removeEventListener("afterprint", restoreTitle);
+      document.title = previousTitle;
+    };
+  }, []);
+
   const totalPrice = useMemo(
     () =>
       purchase
@@ -115,7 +140,60 @@ export default function PurchaseOrderPage() {
     )?.hscode ?? "";
 
   return (
-    <div className="max-w-5xl mx-auto py-8 space-y-8 bg-white font-poppins">
+    <div
+      className="max-w-5xl mx-auto py-8 space-y-8 bg-white font-poppins"
+    >
+      <style jsx global>{`
+        @media print {
+          html:has(#purchase-order-print-content),
+          html:has(#purchase-order-print-content) body {
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          @page {
+            margin: 0;
+          }
+
+          #purchase-order-print-content {
+            max-width: 100% !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            line-height: 1.2 !important;
+          }
+
+          #purchase-order-print-content h1 {
+            font-size: 20pt !important;
+          }
+
+          #purchase-order-print-content h2 {
+            font-size: 16pt !important;
+          }
+
+          #purchase-order-print-content h3 {
+            font-size: 12pt !important;
+          }
+
+          #purchase-order-print-content .text-xs {
+            font-size: 10.5pt !important;
+          }
+
+          #purchase-order-print-content table th,
+          #purchase-order-print-content table td {
+            font-size: 10.5pt !important;
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
+          }
+
+          /* Start print content exactly from logo section. */
+          #purchase-order-print-content > :first-child {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+          }
+        }
+      `}</style>
       <div className="flex items-center justify-between print:hidden">
         <Button
           variant="outline"
@@ -137,7 +215,7 @@ export default function PurchaseOrderPage() {
           Purchase not found.
         </p>
       ) : (
-        <div className="space-y-6">
+        <div id="purchase-order-print-content" className="space-y-6">
           {/* Header: logo + company */}
           <div className="text-center space-y-1">
             <Image
