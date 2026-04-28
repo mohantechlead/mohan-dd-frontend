@@ -40,7 +40,10 @@ const baseNavMain = [
     url: "/diredawa/dashboard",
     icon: LayoutDashboard,
     adminOnly: true,
-    items: [{ title: "Admin Dashboard", url: "/diredawa/dashboard" }],
+    items: [
+      { title: "Admin Dashboard", url: "/diredawa/dashboard" },
+      { title: "Analytics", url: "/diredawa/reports" },
+    ],
   },
   {
     title: "Status",

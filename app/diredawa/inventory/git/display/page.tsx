@@ -84,7 +84,7 @@ export default function GITDisplayPage() {
     }
   };
 
-  const columns = getGITColumns(onWipeOff, auth?.isAdmin);
+  const columns = getGITColumns(onWipeOff, auth?.canManageRecords);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
@@ -103,7 +103,7 @@ export default function GITDisplayPage() {
             <DialogTitle>Confirm Wipe Off</DialogTitle>
           </DialogHeader>
           <p>
-            Admin confirmation required. Wipe off variance for item "{selected?.item_name}"?
+            Confirmation required. Wipe off variance for item "{selected?.item_name}"?
             This will set variance back to zero.
           </p>
           <DialogFooter>

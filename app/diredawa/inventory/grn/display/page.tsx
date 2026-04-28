@@ -84,6 +84,14 @@ export default function DemoPage() {
   }, [auth, error]);
 
   const openEdit = async (row: GRN) => {
+    if (!auth?.isAdmin) {
+      showToast({
+        title: "Permission denied",
+        description: "Only admin can edit GRN.",
+        variant: "error",
+      });
+      return;
+    }
     setSelectedGRN(row);
     setEditSupplierName(row.supplier_name);
     setEditReceivedFrom(row.received_from ?? "");
@@ -145,6 +153,14 @@ export default function DemoPage() {
   };
 
   const openDelete = (row: GRN) => {
+    if (!auth?.isAdmin) {
+      showToast({
+        title: "Permission denied",
+        description: "Only admin can delete GRN.",
+        variant: "error",
+      });
+      return;
+    }
     setSelectedGRN(row);
     setDeleteOpen(true);
   };

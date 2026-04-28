@@ -42,6 +42,7 @@ export default function DisplayOrdersPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const auth = useAuth();
+  const canManageRecords = auth?.canManageRecords ?? false;
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState("");
@@ -233,7 +234,7 @@ export default function DisplayOrdersPage() {
                 <th className="text-left px-4 py-3 border-b border-border font-semibold text-slate-700">
                   Status
                 </th>
-                {auth?.isAdmin && (
+                {canManageRecords && (
                   <th className="text-right px-4 py-3 border-b border-border font-semibold text-slate-700">
                     Actions
                   </th>
@@ -243,7 +244,7 @@ export default function DisplayOrdersPage() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={auth?.isAdmin ? 9 : 8} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={canManageRecords ? 9 : 8} className="px-4 py-8 text-center text-muted-foreground">
                     No results match your search.
                   </td>
                 </tr>
@@ -332,7 +333,7 @@ export default function DisplayOrdersPage() {
                                 {order.status ?? "—"}
                               </span>
                             </td>
-                            {auth?.isAdmin && (
+                            {canManageRecords && (
                               <td
                                 className="px-4 py-2 text-right align-top"
                                 rowSpan={order.items.length}
@@ -404,7 +405,7 @@ export default function DisplayOrdersPage() {
                             {order.status ?? "—"}
                           </span>
                         </td>
-                        {auth?.isAdmin && (
+                        {canManageRecords && (
                           <td className="px-4 py-2 text-right">
                             <div className="flex justify-end gap-2">
                               <Button

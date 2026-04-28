@@ -46,6 +46,7 @@ export default function DisplayPurchasesPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const auth = useAuth();
+  const canManageRecords = auth?.canManageRecords ?? false;
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -198,7 +199,7 @@ export default function DisplayPurchasesPage() {
                 <th className="text-right px-4 py-2">Before VAT</th>
                 <th className="text-left px-4 py-2">Vendor Name</th>
                 <th className="text-left px-4 py-2">Status</th>
-                {auth?.isAdmin && (
+                {canManageRecords && (
                   <th className="text-right px-4 py-2">Actions</th>
                 )}
               </tr>
@@ -243,7 +244,7 @@ export default function DisplayPurchasesPage() {
                     </td>
                     <td className="px-4 py-2">{purchase.buyer}</td>
                     <td className="px-4 py-2 capitalize">{purchase.status}</td>
-                    {auth?.isAdmin && (
+                    {canManageRecords && (
                       <td className="px-4 py-2 text-right">
                         <div className="flex justify-end gap-2">
                           <Button

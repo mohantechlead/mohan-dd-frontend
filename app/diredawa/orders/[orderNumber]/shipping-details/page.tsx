@@ -12,6 +12,8 @@ interface ShippingItemState {
   item_id: string;
   item_name: string;
   hscode: string;
+  code: string;
+  notes: string;
   price: number;
   quantity: number;
   total_price: number;
@@ -65,6 +67,8 @@ export default function ShippingDetailsPage() {
     item_id: "",
     item_name: "",
     hscode: "",
+    code: "",
+    notes: "",
     price: "",
     quantity: "",
     total_price: 0,
@@ -257,6 +261,8 @@ export default function ShippingDetailsPage() {
         item_id: it.item_id || null,
         item_name: it.item_name,
         hscode: it.hscode?.trim() || null,
+        code: it.code?.trim() || null,
+        notes: it.notes?.trim() || null,
         price: Number(it.price) || 0,
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
@@ -691,6 +697,7 @@ export default function ShippingDetailsPage() {
                             item_id: opt.item_id ?? "",
                             item_name: opt.item_name,
                             hscode: opt.hscode ?? "",
+                            code: opt.internal_code ?? "",
                             grade: opt.internal_code ?? "",
                           }));
                           setItemQuery(opt.item_name);
@@ -722,6 +729,19 @@ export default function ShippingDetailsPage() {
               />
             </div>
             <div>
+              <label className="block font-medium mb-1">Code</label>
+              <input
+                value={shippingItem.code}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    code: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
               <label className="block font-medium mb-1">Price</label>
               <input
                 type="number"
@@ -738,6 +758,20 @@ export default function ShippingDetailsPage() {
                 }}
                 className="w-full border rounded-md px-3 py-2"
                 placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Notes</label>
+              <textarea
+                rows={2}
+                value={shippingItem.notes}
+                onChange={(e) =>
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
               />
             </div>
             <div>
@@ -950,6 +984,8 @@ export default function ShippingDetailsPage() {
                   item_id: "",
                   item_name: "",
                   hscode: "",
+                  code: "",
+                  notes: "",
                   price: "",
                   quantity: "",
                   total_price: 0,
@@ -995,9 +1031,11 @@ export default function ShippingDetailsPage() {
                   <tr>
                     <th className="px-2 py-1 text-left">Item</th>
                     <th className="px-2 py-1 text-left">HS Code</th>
+                    <th className="px-2 py-1 text-left">Code</th>
                     <th className="px-2 py-1 text-left">Grade</th>
                     <th className="px-2 py-1 text-left">Brand</th>
                     <th className="px-2 py-1 text-left">Country of Origin</th>
+                    <th className="px-2 py-1 text-left">Notes</th>
                     <th className="px-2 py-1 text-right">Qty</th>
                     <th className="px-2 py-1 text-right">Price</th>
                     <th className="px-2 py-1 text-right">Total</th>
@@ -1008,9 +1046,11 @@ export default function ShippingDetailsPage() {
                     <tr key={idx} className="border-t">
                       <td className="px-2 py-1">{it.item_name}</td>
                       <td className="px-2 py-1">{it.hscode || "—"}</td>
+                      <td className="px-2 py-1">{it.code || "—"}</td>
                       <td className="px-2 py-1">{it.grade || "—"}</td>
                       <td className="px-2 py-1">{it.brand || "—"}</td>
                       <td className="px-2 py-1">{it.country_of_origin || "—"}</td>
+                      <td className="px-2 py-1">{it.notes || "—"}</td>
                       <td className="px-2 py-1 text-right">{it.quantity}</td>
                       <td className="px-2 py-1 text-right">
                         {Number(it.price).toLocaleString(undefined, {

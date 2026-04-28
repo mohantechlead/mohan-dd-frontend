@@ -13,8 +13,10 @@ interface AuthContextType {
     role: string;
     userId: number | null;
     isAdmin: boolean;
+    isLogistics: boolean;
     isStore: boolean;
     isAccounting: boolean;
+    canManageRecords: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -174,7 +176,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return (
         <AuthContext.Provider value={{ isAuthenticated, login, logout, loginRequiredRedirect, username, role, userId, isAdmin: (role || "").toLowerCase() === "admin",
-        isStore: (role || "").toLowerCase() === "store", isAccounting: (role || "").toLowerCase() === "accounting" }}>
+        isLogistics: (role || "").toLowerCase() === "logistics",
+        isStore: (role || "").toLowerCase() === "store", isAccounting: (role || "").toLowerCase() === "accounting",
+        canManageRecords: ["admin", "logistics"].includes((role || "").toLowerCase()) }}>
             {children}
         </AuthContext.Provider>
     );

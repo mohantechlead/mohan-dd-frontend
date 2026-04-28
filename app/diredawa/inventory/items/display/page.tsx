@@ -144,7 +144,7 @@ export default function DemoPage() {
     }
   };
 
-  const columns = getItemsColumns(openEdit, openDelete, auth?.isAdmin);
+  const columns = getItemsColumns(openEdit, openDelete, auth?.canManageRecords);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;

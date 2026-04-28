@@ -12,6 +12,8 @@ interface ShippingItemState {
   item_id: string;
   item_name: string;
   hscode: string;
+  code: string;
+  notes: string;
   price: number | string;
   quantity: number | string;
   total_price: number;
@@ -52,6 +54,8 @@ interface ShippingInvoiceDetail {
     item_id?: string | null;
     item_name: string;
     hscode?: string | null;
+    code?: string | null;
+    notes?: string | null;
     price: number;
     quantity: number;
     total_price: number;
@@ -105,6 +109,8 @@ export default function EditShippingInvoicePage() {
     item_id: "",
     item_name: "",
     hscode: "",
+    code: "",
+    notes: "",
     price: "",
     quantity: "",
     total_price: 0,
@@ -176,6 +182,8 @@ export default function EditShippingInvoicePage() {
             item_id: it.item_id ?? "",
             item_name: it.item_name,
             hscode: it.hscode ?? "",
+            code: it.code ?? "",
+            notes: it.notes ?? "",
             price: String(it.price),
             quantity: String(it.quantity),
             total_price: it.total_price,
@@ -316,6 +324,8 @@ export default function EditShippingInvoicePage() {
         item_id: it.item_id || null,
         item_name: it.item_name,
         hscode: it.hscode?.trim() || null,
+        code: it.code?.trim() || null,
+        notes: it.notes?.trim() || null,
         price: Number(it.price) || 0,
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
@@ -718,6 +728,8 @@ export default function EditShippingInvoicePage() {
                       item_id: "",
                       item_name: "",
                       hscode: "",
+                      code: "",
+                      notes: "",
                       price: "",
                       quantity: "",
                       total_price: 0,
@@ -800,6 +812,7 @@ export default function EditShippingInvoicePage() {
                               item_id: opt.item_id ?? "",
                               item_name: opt.item_name,
                               hscode: opt.hscode ?? "",
+                              code: opt.internal_code ?? "",
                               grade: opt.internal_code ?? "",
                             }));
                             setItemQuery(opt.item_name);
@@ -825,6 +838,19 @@ export default function EditShippingInvoicePage() {
                     setShippingItem((prev) => ({
                       ...prev,
                       hscode: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Code</label>
+                <input
+                  value={shippingItem.code}
+                  onChange={(e) =>
+                    setShippingItem((prev) => ({
+                      ...prev,
+                      code: e.target.value,
                     }))
                   }
                   className="w-full border rounded-md px-3 py-2 bg-white"
@@ -1000,6 +1026,20 @@ export default function EditShippingInvoicePage() {
                   placeholder="e.g. CHINA"
                 />
               </div>
+              <div>
+                <label className="block font-medium mb-1">Notes</label>
+                <textarea
+                  rows={2}
+                  value={shippingItem.notes}
+                  onChange={(e) =>
+                    setShippingItem((prev) => ({
+                      ...prev,
+                      notes: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
             </div>
 
             {/* Editable items in card format - 2 column grid */}
@@ -1072,9 +1112,10 @@ export default function EditShippingInvoicePage() {
                                     const next = [...prev];
                                     next[idx] = {
                                       ...next[idx],
-                                        item_id: opt.item_id ?? "",
+                                      item_id: opt.item_id ?? "",
                                       item_name: opt.item_name,
-                                        hscode: opt.hscode ?? "",
+                                      hscode: opt.hscode ?? "",
+                                      code: opt.internal_code ?? "",
                                       grade: opt.internal_code ?? "",
                                     };
                                     return next;
@@ -1103,6 +1144,20 @@ export default function EditShippingInvoicePage() {
                           setShippingItems((prev) => {
                             const next = [...prev];
                             next[idx] = { ...next[idx], hscode: e.target.value };
+                            return next;
+                          })
+                        }
+                        className="w-full border rounded-md px-3 py-2 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Code</label>
+                      <input
+                        value={it.code}
+                        onChange={(e) =>
+                          setShippingItems((prev) => {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], code: e.target.value };
                             return next;
                           })
                         }
@@ -1307,6 +1362,21 @@ export default function EditShippingInvoicePage() {
                         }
                         className="w-full border rounded-md px-3 py-2 bg-white"
                         placeholder="e.g. CHINA"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Notes</label>
+                      <textarea
+                        rows={2}
+                        value={it.notes}
+                        onChange={(e) =>
+                          setShippingItems((prev) => {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], notes: e.target.value };
+                            return next;
+                          })
+                        }
+                        className="w-full border rounded-md px-3 py-2 bg-white"
                       />
                     </div>
                     </div>

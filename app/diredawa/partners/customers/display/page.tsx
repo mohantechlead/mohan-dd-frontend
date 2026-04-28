@@ -166,7 +166,12 @@ export default function DemoPage() {
     router.push(`/diredawa/partners/customers/${encodeURIComponent(row.id)}`);
   };
 
-  const columns = getCustomerColumns(openEdit, openDelete, auth?.isAdmin, openView);
+  const columns = getCustomerColumns(
+    openEdit,
+    openDelete,
+    auth?.canManageRecords,
+    openView,
+  );
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;

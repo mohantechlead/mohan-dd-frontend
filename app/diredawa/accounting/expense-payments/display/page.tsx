@@ -24,6 +24,8 @@ export default function DisplayExpensePaymentsPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const auth = useAuth();
+  const canManageRecords =
+    Boolean(auth?.canManageRecords) || Boolean(auth?.isAccounting);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ExpensePayment[]>([]);
   const [search, setSearch] = useState("");
@@ -95,13 +97,13 @@ export default function DisplayExpensePaymentsPage() {
                   <th className="text-left px-4 py-2">Category</th>
                   <th className="text-right px-4 py-2">Amount</th>
                   <th className="text-left px-4 py-2">Status</th>
-                  {(auth?.isAdmin || auth?.isAccounting) && <th className="text-right px-4 py-2">Actions</th>}
+                  {canManageRecords && <th className="text-right px-4 py-2">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={(auth?.isAdmin || auth?.isAccounting) ? 7 : 6} className="px-4 py-4 text-center text-sm text-muted-foreground">
+                    <td colSpan={canManageRecords ? 7 : 6} className="px-4 py-4 text-center text-sm text-muted-foreground">
                       No expense payments found.
                     </td>
                   </tr>
@@ -118,7 +120,7 @@ export default function DisplayExpensePaymentsPage() {
                       <td className="px-4 py-2">{x.category}</td>
                       <td className="px-4 py-2 text-right">{Number(x.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                       <td className="px-4 py-2 capitalize">{x.status}</td>
-                      {(auth?.isAdmin || auth?.isAccounting) && (
+                      {canManageRecords && (
                         <td className="px-4 py-2">
                           <div className="flex justify-end gap-2">
                             <Button variant="ghost" size="sm" onClick={() => router.push(`/diredawa/accounting/expense-payments/${x.expense_number}/edit`)}>

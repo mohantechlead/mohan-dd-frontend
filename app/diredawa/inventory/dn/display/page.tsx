@@ -96,6 +96,14 @@ export default function DemoPage() {
   }, [auth, error]);
 
   const openEdit = async (row: DN) => {
+    if (!auth?.isAdmin) {
+      showToast({
+        title: "Permission denied",
+        description: "Only admin can edit Delivery Notes.",
+        variant: "error",
+      });
+      return;
+    }
     setSelectedDN(row);
     setEditCustomerName(row.customer_name);
     setEditSalesNo(row.sales_no);
@@ -137,6 +145,14 @@ export default function DemoPage() {
   };
 
   const openDelete = (row: DN) => {
+    if (!auth?.isAdmin) {
+      showToast({
+        title: "Permission denied",
+        description: "Only admin can delete Delivery Notes.",
+        variant: "error",
+      });
+      return;
+    }
     setSelectedDN(row);
     setDeleteOpen(true);
   };

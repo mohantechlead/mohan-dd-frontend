@@ -166,7 +166,12 @@ export default function DemoPage() {
     router.push(`/diredawa/partners/suppliers/${encodeURIComponent(row.id)}`);
   };
 
-  const columns = getSupplierColumns(openEdit, openDelete, auth?.isAdmin, openView);
+  const columns = getSupplierColumns(
+    openEdit,
+    openDelete,
+    auth?.canManageRecords,
+    openView,
+  );
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
