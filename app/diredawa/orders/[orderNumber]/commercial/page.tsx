@@ -421,12 +421,12 @@ export default function CommercialInvoicePage() {
                       </td>
                       <td className="px-2 py-2 print:py-1 text-right">
                         ${item.price.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
+                          maximumFractionDigits: 20,
                         })}
                       </td>
                       <td className="px-2 py-2 print:py-1 text-right">
                         ${item.total_price.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
+                          maximumFractionDigits: 20,
                         })}
                       </td>
                     </tr>
@@ -441,7 +441,7 @@ export default function CommercialInvoicePage() {
                   </td>
                   <td className="px-2 py-2 print:py-1 text-right font-semibold">
                     ${totalAmount.toLocaleString(undefined, {
-                      maximumFractionDigits: 2,
+                      maximumFractionDigits: 20,
                     })}
                   </td>
                 </tr>

@@ -1007,8 +1007,7 @@ export default function ShippingDetailsPage() {
                 <span className="ml-auto text-sm font-semibold">
                   Total Price: $
                   {itemsTotal.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    maximumFractionDigits: 20,
                   })}
                 </span>
               )}
@@ -1054,12 +1053,12 @@ export default function ShippingDetailsPage() {
                       <td className="px-2 py-1 text-right">{it.quantity}</td>
                       <td className="px-2 py-1 text-right">
                         {Number(it.price).toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
+                          maximumFractionDigits: 20,
                         })}
                       </td>
                       <td className="px-2 py-1 text-right">
                         {Number(it.total_price).toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
+                          maximumFractionDigits: 20,
                         })}
                       </td>
                     </tr>

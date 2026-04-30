@@ -210,7 +210,7 @@ export default function OrderDetailPage() {
                   </td>
                   <td className="px-4 py-2">
                     {totalPrice.toLocaleString(undefined, {
-                      maximumFractionDigits: 2,
+                      maximumFractionDigits: 20,
                     })}
                   </td>
                   <td className="px-4 py-2">{order.buyer}</td>

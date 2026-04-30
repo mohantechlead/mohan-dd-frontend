@@ -416,19 +416,19 @@ export default function LoadingInstructionPage() {
                     if (item.net_weight != null) {
                       const netInKg = toKg(item.net_weight, item.measurement);
                       return `${netInKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 3,
+                        maximumFractionDigits: 20,
                       })} KG`;
                     }
                     if (item.gross_weight != null) {
                       const grossInKg = toKg(item.gross_weight, item.measurement);
                       return `${grossInKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 3,
+                        maximumFractionDigits: 20,
                       })} KG`;
                     }
                     if (item.quantity != null) {
                       const qtyInKg = toKg(item.quantity, item.measurement);
                       return `${qtyInKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 3,
+                        maximumFractionDigits: 20,
                       })} KG`;
                     }
                     return "—";
@@ -456,7 +456,7 @@ export default function LoadingInstructionPage() {
                       <td className="border border-black px-3 py-2 print:py-5">
                         {item.package != null
                           ? item.package.toLocaleString(undefined, {
-                              maximumFractionDigits: 3,
+                              maximumFractionDigits: 20,
                             })
                           : "—"}
                       </td>

@@ -417,7 +417,7 @@ export default function PackingListPage() {
                   const grossLabel =
                     item.gross_weight != null
                       ? item.gross_weight.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
+                          maximumFractionDigits: 20,
                         })
                       : "";
                   const unitLabel =
@@ -432,7 +432,7 @@ export default function PackingListPage() {
                       <td className="px-3 py-2">
                         <div>
                           {item.quantity.toLocaleString(undefined, {
-                            maximumFractionDigits: 3,
+                            maximumFractionDigits: 20,
                           })}{" "}
                           {unitLabel} {item.item_name}
                         </div>

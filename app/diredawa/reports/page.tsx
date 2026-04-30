@@ -723,7 +723,7 @@ function ReportTooltip({
       <div className="font-semibold">{label}</div>
       {payload.map((entry) => (
         <div key={String(entry.dataKey)}>
-          {entry.name}: {Number(entry.value ?? 0).toLocaleString()}
+          {entry.name}: {Number(entry.value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 20 })}
         </div>
       ))}
       {!!point?.refs?.length && <div>Order No: {point.refs.join(", ")}</div>}
@@ -896,5 +896,5 @@ function toPeriodKey(isoDate: string, granularity: Granularity): string {
 }
 
 function round2(value: number) {
-  return Math.round(value * 100) / 100;
+  return value;
 }

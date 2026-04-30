@@ -297,18 +297,17 @@ export default function DisplayOrdersPage() {
                         </td>
                         <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
                           {item.quantity.toLocaleString(undefined, {
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 1,
+                            maximumFractionDigits: 20,
                           })}
                         </td>
                         <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
                           {item.price.toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
+                            maximumFractionDigits: 20,
                           })}
                         </td>
                         <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
                           {item.total_price.toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
+                            maximumFractionDigits: 20,
                           })}
                         </td>
                         {idx === 0 ? (

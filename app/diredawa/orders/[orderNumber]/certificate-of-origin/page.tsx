@@ -344,7 +344,7 @@ export default function CertificateOfOriginPage() {
                         <td className="px-3 py-3 border-r border-border align-top">
                           <div className="font-medium">
                             {netKg.toLocaleString(undefined, {
-                              maximumFractionDigits: 3,
+                              maximumFractionDigits: 20,
                             })}{" "}
                             {unit}
                             {bagsSuffix} {item.item_name}
@@ -395,14 +395,14 @@ export default function CertificateOfOriginPage() {
                           <div>
                             NW{" "}
                             {netKg.toLocaleString(undefined, {
-                              maximumFractionDigits: 3,
+                              maximumFractionDigits: 20,
                             })}{" "}
                             {unit}
                           </div>
                           <div>
                             GW{" "}
                             {grossKg.toLocaleString(undefined, {
-                              maximumFractionDigits: 3,
+                              maximumFractionDigits: 20,
                             })}{" "}
                             {unit}
                           </div>

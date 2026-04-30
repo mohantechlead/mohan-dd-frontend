@@ -403,13 +403,13 @@ export default function TruckWaybillPage() {
                   const netLabel =
                     item.net_weight != null
                       ? `${item.net_weight.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
+                          maximumFractionDigits: 20,
                         })} ${unitLabel}`
                       : "";
                   const grossLabel =
                     item.gross_weight != null
                       ? `${item.gross_weight.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
+                          maximumFractionDigits: 20,
                         })} ${unitLabel}`
                       : "";
 
@@ -422,7 +422,7 @@ export default function TruckWaybillPage() {
                       <td className="px-3 py-2 align-top">
                         <div>
                           {item.quantity.toLocaleString(undefined, {
-                            maximumFractionDigits: 3,
+                            maximumFractionDigits: 20,
                           })}{" "}
                           {unitLabel}{" "}
                           {item.item_name}

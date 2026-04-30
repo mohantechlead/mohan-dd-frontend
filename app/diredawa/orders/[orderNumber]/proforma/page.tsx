@@ -309,14 +309,14 @@ export default function ProformaInvoicePage() {
                     </td>
                     <td className="px-2 py-2 text-right">
                       ${item.price.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
+                        maximumFractionDigits: 20,
                       })}
                     </td>
                     <td className="px-2 py-2 text-right">{item.quantity}</td>
                     <td className="px-2 py-2">{item.measurement || order.measurement_type || "-"}</td>
                     <td className="px-2 py-2 text-right">
                       ${item.total_price.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
+                        maximumFractionDigits: 20,
                       })}
                     </td>
                   </tr>
@@ -330,7 +330,7 @@ export default function ProformaInvoicePage() {
                   </td>
                   <td className="px-2 py-2 text-right font-semibold">
                     ${totalPrice.toLocaleString(undefined, {
-                      maximumFractionDigits: 2,
+                      maximumFractionDigits: 20,
                     })}
                   </td>
                 </tr>
