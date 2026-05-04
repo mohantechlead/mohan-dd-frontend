@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatExactNumber } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -396,21 +397,17 @@ export default function TruckWaybillPage() {
                     null;
                   const packagesLabel =
                     item.bags != null
-                      ? `${item.bags.toLocaleString()} packages`
+                      ? `${formatExactNumber(item.bags)} packages`
                       : "-";
                   const unitLabel =
                     item.measurement || orderItem?.measurement || "-";
                   const netLabel =
                     item.net_weight != null
-                      ? `${item.net_weight.toLocaleString(undefined, {
-                          maximumFractionDigits: 20,
-                        })} ${unitLabel}`
+                      ? `${formatExactNumber(item.net_weight)} ${unitLabel}`
                       : "";
                   const grossLabel =
                     item.gross_weight != null
-                      ? `${item.gross_weight.toLocaleString(undefined, {
-                          maximumFractionDigits: 20,
-                        })} ${unitLabel}`
+                      ? `${formatExactNumber(item.gross_weight)} ${unitLabel}`
                       : "";
 
                   return (
@@ -421,9 +418,7 @@ export default function TruckWaybillPage() {
                       <td className="px-3 py-2 align-top">{packagesLabel}</td>
                       <td className="px-3 py-2 align-top">
                         <div>
-                          {item.quantity.toLocaleString(undefined, {
-                            maximumFractionDigits: 20,
-                          })}{" "}
+                          {formatExactNumber(item.quantity)}{" "}
                           {unitLabel}{" "}
                           {item.item_name}
                         </div>

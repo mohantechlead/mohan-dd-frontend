@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
-import { amountInWords } from "@/lib/utils";
+import { amountInWords, formatExactNumber } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -182,23 +182,6 @@ export default function CommercialInvoicePage() {
     () => itemsForTable.reduce((sum, item) => sum + item.total_price, 0),
     [itemsForTable]
   );
-
-  // Totals for footer line: weight (KG) and bags
-  const { totalNetKg, totalBags } = useMemo(() => {
-    let kg = 0;
-    let bags = 0;
-    for (const item of itemsForTable) {
-      if (item.net_weight != null) {
-        kg += item.net_weight;
-      } else if (item.quantity != null) {
-        kg += item.quantity;
-      }
-      if (item.bags != null) {
-        bags += item.bags;
-      }
-    }
-    return { totalNetKg: kg, totalBags: bags };
-  }, [itemsForTable]);
 
   return (
     <div className="commercial-invoice-print w-full max-w-6xl print:max-w-none print:w-full mx-auto print:mx-0 py-8 print:py-1 px-2 print:px-2 space-y-8 print:space-y-2 bg-white font-poppins">
@@ -417,17 +400,13 @@ export default function CommercialInvoicePage() {
                         {item.measurement || orderItem?.measurement || ""}
                       </td>
                       <td className="px-2 py-2 print:py-1 text-right">
-                        {item.quantity.toLocaleString()}
+                        {formatExactNumber(item.quantity)}
                       </td>
                       <td className="px-2 py-2 print:py-1 text-right">
-                        ${item.price.toLocaleString(undefined, {
-                          maximumFractionDigits: 20,
-                        })}
+                        ${formatExactNumber(item.price)}
                       </td>
                       <td className="px-2 py-2 print:py-1 text-right">
-                        ${item.total_price.toLocaleString(undefined, {
-                          maximumFractionDigits: 20,
-                        })}
+                        ${formatExactNumber(item.total_price)}
                       </td>
                     </tr>
                   );
@@ -440,9 +419,7 @@ export default function CommercialInvoicePage() {
                     </span>
                   </td>
                   <td className="px-2 py-2 print:py-1 text-right font-semibold">
-                    ${totalAmount.toLocaleString(undefined, {
-                      maximumFractionDigits: 20,
-                    })}
+                    ${formatExactNumber(totalAmount)}
                   </td>
                 </tr>
               </tbody>

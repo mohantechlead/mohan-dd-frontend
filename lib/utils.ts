@@ -5,6 +5,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function formatExactNumber(
+  value: number | string | null | undefined,
+): string {
+  if (value === null || value === undefined || value === "") return "";
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    const match = trimmed.match(/^([+-]?)(\d+)(\.\d+)?$/);
+    if (!match) return trimmed;
+
+    const [, sign, whole, decimal = ""] = match;
+    const groupedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return `${sign}${groupedWhole}${decimal}`;
+  }
+
+  if (!Number.isFinite(value)) return "";
+
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: 20,
+  });
+}
+
 /** Convert number to words for USD amounts (e.g. for invoices). */
 export function amountInWords(n: number): string {
   const ones = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"];

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
-import { amountInWords } from "@/lib/utils";
+import { amountInWords, formatExactNumber } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -64,8 +64,8 @@ export default function ProformaInvoicePage() {
           showToast({
             title: "Failed to load order",
             description:
-              (data as any)?.detail ||
-              (data as any)?.message ||
+              (data as { detail?: string; message?: string })?.detail ||
+              (data as { detail?: string; message?: string })?.message ||
               "Please try again.",
             variant: "error",
           });
@@ -308,16 +308,14 @@ export default function ProformaInvoicePage() {
                       </div>
                     </td>
                     <td className="px-2 py-2 text-right">
-                      ${item.price.toLocaleString(undefined, {
-                        maximumFractionDigits: 20,
-                      })}
+                      ${formatExactNumber(item.price)}
                     </td>
-                    <td className="px-2 py-2 text-right">{item.quantity}</td>
+                    <td className="px-2 py-2 text-right">
+                      {formatExactNumber(item.quantity)}
+                    </td>
                     <td className="px-2 py-2">{item.measurement || order.measurement_type || "-"}</td>
                     <td className="px-2 py-2 text-right">
-                      ${item.total_price.toLocaleString(undefined, {
-                        maximumFractionDigits: 20,
-                      })}
+                      ${formatExactNumber(item.total_price)}
                     </td>
                   </tr>
                 ))}
@@ -329,9 +327,7 @@ export default function ProformaInvoicePage() {
                     </span>
                   </td>
                   <td className="px-2 py-2 text-right font-semibold">
-                    ${totalPrice.toLocaleString(undefined, {
-                      maximumFractionDigits: 20,
-                    })}
+                    ${formatExactNumber(totalPrice)}
                   </td>
                 </tr>
               </tbody>

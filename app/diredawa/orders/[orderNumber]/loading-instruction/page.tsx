@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
+import { formatExactNumber } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -400,11 +401,11 @@ export default function LoadingInstructionPage() {
                 {invoice.items.map((item, index) => {
                   const noOfUnit =
                     item.bags != null
-                      ? `${item.bags.toLocaleString()} bags`
+                      ? `${formatExactNumber(item.bags)} bags`
                       : item.drums != null
-                        ? `${item.drums.toLocaleString()} drums`
+                        ? `${formatExactNumber(item.drums)} drums`
                       : item.quantity != null
-                        ? `${item.quantity} ${item.measurement || ""}`
+                        ? `${formatExactNumber(item.quantity)} ${item.measurement || ""}`
                         : "—";
 
                   const toKg = (value: number, unit?: string | null) => {
@@ -415,21 +416,15 @@ export default function LoadingInstructionPage() {
                   const remarks = (() => {
                     if (item.net_weight != null) {
                       const netInKg = toKg(item.net_weight, item.measurement);
-                      return `${netInKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 20,
-                      })} KG`;
+                      return `${formatExactNumber(netInKg)} KG`;
                     }
                     if (item.gross_weight != null) {
                       const grossInKg = toKg(item.gross_weight, item.measurement);
-                      return `${grossInKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 20,
-                      })} KG`;
+                      return `${formatExactNumber(grossInKg)} KG`;
                     }
                     if (item.quantity != null) {
                       const qtyInKg = toKg(item.quantity, item.measurement);
-                      return `${qtyInKg.toLocaleString(undefined, {
-                        maximumFractionDigits: 20,
-                      })} KG`;
+                      return `${formatExactNumber(qtyInKg)} KG`;
                     }
                     return "—";
                   })();
@@ -455,9 +450,7 @@ export default function LoadingInstructionPage() {
                       </td>
                       <td className="border border-black px-3 py-2 print:py-5">
                         {item.package != null
-                          ? item.package.toLocaleString(undefined, {
-                              maximumFractionDigits: 20,
-                            })
+                          ? formatExactNumber(item.package)
                           : "—"}
                       </td>
                       <td className="border border-black px-3 py-2 print:py-5">

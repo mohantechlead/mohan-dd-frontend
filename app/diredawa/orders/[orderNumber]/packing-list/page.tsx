@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
+import { formatExactNumber } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -186,22 +187,6 @@ export default function PackingListPage() {
     }
     return order?.country_of_origin || "";
   }, [itemsForTable, order]);
-
-  const { totalBags, totalNetKg } = useMemo(() => {
-    let bags = 0;
-    let net = 0;
-    for (const item of itemsForTable) {
-      if (item.bags != null) {
-        bags += item.bags;
-      }
-      if (item.net_weight != null) {
-        net += item.net_weight;
-      } else if (item.quantity != null) {
-        net += item.quantity;
-      }
-    }
-    return { totalBags: bags, totalNetKg: net };
-  }, [itemsForTable]);
 
   return (
     <div
@@ -412,13 +397,11 @@ export default function PackingListPage() {
                     null;
                   const packagesLabel =
                     item.bags != null
-                      ? `${item.bags.toLocaleString()} packages`
+                      ? `${formatExactNumber(item.bags)} packages`
                       : "-";
                   const grossLabel =
                     item.gross_weight != null
-                      ? item.gross_weight.toLocaleString(undefined, {
-                          maximumFractionDigits: 20,
-                        })
+                      ? formatExactNumber(item.gross_weight)
                       : "";
                   const unitLabel =
                     item.measurement || orderItem?.measurement || "-";
@@ -431,9 +414,7 @@ export default function PackingListPage() {
                       <td className="px-3 py-2">{packagesLabel}</td>
                       <td className="px-3 py-2">
                         <div>
-                          {item.quantity.toLocaleString(undefined, {
-                            maximumFractionDigits: 20,
-                          })}{" "}
+                          {formatExactNumber(item.quantity)}{" "}
                           {unitLabel} {item.item_name}
                         </div>
                         {orderItem?.hs_code ? (

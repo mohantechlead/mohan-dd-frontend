@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatExactNumber } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -93,8 +94,8 @@ export default function BillOfLadingPage() {
           showToast({
             title: "Failed to load order",
             description:
-              (orderData as any)?.detail ||
-              (orderData as any)?.message ||
+              (orderData as { detail?: string; message?: string })?.detail ||
+              (orderData as { detail?: string; message?: string })?.message ||
               "Please try again.",
             variant: "error",
           });
@@ -360,10 +361,10 @@ export default function BillOfLadingPage() {
                     </td>
                     <td className="px-2 py-2">{item.measurement}</td>
                     <td className="px-2 py-2 text-right">
-                      {item.net_weight ?? ""}
+                      {formatExactNumber(item.net_weight)}
                     </td>
                     <td className="px-2 py-2 text-right">
-                      {item.gross_weight ?? ""}
+                      {formatExactNumber(item.gross_weight)}
                     </td>
                   </tr>
                 ))}

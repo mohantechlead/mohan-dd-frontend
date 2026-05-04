@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatExactNumber } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -278,7 +279,7 @@ export default function CertificateOfOriginPage() {
                       .toUpperCase() || "KG";
                     const bagsSuffix =
                       item.bags != null && item.bags > 0
-                        ? ` (${item.bags.toLocaleString()} ${
+                        ? ` (${formatExactNumber(item.bags)} ${
                             item.bags === 1 ? "Bag" : "Bags"
                           })`
                         : "";
@@ -343,9 +344,7 @@ export default function CertificateOfOriginPage() {
                         ) : null}
                         <td className="px-3 py-3 border-r border-border align-top">
                           <div className="font-medium">
-                            {netKg.toLocaleString(undefined, {
-                              maximumFractionDigits: 20,
-                            })}{" "}
+                            {formatExactNumber(netKg)}{" "}
                             {unit}
                             {bagsSuffix} {item.item_name}
                           </div>
@@ -394,16 +393,12 @@ export default function CertificateOfOriginPage() {
                         <td className="px-3 py-3 align-top">
                           <div>
                             NW{" "}
-                            {netKg.toLocaleString(undefined, {
-                              maximumFractionDigits: 20,
-                            })}{" "}
+                            {formatExactNumber(netKg)}{" "}
                             {unit}
                           </div>
                           <div>
                             GW{" "}
-                            {grossKg.toLocaleString(undefined, {
-                              maximumFractionDigits: 20,
-                            })}{" "}
+                            {formatExactNumber(grossKg)}{" "}
                             {unit}
                           </div>
                         </td>
