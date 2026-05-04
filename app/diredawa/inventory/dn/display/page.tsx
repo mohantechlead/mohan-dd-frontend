@@ -17,16 +17,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { TableSearch } from "@/components/table-search";
 import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 import { OverUnderNotification } from "@/components/over-under-notification";
-import { cn } from "@/lib/utils";
+import { cn, compareDocumentNumberDesc } from "@/lib/utils";
 
 interface OverUnderItem {
   item_name: string;
@@ -78,14 +74,18 @@ export default function DemoPage() {
   const filteredData = useMemo(() => {
     const list = data || [];
     const q = search.toLowerCase().trim();
-    if (!q) return list;
-    return list.filter(
-      (d) =>
-        d.dn_no.toLowerCase().includes(q) ||
-        d.customer_name.toLowerCase().includes(q) ||
-        d.sales_no.toLowerCase().includes(q) ||
-        (d.remark?.toLowerCase().includes(q) ?? false) ||
-        d.items.some((i) => i.item_name.toLowerCase().includes(q))
+    const filtered = q
+      ? list.filter(
+          (d) =>
+            d.dn_no.toLowerCase().includes(q) ||
+            d.customer_name.toLowerCase().includes(q) ||
+            d.sales_no.toLowerCase().includes(q) ||
+            (d.remark?.toLowerCase().includes(q) ?? false) ||
+            d.items.some((i) => i.item_name.toLowerCase().includes(q)),
+        )
+      : list;
+    return [...filtered].sort((a, b) =>
+      compareDocumentNumberDesc(a.dn_no, b.dn_no),
     );
   }, [data, search]);
 
@@ -108,9 +108,12 @@ export default function DemoPage() {
     setEditCustomerName(row.customer_name);
     setEditSalesNo(row.sales_no);
     try {
-      const res = await fetch(`${DN_API_URL}/${encodeURIComponent(row.dn_no)}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${DN_API_URL}/${encodeURIComponent(row.dn_no)}`,
+        {
+          credentials: "include",
+        },
+      );
       if (res.ok) {
         const detail = await res.json();
         setEditDate(detail.date || "");
@@ -133,9 +136,11 @@ export default function DemoPage() {
                 unit_measurement: String(item.unit_measurement || ""),
                 code: String(item.code || ""),
                 bags:
-                  item.bags === null || item.bags === undefined ? "" : String(item.bags),
+                  item.bags === null || item.bags === undefined
+                    ? ""
+                    : String(item.bags),
               }))
-            : []
+            : [],
         );
       }
     } catch {
@@ -173,44 +178,51 @@ export default function DemoPage() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${DN_API_URL}/${encodeURIComponent(selectedDN.dn_no)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          customer_name: editCustomerName,
-          sales_no: editSalesNo,
-          date: editDate || null,
-          plate_no: editPlateNo || null,
-          ECD_no: editEcdNo || null,
-          invoice_no: editInvoiceNo || null,
-          gatepass_no: editGatepassNo || null,
-          despathcher_name: editDispatcherName || null,
-          receiver_name: editReceiverName || null,
-          authorized_by: editAuthorizedBy || null,
-          remark: editRemark.trim(),
-          items: editItems.map((item) => {
-            const qty = parseDecimalQuantity(item.quantity);
-            const bagsRaw = item.bags;
-            const bagsParsed =
-              bagsRaw === "" || bagsRaw === null || bagsRaw === undefined
-                ? null
-                : parseDecimalQuantity(bagsRaw);
-            return {
-              item_name: item.item_name,
-              quantity: qty,
-              unit_measurement: item.unit_measurement || "",
-              code: item.code || "",
-              bags: bagsParsed !== null && Number.isFinite(bagsParsed) ? bagsParsed : null,
-            };
+      const res = await fetch(
+        `${DN_API_URL}/${encodeURIComponent(selectedDN.dn_no)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            customer_name: editCustomerName,
+            sales_no: editSalesNo,
+            date: editDate || null,
+            plate_no: editPlateNo || null,
+            ECD_no: editEcdNo || null,
+            invoice_no: editInvoiceNo || null,
+            gatepass_no: editGatepassNo || null,
+            despathcher_name: editDispatcherName || null,
+            receiver_name: editReceiverName || null,
+            authorized_by: editAuthorizedBy || null,
+            remark: editRemark.trim(),
+            items: editItems.map((item) => {
+              const qty = parseDecimalQuantity(item.quantity);
+              const bagsRaw = item.bags;
+              const bagsParsed =
+                bagsRaw === "" || bagsRaw === null || bagsRaw === undefined
+                  ? null
+                  : parseDecimalQuantity(bagsRaw);
+              return {
+                item_name: item.item_name,
+                quantity: qty,
+                unit_measurement: item.unit_measurement || "",
+                code: item.code || "",
+                bags:
+                  bagsParsed !== null && Number.isFinite(bagsParsed)
+                    ? bagsParsed
+                    : null,
+              };
+            }),
           }),
-        }),
-      });
+        },
+      );
       const data = await res.json();
       if (!res.ok) {
         showToast({
           title: "Failed to update Delivery Note",
-          description: (data as { detail?: string })?.detail || "Please try again.",
+          description:
+            (data as { detail?: string })?.detail || "Please try again.",
           variant: "error",
         });
         return;
@@ -219,7 +231,11 @@ export default function DemoPage() {
       setEditOpen(false);
       setSelectedDN(null);
       mutate();
-      const resData = data as { dn_no?: string; over_items?: OverUnderItem[]; under_items?: OverUnderItem[] };
+      const resData = data as {
+        dn_no?: string;
+        over_items?: OverUnderItem[];
+        under_items?: OverUnderItem[];
+      };
       if (
         (resData.over_items && resData.over_items.length > 0) ||
         (resData.under_items && resData.under_items.length > 0)
@@ -246,15 +262,19 @@ export default function DemoPage() {
     if (!selectedDN?.dn_no) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`${DN_API_URL}/${encodeURIComponent(selectedDN.dn_no)}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${DN_API_URL}/${encodeURIComponent(selectedDN.dn_no)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
       const data = await res.json();
       if (!res.ok) {
         showToast({
           title: "Failed to delete Delivery Note",
-          description: (data as { detail?: string })?.detail || "Please try again.",
+          description:
+            (data as { detail?: string })?.detail || "Please try again.",
           variant: "error",
         });
         return;
@@ -290,9 +310,15 @@ export default function DemoPage() {
           Create Delivery Note
         </Button>
       </div>
-      <h1 className="text-2xl text-center my-2 font-bold">Delivery Note List</h1>
+      <h1 className="text-2xl text-center my-2 font-bold">
+        Delivery Note List
+      </h1>
       <div className="flex justify-end mb-4">
-        <TableSearch value={search} onChange={setSearch} placeholder="Search delivery notes, customer, items..." />
+        <TableSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search delivery notes, customer, items..."
+        />
       </div>
       <DataTable columns={columns} data={filteredData} />
 
@@ -305,31 +331,55 @@ export default function DemoPage() {
             <FieldGroup>
               <Field>
                 <FieldLabel>Customer Name</FieldLabel>
-                <Input value={editCustomerName} onChange={(e) => setEditCustomerName(e.target.value)} required />
+                <Input
+                  value={editCustomerName}
+                  onChange={(e) => setEditCustomerName(e.target.value)}
+                  required
+                />
               </Field>
               <Field>
                 <FieldLabel>Sales No</FieldLabel>
-                <Input value={editSalesNo} onChange={(e) => setEditSalesNo(e.target.value)} required />
+                <Input
+                  value={editSalesNo}
+                  onChange={(e) => setEditSalesNo(e.target.value)}
+                  required
+                />
               </Field>
               <Field>
                 <FieldLabel>Date</FieldLabel>
-                <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                <Input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Plate No</FieldLabel>
-                <Input value={editPlateNo} onChange={(e) => setEditPlateNo(e.target.value)} />
+                <Input
+                  value={editPlateNo}
+                  onChange={(e) => setEditPlateNo(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>ECD No</FieldLabel>
-                <Input value={editEcdNo} onChange={(e) => setEditEcdNo(e.target.value)} />
+                <Input
+                  value={editEcdNo}
+                  onChange={(e) => setEditEcdNo(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Invoice No</FieldLabel>
-                <Input value={editInvoiceNo} onChange={(e) => setEditInvoiceNo(e.target.value)} />
+                <Input
+                  value={editInvoiceNo}
+                  onChange={(e) => setEditInvoiceNo(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Gatepass No</FieldLabel>
-                <Input value={editGatepassNo} onChange={(e) => setEditGatepassNo(e.target.value)} />
+                <Input
+                  value={editGatepassNo}
+                  onChange={(e) => setEditGatepassNo(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Dispatcher Name</FieldLabel>
@@ -340,17 +390,23 @@ export default function DemoPage() {
               </Field>
               <Field>
                 <FieldLabel>Receiver Name</FieldLabel>
-                <Input value={editReceiverName} onChange={(e) => setEditReceiverName(e.target.value)} />
+                <Input
+                  value={editReceiverName}
+                  onChange={(e) => setEditReceiverName(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Authorized By</FieldLabel>
-                <Input value={editAuthorizedBy} onChange={(e) => setEditAuthorizedBy(e.target.value)} />
+                <Input
+                  value={editAuthorizedBy}
+                  onChange={(e) => setEditAuthorizedBy(e.target.value)}
+                />
               </Field>
               <Field className="w-full">
                 <FieldLabel>Remark (optional)</FieldLabel>
                 <textarea
                   className={cn(
-                    "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                    "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
                   )}
                   value={editRemark}
                   onChange={(e) => setEditRemark(e.target.value)}
@@ -381,13 +437,18 @@ export default function DemoPage() {
                 </Button>
               </div>
               {editItems.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                <div
+                  key={idx}
+                  className="grid grid-cols-1 md:grid-cols-5 gap-2"
+                >
                   <Input
                     placeholder="Item name"
                     value={item.item_name}
                     onChange={(e) =>
                       setEditItems((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, item_name: e.target.value } : r))
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, item_name: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -400,7 +461,9 @@ export default function DemoPage() {
                     value={item.quantity}
                     onChange={(e) =>
                       setEditItems((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, quantity: e.target.value } : r))
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, quantity: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -410,8 +473,10 @@ export default function DemoPage() {
                     onChange={(e) =>
                       setEditItems((prev) =>
                         prev.map((r, i) =>
-                          i === idx ? { ...r, unit_measurement: e.target.value } : r
-                        )
+                          i === idx
+                            ? { ...r, unit_measurement: e.target.value }
+                            : r,
+                        ),
                       )
                     }
                   />
@@ -420,7 +485,9 @@ export default function DemoPage() {
                     value={item.code}
                     onChange={(e) =>
                       setEditItems((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, code: e.target.value } : r))
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, code: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -434,14 +501,18 @@ export default function DemoPage() {
                       value={item.bags}
                       onChange={(e) =>
                         setEditItems((prev) =>
-                          prev.map((r, i) => (i === idx ? { ...r, bags: e.target.value } : r))
+                          prev.map((r, i) =>
+                            i === idx ? { ...r, bags: e.target.value } : r,
+                          ),
                         )
                       }
                     />
                     <Button
                       type="button"
                       variant="destructive"
-                      onClick={() => setEditItems((prev) => prev.filter((_, i) => i !== idx))}
+                      onClick={() =>
+                        setEditItems((prev) => prev.filter((_, i) => i !== idx))
+                      }
                     >
                       Remove
                     </Button>
@@ -450,7 +521,11 @@ export default function DemoPage() {
               ))}
             </div>
             <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>
@@ -467,13 +542,22 @@ export default function DemoPage() {
             <DialogTitle>Delete Delivery Note</DialogTitle>
           </DialogHeader>
           <p>
-            Are you sure you want to delete delivery note &quot;{selectedDN?.dn_no}&quot;? This action cannot be undone.
+            Are you sure you want to delete delivery note &quot;
+            {selectedDN?.dn_no}&quot;? This action cannot be undone.
           </p>
           <DialogFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={submitting}
+            >
               {submitting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>

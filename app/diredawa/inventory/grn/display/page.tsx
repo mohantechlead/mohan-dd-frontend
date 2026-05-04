@@ -17,15 +17,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { TableSearch } from "@/components/table-search";
 import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
-import { cn } from "@/lib/utils";
+import { cn, compareDocumentNumberDesc } from "@/lib/utils";
 
 const GRN_API_URL = "/api/inventory/grn";
 
@@ -58,22 +54,29 @@ export default function DemoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data, error, isLoading, mutate } = useSWR<GRN[]>(GRN_API_URL, fetcher);
+  const { data, error, isLoading, mutate } = useSWR<GRN[]>(
+    GRN_API_URL,
+    fetcher,
+  );
 
   const filteredData = useMemo(() => {
     const list = data || [];
     const q = search.toLowerCase().trim();
-    if (!q) return list;
-    return list.filter(
-      (g) =>
-        String(g.grn_no).toLowerCase().includes(q) ||
-        g.supplier_name.toLowerCase().includes(q) ||
-        (g.received_from?.toLowerCase().includes(q) ?? false) ||
-        (g.truck_no?.toLowerCase().includes(q) ?? false) ||
-        g.purchase_no.toLowerCase().includes(q) ||
-        (g.store_keeper?.toLowerCase().includes(q) ?? false) ||
-        (g.remark?.toLowerCase().includes(q) ?? false) ||
-        g.items.some((i) => i.item_name.toLowerCase().includes(q))
+    const filtered = q
+      ? list.filter(
+          (g) =>
+            String(g.grn_no).toLowerCase().includes(q) ||
+            g.supplier_name.toLowerCase().includes(q) ||
+            (g.received_from?.toLowerCase().includes(q) ?? false) ||
+            (g.truck_no?.toLowerCase().includes(q) ?? false) ||
+            g.purchase_no.toLowerCase().includes(q) ||
+            (g.store_keeper?.toLowerCase().includes(q) ?? false) ||
+            (g.remark?.toLowerCase().includes(q) ?? false) ||
+            g.items.some((i) => i.item_name.toLowerCase().includes(q)),
+        )
+      : list;
+    return [...filtered].sort((a, b) =>
+      compareDocumentNumberDesc(a.grn_no, b.grn_no),
     );
   }, [data, search]);
 
@@ -125,9 +128,11 @@ export default function DemoPage() {
                 unit_measurement: String(item.unit_measurement || ""),
                 code: String(item.code || ""),
                 bags:
-                  item.bags === null || item.bags === undefined ? "" : String(item.bags),
+                  item.bags === null || item.bags === undefined
+                    ? ""
+                    : String(item.bags),
               }))
-            : []
+            : [],
         );
       } else {
         setEditTruckNo("");
@@ -209,7 +214,10 @@ export default function DemoPage() {
               quantity: qty,
               unit_measurement: item.unit_measurement || "",
               code: item.code || "",
-              bags: bagsParsed !== null && Number.isFinite(bagsParsed) ? bagsParsed : null,
+              bags:
+                bagsParsed !== null && Number.isFinite(bagsParsed)
+                  ? bagsParsed
+                  : null,
             };
           }),
         }),
@@ -218,7 +226,8 @@ export default function DemoPage() {
       if (!res.ok) {
         showToast({
           title: "Failed to update GRN",
-          description: (data as { detail?: string })?.detail || "Please try again.",
+          description:
+            (data as { detail?: string })?.detail || "Please try again.",
           variant: "error",
         });
         return;
@@ -251,7 +260,8 @@ export default function DemoPage() {
       if (!res.ok) {
         showToast({
           title: "Failed to delete GRN",
-          description: (data as { detail?: string })?.detail || "Please try again.",
+          description:
+            (data as { detail?: string })?.detail || "Please try again.",
           variant: "error",
         });
         return;
@@ -272,7 +282,9 @@ export default function DemoPage() {
   };
 
   const openView = (row: GRN) => {
-    router.push(`/diredawa/inventory/grn/${encodeURIComponent(String(row.grn_no))}`);
+    router.push(
+      `/diredawa/inventory/grn/${encodeURIComponent(String(row.grn_no))}`,
+    );
   };
 
   const columns = getGRNColumns(openEdit, openDelete, auth?.isAdmin, openView);
@@ -289,7 +301,11 @@ export default function DemoPage() {
       </div>
       <h1 className="text-2xl text-center my-2 font-bold">GRN List</h1>
       <div className="flex justify-end mb-4">
-        <TableSearch value={search} onChange={setSearch} placeholder="Search GRN, supplier, items..." />
+        <TableSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search GRN, supplier, items..."
+        />
       </div>
       <DataTable columns={columns} data={filteredData} />
 
@@ -302,35 +318,62 @@ export default function DemoPage() {
             <FieldGroup>
               <Field>
                 <FieldLabel>Supplier Name</FieldLabel>
-                <Input value={editSupplierName} onChange={(e) => setEditSupplierName(e.target.value)} required />
+                <Input
+                  value={editSupplierName}
+                  onChange={(e) => setEditSupplierName(e.target.value)}
+                  required
+                />
               </Field>
               <Field>
                 <FieldLabel>Received From</FieldLabel>
-                <Input value={editReceivedFrom} onChange={(e) => setEditReceivedFrom(e.target.value)} />
+                <Input
+                  value={editReceivedFrom}
+                  onChange={(e) => setEditReceivedFrom(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Truck No</FieldLabel>
-                <Input value={editTruckNo} onChange={(e) => setEditTruckNo(e.target.value)} />
+                <Input
+                  value={editTruckNo}
+                  onChange={(e) => setEditTruckNo(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Purchase No</FieldLabel>
-                <Input value={editPurchaseNo} onChange={(e) => setEditPurchaseNo(e.target.value)} required />
+                <Input
+                  value={editPurchaseNo}
+                  onChange={(e) => setEditPurchaseNo(e.target.value)}
+                  required
+                />
               </Field>
               <Field>
                 <FieldLabel>Date</FieldLabel>
-                <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                <Input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Store Name</FieldLabel>
-                <Input value={editStoreName} onChange={(e) => setEditStoreName(e.target.value)} />
+                <Input
+                  value={editStoreName}
+                  onChange={(e) => setEditStoreName(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Store Keeper</FieldLabel>
-                <Input value={editStoreKeeper} onChange={(e) => setEditStoreKeeper(e.target.value)} />
+                <Input
+                  value={editStoreKeeper}
+                  onChange={(e) => setEditStoreKeeper(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>ECD No</FieldLabel>
-                <Input value={editEcdNo} onChange={(e) => setEditEcdNo(e.target.value)} />
+                <Input
+                  value={editEcdNo}
+                  onChange={(e) => setEditEcdNo(e.target.value)}
+                />
               </Field>
               <Field>
                 <FieldLabel>Transporter Name</FieldLabel>
@@ -343,7 +386,7 @@ export default function DemoPage() {
                 <FieldLabel>Remark (optional)</FieldLabel>
                 <textarea
                   className={cn(
-                    "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                    "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
                   )}
                   value={editRemark}
                   onChange={(e) => setEditRemark(e.target.value)}
@@ -374,13 +417,18 @@ export default function DemoPage() {
                 </Button>
               </div>
               {editItems.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                <div
+                  key={idx}
+                  className="grid grid-cols-1 md:grid-cols-5 gap-2"
+                >
                   <Input
                     placeholder="Item name"
                     value={item.item_name}
                     onChange={(e) =>
                       setEditItems((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, item_name: e.target.value } : r))
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, item_name: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -393,7 +441,9 @@ export default function DemoPage() {
                     value={item.quantity}
                     onChange={(e) =>
                       setEditItems((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, quantity: e.target.value } : r))
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, quantity: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -403,8 +453,10 @@ export default function DemoPage() {
                     onChange={(e) =>
                       setEditItems((prev) =>
                         prev.map((r, i) =>
-                          i === idx ? { ...r, unit_measurement: e.target.value } : r
-                        )
+                          i === idx
+                            ? { ...r, unit_measurement: e.target.value }
+                            : r,
+                        ),
                       )
                     }
                   />
@@ -413,7 +465,9 @@ export default function DemoPage() {
                     value={item.code}
                     onChange={(e) =>
                       setEditItems((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, code: e.target.value } : r))
+                        prev.map((r, i) =>
+                          i === idx ? { ...r, code: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -427,14 +481,18 @@ export default function DemoPage() {
                       value={item.bags}
                       onChange={(e) =>
                         setEditItems((prev) =>
-                          prev.map((r, i) => (i === idx ? { ...r, bags: e.target.value } : r))
+                          prev.map((r, i) =>
+                            i === idx ? { ...r, bags: e.target.value } : r,
+                          ),
                         )
                       }
                     />
                     <Button
                       type="button"
                       variant="destructive"
-                      onClick={() => setEditItems((prev) => prev.filter((_, i) => i !== idx))}
+                      onClick={() =>
+                        setEditItems((prev) => prev.filter((_, i) => i !== idx))
+                      }
                     >
                       Remove
                     </Button>
@@ -443,7 +501,11 @@ export default function DemoPage() {
               ))}
             </div>
             <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>
@@ -460,13 +522,22 @@ export default function DemoPage() {
             <DialogTitle>Delete GRN</DialogTitle>
           </DialogHeader>
           <p>
-            Are you sure you want to delete GRN &quot;{selectedGRN?.grn_no}&quot;? This action cannot be undone.
+            Are you sure you want to delete GRN &quot;{selectedGRN?.grn_no}
+            &quot;? This action cannot be undone.
           </p>
           <DialogFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={submitting}
+            >
               {submitting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>

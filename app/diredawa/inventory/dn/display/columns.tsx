@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import { ColumnDef } from "@tanstack/react-table"
-import { Button } from "@/components/ui/button"
-import { Eye, Pencil, Trash2 } from "lucide-react"
-import { formatQuantityDisplay } from "@/lib/inventoryQuantity"
+import { ColumnDef } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
 
 export type DNItem = {
-  code?: string
-  item_name: string
-  quantity: number
-  unit_measurement?: string
-  internal_code?: string
-}
+  code?: string;
+  item_name: string;
+  quantity: number;
+  unit_measurement?: string;
+  internal_code?: string;
+};
 
 export type DN = {
-  dn_no: string
-  customer_name: string
-  sales_no: string
-  remark?: string | null
-  items: DNItem[]
-}
+  dn_no: string;
+  customer_name: string;
+  sales_no: string;
+  remark?: string | null;
+  items: DNItem[];
+};
 
 export function getDNColumns(
   onEdit?: (row: DN) => void,
   onDelete?: (row: DN) => void,
   isAdmin?: boolean,
-  onView?: (row: DN) => void
+  onView?: (row: DN) => void,
 ): ColumnDef<DN>[] {
   const cols: ColumnDef<DN>[] = [
     {
@@ -58,15 +58,17 @@ export function getDNColumns(
           <ul className="list-disc ml-5">
             {items?.map((item, idx) => (
               <li key={idx}>
-                {item.item_name} - Code: {item.code || item.internal_code || "-"} -{" "}
-                {formatQuantityDisplay(item.quantity)} {item.unit_measurement ?? ""}
+                {item.item_name} - Code:{" "}
+                {item.code || item.internal_code || "-"} -{" "}
+                {formatQuantityDisplay(item.quantity)}{" "}
+                {item.unit_measurement ?? ""}
               </li>
             ))}
           </ul>
         );
       },
     },
-  ]
+  ];
   if (onView || (isAdmin && (onEdit || onDelete))) {
     cols.push({
       id: "actions",
@@ -84,20 +86,28 @@ export function getDNColumns(
             </Button>
           )}
           {isAdmin && onEdit && (
-            <Button variant="ghost" size="sm" onClick={() => onEdit(row.original)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(row.original)}
+            >
               <Pencil className="w-4 h-4" />
             </Button>
           )}
           {isAdmin && onDelete && (
-            <Button variant="ghost" size="sm" onClick={() => onDelete(row.original)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(row.original)}
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
         </div>
       ),
-    })
+    });
   }
-  return cols
+  return cols;
 }
 
 export const columns: ColumnDef<DN>[] = [
@@ -113,12 +123,13 @@ export const columns: ColumnDef<DN>[] = [
         <ul className="list-disc ml-5">
           {items?.map((item, idx) => (
             <li key={idx}>
-              {item.item_name} - Code: {item.code || item.internal_code || "-"} -{" "}
-              {formatQuantityDisplay(item.quantity)} {item.unit_measurement ?? ""}
+              {item.item_name} - Code: {item.code || item.internal_code || "-"}{" "}
+              - {formatQuantityDisplay(item.quantity)}{" "}
+              {item.unit_measurement ?? ""}
             </li>
           ))}
         </ul>
       );
     },
   },
-]
+];

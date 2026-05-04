@@ -29,6 +29,18 @@ export function formatExactNumber(
   });
 }
 
+const documentNumberCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+
+export function compareDocumentNumberDesc(
+  a: number | string | null | undefined,
+  b: number | string | null | undefined,
+): number {
+  return documentNumberCollator.compare(String(b ?? ""), String(a ?? ""));
+}
+
 /** Convert number to words for USD amounts (e.g. for invoices). */
 export function amountInWords(n: number): string {
   const ones = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"];
