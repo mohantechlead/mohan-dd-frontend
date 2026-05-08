@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/authProvider";
 import { Button } from "@/components/ui/button";
 import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
+import * as XLSX from "xlsx";
 
 const STOCK_API_URL = "/api/inventory/stock";
 const GRN_DETAIL_API_URL = "/api/inventory/grn";
@@ -219,6 +220,34 @@ export default function StockLedgerPage() {
     return { totalIn, totalOut, currentBalance };
   }, [entries]);
 
+  const exportToExcel = () => {
+    if (!entriesWithRunning.length || !stockItem) return;
+
+    const rows = entriesWithRunning.map((entry) => ({
+      "Entry Date": entry.entryDate
+        ? new Date(entry.entryDate).toLocaleDateString()
+        : "",
+      Type: entry.type,
+      "Reference No": entry.documentNo,
+      Flow: entry.type === "GRN" ? "Stock In" : "Stock Out",
+      "In Qty": entry.type === "GRN" ? entry.quantity : 0,
+      "Out Qty": entry.type === "DN" ? entry.quantity : 0,
+      "Line Bags": entry.bags,
+      "Running Balance Qty": entry.runningQty,
+    }));
+
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, "Stock Ledger");
+
+    const safeItemName = stockItem.item_name
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .replace(/\s+/g, "_");
+    const safeCode = (stockItem.code ?? "NA").replace(/[\\/:*?"<>|]/g, "_");
+    const fileName = `stock_ledger_${safeItemName}_${safeCode}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="rounded-xl border bg-gradient-to-r from-indigo-600 to-blue-600 p-6 text-white shadow-sm">
@@ -255,9 +284,19 @@ export default function StockLedgerPage() {
             </p>
           </div>
         </div>
-        <Button asChild variant="outline" className="shadow-sm">
-          <Link href="/diredawa/inventory/stock">Back to Stock</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            className="shadow-sm"
+            onClick={exportToExcel}
+            disabled={loading || !!error || entriesWithRunning.length === 0}
+          >
+            Export Excel
+          </Button>
+          <Button asChild variant="outline" className="shadow-sm">
+            <Link href="/diredawa/inventory/stock">Back to Stock</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
