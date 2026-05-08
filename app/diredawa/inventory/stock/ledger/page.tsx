@@ -173,8 +173,8 @@ export default function StockLedgerPage() {
           dnEntriesPromise,
         ]);
 
-        const merged = [...grnEntries, ...dnEntries]
-          .filter((entry): entry is StockLedgerEntry => Boolean(entry))
+        const merged: StockLedgerEntry[] = [...grnEntries, ...dnEntries]
+          .filter((entry) => entry !== null)
           .sort((a, b) => {
             const at = a.entryDate ? new Date(a.entryDate).getTime() : 0;
             const bt = b.entryDate ? new Date(b.entryDate).getTime() : 0;
