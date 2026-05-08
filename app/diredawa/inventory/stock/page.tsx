@@ -1,15 +1,17 @@
 "use client";
 
 import { DataTable } from "@/components/data-table";
-import { columns, Items } from "./columns";
+import { getStockColumns, Items } from "./columns";
 import useSWR from "swr";
 import fetcher from "@/lib/fetcher";
 import { useAuth } from "@/components/authProvider";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const GRN_API_URL = "/api/inventory/stock";
 
 export default function DemoPage() {
+  const router = useRouter();
   const auth = useAuth();
   const [code, setCode] = useState("");
   const [item, setItem] = useState("");
@@ -46,9 +48,6 @@ export default function DemoPage() {
     }
   }, [auth, error]);
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
-
   const applyFilters = () => {
     setAppliedFilters({
       code: code.trim(),
@@ -76,6 +75,18 @@ export default function DemoPage() {
       dn_no: "",
     });
   };
+
+  const openLedgerPage = (row: Items) => {
+    const params = new URLSearchParams();
+    if (row.code) params.set("code", row.code);
+    params.set("item", row.item_name);
+    router.push(`/diredawa/inventory/stock/ledger?${params.toString()}`);
+  };
+
+  const columns = getStockColumns(openLedgerPage);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
 
   return (
     <div className="container mx-auto py-10">
