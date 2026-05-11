@@ -23,6 +23,8 @@ import { TableSearch } from "@/components/table-search";
 import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 import { OverUnderNotification } from "@/components/over-under-notification";
 import { cn, compareDocumentNumberDesc } from "@/lib/utils";
+import { SearchableDropdown, type DropdownOption } from "@/components/searchable-dropdown";
+import { parseInventoryItemsJson } from "@/lib/parseInventoryItems";
 
 interface OverUnderItem {
   item_name: string;
@@ -32,6 +34,11 @@ interface OverUnderItem {
 }
 
 const DN_API_URL = "/api/inventory/dn";
+const ITEMS_API_URL = "/api/inventory/items";
+
+type ItemDropdownOption = DropdownOption & {
+  internalCode?: string;
+};
 
 export default function DemoPage() {
   const router = useRouter();
@@ -58,11 +65,15 @@ export default function DemoPage() {
       unit_measurement: string;
       code: string;
       bags: number | string;
+      internal_code?: string;
     }>
   >([]);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
+  const [itemOptions, setItemOptions] = useState<ItemDropdownOption[]>([]);
   const [overUnderOpen, setOverUnderOpen] = useState(false);
+  const canEditDN = Boolean(auth?.isAdmin || auth?.isStore);
+  const canDeleteDN = Boolean(auth?.isAdmin);
   const [overUnderData, setOverUnderData] = useState<{
     dnNo: string;
     overItems: OverUnderItem[];
@@ -95,11 +106,42 @@ export default function DemoPage() {
     }
   }, [auth, error]);
 
+  useEffect(() => {
+    async function loadItems() {
+      try {
+        const res = await fetch(ITEMS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const parsed = parseInventoryItemsJson(data);
+        setItemOptions(
+          parsed.map((item, idx) => {
+            const id = item.item_id?.trim();
+            const name = item.item_name;
+            const code = item.internal_code?.trim();
+            return {
+              value: id && id.length > 0 ? id : `${idx}::${name}::${code ?? ""}`,
+              display: name,
+              subtext: item.hscode || code || undefined,
+              internalCode: code || undefined,
+            };
+          }),
+        );
+      } catch {
+        // ignore
+      }
+    }
+    loadItems();
+  }, []);
+
   const openEdit = async (row: DN) => {
-    if (!auth?.isAdmin) {
+    if (!canEditDN) {
       showToast({
         title: "Permission denied",
-        description: "Only admin can edit Delivery Notes.",
+        description: "Only admin or store can edit Delivery Notes.",
         variant: "error",
       });
       return;
@@ -139,6 +181,10 @@ export default function DemoPage() {
                   item.bags === null || item.bags === undefined
                     ? ""
                     : String(item.bags),
+                internal_code:
+                  item.internal_code === null || item.internal_code === undefined
+                    ? ""
+                    : String(item.internal_code),
               }))
             : [],
         );
@@ -208,6 +254,7 @@ export default function DemoPage() {
                 quantity: qty,
                 unit_measurement: item.unit_measurement || "",
                 code: item.code || "",
+                internal_code: item.internal_code || "",
                 bags:
                   bagsParsed !== null && Number.isFinite(bagsParsed)
                     ? bagsParsed
@@ -298,7 +345,13 @@ export default function DemoPage() {
     router.push(`/diredawa/inventory/dn/${encodeURIComponent(row.dn_no)}`);
   };
 
-  const columns = getDNColumns(openEdit, openDelete, auth?.isAdmin, openView);
+  const columns = getDNColumns(
+    openEdit,
+    openDelete,
+    canEditDN,
+    canDeleteDN,
+    openView,
+  );
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
@@ -429,6 +482,7 @@ export default function DemoPage() {
                         unit_measurement: "",
                         code: "",
                         bags: "",
+                        internal_code: "",
                       },
                     ])
                   }
@@ -441,16 +495,23 @@ export default function DemoPage() {
                   key={idx}
                   className="grid grid-cols-1 md:grid-cols-5 gap-2"
                 >
-                  <Input
-                    placeholder="Item name"
+                  <SearchableDropdown
                     value={item.item_name}
-                    onChange={(e) =>
+                    tieBreakHint={String(item.internal_code ?? "").trim()}
+                    onChange={(_, option) => {
+                      const selected = option as ItemDropdownOption | undefined;
+                      const name = selected?.display ?? item.item_name;
+                      const internalCode = selected?.internalCode?.trim() ?? "";
                       setEditItems((prev) =>
                         prev.map((r, i) =>
-                          i === idx ? { ...r, item_name: e.target.value } : r,
+                          i === idx
+                            ? { ...r, item_name: name, internal_code: internalCode }
+                            : r,
                         ),
-                      )
-                    }
+                      );
+                    }}
+                    options={itemOptions}
+                    placeholder="Search item..."
                   />
                   <Input
                     type="number"

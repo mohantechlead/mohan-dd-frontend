@@ -22,8 +22,15 @@ import { Input } from "@/components/ui/input";
 import { TableSearch } from "@/components/table-search";
 import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 import { cn, compareDocumentNumberDesc } from "@/lib/utils";
+import { SearchableDropdown, type DropdownOption } from "@/components/searchable-dropdown";
+import { parseInventoryItemsJson } from "@/lib/parseInventoryItems";
 
 const GRN_API_URL = "/api/inventory/grn";
+const ITEMS_API_URL = "/api/inventory/items";
+
+type ItemDropdownOption = DropdownOption & {
+  internalCode?: string;
+};
 
 export default function DemoPage() {
   const router = useRouter();
@@ -49,10 +56,14 @@ export default function DemoPage() {
       unit_measurement: string;
       code: string;
       bags: number | string;
+      internal_code?: string;
     }>
   >([]);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
+  const [itemOptions, setItemOptions] = useState<ItemDropdownOption[]>([]);
+  const canEditGRN = Boolean(auth?.isAdmin || auth?.isStore);
+  const canDeleteGRN = Boolean(auth?.isAdmin);
 
   const { data, error, isLoading, mutate } = useSWR<GRN[]>(
     GRN_API_URL,
@@ -86,11 +97,42 @@ export default function DemoPage() {
     }
   }, [auth, error]);
 
+  useEffect(() => {
+    async function loadItems() {
+      try {
+        const res = await fetch(ITEMS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const parsed = parseInventoryItemsJson(data);
+        setItemOptions(
+          parsed.map((item, idx) => {
+            const id = item.item_id?.trim();
+            const name = item.item_name;
+            const code = item.internal_code?.trim();
+            return {
+              value: id && id.length > 0 ? id : `${idx}::${name}::${code ?? ""}`,
+              display: name,
+              subtext: item.hscode || code || undefined,
+              internalCode: code || undefined,
+            };
+          }),
+        );
+      } catch {
+        // ignore
+      }
+    }
+    loadItems();
+  }, []);
+
   const openEdit = async (row: GRN) => {
-    if (!auth?.isAdmin) {
+    if (!canEditGRN) {
       showToast({
         title: "Permission denied",
-        description: "Only admin can edit GRN.",
+        description: "Only admin or store can edit GRN.",
         variant: "error",
       });
       return;
@@ -131,6 +173,10 @@ export default function DemoPage() {
                   item.bags === null || item.bags === undefined
                     ? ""
                     : String(item.bags),
+                internal_code:
+                  item.internal_code === null || item.internal_code === undefined
+                    ? ""
+                    : String(item.internal_code),
               }))
             : [],
         );
@@ -214,6 +260,7 @@ export default function DemoPage() {
               quantity: qty,
               unit_measurement: item.unit_measurement || "",
               code: item.code || "",
+              internal_code: item.internal_code || "",
               bags:
                 bagsParsed !== null && Number.isFinite(bagsParsed)
                   ? bagsParsed
@@ -287,7 +334,13 @@ export default function DemoPage() {
     );
   };
 
-  const columns = getGRNColumns(openEdit, openDelete, auth?.isAdmin, openView);
+  const columns = getGRNColumns(
+    openEdit,
+    openDelete,
+    canEditGRN,
+    canDeleteGRN,
+    openView,
+  );
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
@@ -409,6 +462,7 @@ export default function DemoPage() {
                         unit_measurement: "",
                         code: "",
                         bags: "",
+                        internal_code: "",
                       },
                     ])
                   }
@@ -421,16 +475,23 @@ export default function DemoPage() {
                   key={idx}
                   className="grid grid-cols-1 md:grid-cols-5 gap-2"
                 >
-                  <Input
-                    placeholder="Item name"
+                  <SearchableDropdown
                     value={item.item_name}
-                    onChange={(e) =>
+                    tieBreakHint={String(item.internal_code ?? "").trim()}
+                    onChange={(_, option) => {
+                      const selected = option as ItemDropdownOption | undefined;
+                      const name = selected?.display ?? item.item_name;
+                      const internalCode = selected?.internalCode?.trim() ?? "";
                       setEditItems((prev) =>
                         prev.map((r, i) =>
-                          i === idx ? { ...r, item_name: e.target.value } : r,
+                          i === idx
+                            ? { ...r, item_name: name, internal_code: internalCode }
+                            : r,
                         ),
-                      )
-                    }
+                      );
+                    }}
+                    options={itemOptions}
+                    placeholder="Search item..."
                   />
                   <Input
                     type="number"
