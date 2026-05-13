@@ -31,8 +31,7 @@ export type GRN = {
 export function getGRNColumns(
   onEdit?: (row: GRN) => void,
   onDelete?: (row: GRN) => void,
-  canEdit?: boolean,
-  canDelete?: boolean,
+  isAdmin?: boolean,
   onView?: (row: GRN) => void,
 ): ColumnDef<GRN>[] {
   const cols: ColumnDef<GRN>[] = [
@@ -87,7 +86,7 @@ export function getGRNColumns(
       },
     },
   ];
-  if (onView || ((canEdit && onEdit) || (canDelete && onDelete))) {
+  if (onView || (isAdmin && (onEdit || onDelete))) {
     cols.push({
       id: "actions",
       header: "Actions",
@@ -103,7 +102,7 @@ export function getGRNColumns(
               <Eye className="w-4 h-4" />
             </Button>
           )}
-          {canEdit && onEdit && (
+          {isAdmin && onEdit && (
             <Button
               variant="ghost"
               size="sm"
@@ -112,7 +111,7 @@ export function getGRNColumns(
               <Pencil className="w-4 h-4" />
             </Button>
           )}
-          {canDelete && onDelete && (
+          {isAdmin && onDelete && (
             <Button
               variant="ghost"
               size="sm"

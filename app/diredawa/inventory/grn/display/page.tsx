@@ -62,8 +62,6 @@ export default function DemoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [itemOptions, setItemOptions] = useState<ItemDropdownOption[]>([]);
-  const canEditGRN = Boolean(auth?.isAdmin || auth?.isStore);
-  const canDeleteGRN = Boolean(auth?.isAdmin);
 
   const { data, error, isLoading, mutate } = useSWR<GRN[]>(
     GRN_API_URL,
@@ -129,10 +127,10 @@ export default function DemoPage() {
   }, []);
 
   const openEdit = async (row: GRN) => {
-    if (!canEditGRN) {
+    if (!auth?.isAdmin) {
       showToast({
         title: "Permission denied",
-        description: "Only admin or store can edit GRN.",
+        description: "Only admin can edit GRN.",
         variant: "error",
       });
       return;
@@ -334,13 +332,7 @@ export default function DemoPage() {
     );
   };
 
-  const columns = getGRNColumns(
-    openEdit,
-    openDelete,
-    canEditGRN,
-    canDeleteGRN,
-    openView,
-  );
+  const columns = getGRNColumns(openEdit, openDelete, auth?.isAdmin, openView);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;

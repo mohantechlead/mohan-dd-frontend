@@ -24,8 +24,7 @@ export type DN = {
 export function getDNColumns(
   onEdit?: (row: DN) => void,
   onDelete?: (row: DN) => void,
-  canEdit?: boolean,
-  canDelete?: boolean,
+  isAdmin?: boolean,
   onView?: (row: DN) => void,
 ): ColumnDef<DN>[] {
   const cols: ColumnDef<DN>[] = [
@@ -70,7 +69,7 @@ export function getDNColumns(
       },
     },
   ];
-  if (onView || ((canEdit && onEdit) || (canDelete && onDelete))) {
+  if (onView || (isAdmin && (onEdit || onDelete))) {
     cols.push({
       id: "actions",
       header: "Actions",
@@ -86,7 +85,7 @@ export function getDNColumns(
               <Eye className="w-4 h-4" />
             </Button>
           )}
-          {canEdit && onEdit && (
+          {isAdmin && onEdit && (
             <Button
               variant="ghost"
               size="sm"
@@ -95,7 +94,7 @@ export function getDNColumns(
               <Pencil className="w-4 h-4" />
             </Button>
           )}
-          {canDelete && onDelete && (
+          {isAdmin && onDelete && (
             <Button
               variant="ghost"
               size="sm"

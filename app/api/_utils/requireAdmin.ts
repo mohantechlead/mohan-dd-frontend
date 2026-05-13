@@ -27,23 +27,3 @@ export async function requireAdminResponse(): Promise<NextResponse | null> {
 
   return null;
 }
-
-export async function requireAdminOrStoreResponse(): Promise<NextResponse | null> {
-  const { role, status } = await getUserRole();
-
-  if (status !== 200) {
-    return NextResponse.json(
-      { detail: "Authentication required." },
-      { status: status === 401 ? 401 : 403 }
-    );
-  }
-
-  if (role !== "admin" && role !== "store") {
-    return NextResponse.json(
-      { detail: "Only admin or store can edit GRN/DN records." },
-      { status: 403 }
-    );
-  }
-
-  return null;
-}

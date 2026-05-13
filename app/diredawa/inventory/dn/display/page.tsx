@@ -72,8 +72,6 @@ export default function DemoPage() {
   const [search, setSearch] = useState("");
   const [itemOptions, setItemOptions] = useState<ItemDropdownOption[]>([]);
   const [overUnderOpen, setOverUnderOpen] = useState(false);
-  const canEditDN = Boolean(auth?.isAdmin || auth?.isStore);
-  const canDeleteDN = Boolean(auth?.isAdmin);
   const [overUnderData, setOverUnderData] = useState<{
     dnNo: string;
     overItems: OverUnderItem[];
@@ -138,10 +136,10 @@ export default function DemoPage() {
   }, []);
 
   const openEdit = async (row: DN) => {
-    if (!canEditDN) {
+    if (!auth?.isAdmin) {
       showToast({
         title: "Permission denied",
-        description: "Only admin or store can edit Delivery Notes.",
+        description: "Only admin can edit Delivery Notes.",
         variant: "error",
       });
       return;
@@ -345,13 +343,7 @@ export default function DemoPage() {
     router.push(`/diredawa/inventory/dn/${encodeURIComponent(row.dn_no)}`);
   };
 
-  const columns = getDNColumns(
-    openEdit,
-    openDelete,
-    canEditDN,
-    canDeleteDN,
-    openView,
-  );
+  const columns = getDNColumns(openEdit, openDelete, auth?.isAdmin, openView);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
