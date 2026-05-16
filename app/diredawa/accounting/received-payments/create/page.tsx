@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import {
+  resolveOrderTotalFromPayments,
+  sortReceivedPaymentsChronologically,
+  sumPaymentsTowardRemaining,
+} from "@/lib/receivedPaymentsBalance";
 
 interface OrderOption {
   order_number: string;
@@ -12,9 +17,15 @@ interface OrderOption {
 }
 
 interface ReceivedPayment {
+  id?: string;
   order_number: string;
+  payment_number?: string;
+  payment_date?: string;
   amount: number;
   status?: string;
+  installment_number?: number;
+  remaining_amount?: number;
+  order_total?: number;
 }
 
 const RP_API_URL = "/api/accounting/received-payments";
@@ -67,17 +78,21 @@ export default function CreateReceivedPaymentPage() {
   );
 
   const remainingAmount = useMemo(() => {
+    const orderNum = form.order_number;
+    if (!orderNum) return 0;
+
+    const forOrder = existingPayments.filter((p) => p.order_number === orderNum);
+    const sorted = sortReceivedPaymentsChronologically(forOrder);
+
+    const recorded = sumPaymentsTowardRemaining(sorted);
+    const orderTotalFromPayments = resolveOrderTotalFromPayments(sorted);
+    if (orderTotalFromPayments > 0) {
+      return Math.max(0, orderTotalFromPayments - recorded);
+    }
     if (!selectedOrder) return 0;
     const orderTotal = Number(selectedOrder.PR_before_VAT ?? 0);
-    const paid = existingPayments
-      .filter(
-        (p) =>
-          p.order_number === selectedOrder.order_number &&
-          (p.status === "approved" || p.status === "completed")
-      )
-      .reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
-    return Math.max(0, orderTotal - paid);
-  }, [selectedOrder, existingPayments]);
+    return Math.max(0, orderTotal - recorded);
+  }, [form.order_number, selectedOrder, existingPayments]);
 
   useEffect(() => {
     const prefillOrder = searchParams.get("orderNumber");
@@ -90,8 +105,11 @@ export default function CreateReceivedPaymentPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!selectedOrder) {
+    if (!form.order_number) {
       setForm((prev) => ({ ...prev, customer_name: "", amount: "" }));
+      return;
+    }
+    if (!selectedOrder) {
       return;
     }
     setForm((prev) => ({
@@ -99,7 +117,7 @@ export default function CreateReceivedPaymentPage() {
       customer_name: selectedOrder.buyer ?? "",
       amount: prev.payment_type === "full" ? String(remainingAmount) : prev.amount,
     }));
-  }, [selectedOrder, remainingAmount]);
+  }, [form.order_number, selectedOrder, remainingAmount]);
 
   useEffect(() => {
     if (form.payment_type === "full") {

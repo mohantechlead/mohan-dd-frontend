@@ -6,6 +6,11 @@ import { ChevronDown, Eye, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { TableSearch } from "@/components/table-search";
+import {
+  resolvePurchaseTotalFromPayments,
+  sortReceivedPaymentsChronologically,
+  sumPaymentsTowardRemaining,
+} from "@/lib/receivedPaymentsBalance";
 
 interface VendorPayment {
   id: string;
@@ -16,6 +21,7 @@ interface VendorPayment {
   supplier_name: string;
   payment_type: string;
   amount: number;
+  purchase_total?: number;
   remaining_amount: number;
   payment_completion_status: string;
   status: string;
@@ -31,16 +37,22 @@ export default function DisplayVendorPaymentsPage() {
   const [search, setSearch] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    if (!q) return rows;
-    return rows.filter((x) =>
-      [x.payment_number, x.purchase_number, x.supplier_name, x.payment_type, x.payment_completion_status, x.status]
-        .some((v) => (v ?? "").toLowerCase().includes(q))
-    );
-  }, [rows, search]);
-
   const groupedRows = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    const purchasesWithMatch = new Set<string>();
+    if (q) {
+      for (const x of rows) {
+        if (
+          [x.payment_number, x.purchase_number, x.supplier_name, x.payment_type, x.payment_completion_status, x.status].some(
+            (v) => (v ?? "").toLowerCase().includes(q)
+          )
+        ) {
+          purchasesWithMatch.add(x.purchase_number);
+        }
+      }
+    }
+    const paymentsToGroup = q ? rows.filter((p) => purchasesWithMatch.has(p.purchase_number)) : rows;
+
     const map = new Map<
       string,
       {
@@ -53,23 +65,18 @@ export default function DisplayVendorPaymentsPage() {
       }
     >();
 
-    for (const p of filtered) {
+    for (const p of paymentsToGroup) {
       const current = map.get(p.purchase_number);
       if (!current) {
         map.set(p.purchase_number, {
           purchase_number: p.purchase_number,
           supplier_name: p.supplier_name,
-          total_amount: Number(p.amount ?? 0),
-          remaining_amount: Number(p.remaining_amount ?? 0),
+          total_amount: 0,
+          remaining_amount: 0,
           completion_status: p.payment_completion_status,
           payments: [p],
         });
       } else {
-        current.total_amount += Number(p.amount ?? 0);
-        current.remaining_amount = Math.min(
-          current.remaining_amount,
-          Number(p.remaining_amount ?? current.remaining_amount)
-        );
         current.completion_status =
           current.completion_status === "full" || p.payment_completion_status === "full"
             ? "full"
@@ -79,13 +86,23 @@ export default function DisplayVendorPaymentsPage() {
     }
 
     for (const [, group] of map) {
-      group.payments.sort(
-        (a, b) =>
-          (a.installment_number ?? 0) - (b.installment_number ?? 0)
-      );
+      const sorted = sortReceivedPaymentsChronologically(group.payments);
+      group.payments = sorted;
+      const latest = sorted[sorted.length - 1];
+      group.supplier_name = latest?.supplier_name ?? group.supplier_name;
+
+      const recordedInclPending = sumPaymentsTowardRemaining(sorted);
+      group.total_amount = recordedInclPending;
+
+      const purchaseTotal = resolvePurchaseTotalFromPayments(sorted);
+      if (purchaseTotal > 0) {
+        group.remaining_amount = Math.max(0, purchaseTotal - recordedInclPending);
+      } else {
+        group.remaining_amount = Math.max(0, Number(latest?.remaining_amount ?? 0));
+      }
     }
     return Array.from(map.values());
-  }, [filtered]);
+  }, [rows, search]);
 
   const fetchRows = async () => {
     try {
@@ -142,7 +159,7 @@ export default function DisplayVendorPaymentsPage() {
                 <tr>
                   <th className="px-4 py-2 text-left">Purchase</th>
                   <th className="px-4 py-2 text-left">Supplier</th>
-                  <th className="px-4 py-2 text-right">Total Paid</th>
+                  <th className="px-4 py-2 text-right">Recorded (incl. pending)</th>
                   <th className="px-4 py-2 text-right">Remaining</th>
                   <th className="px-4 py-2 text-left">Completion</th>
                   <th className="px-4 py-2 text-right">Actions</th>

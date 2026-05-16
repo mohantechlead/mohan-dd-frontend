@@ -4,10 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import {
+  resolvePurchaseTotalFromPayments,
+  sortReceivedPaymentsChronologically,
+  sumPaymentsTowardRemaining,
+} from "@/lib/receivedPaymentsBalance";
 
 interface VendorPayment {
   id: string;
-  payment_number: string;
+  payment_number?: string;
   installment_number?: number;
   payment_date: string;
   purchase_number: string;
@@ -15,8 +20,7 @@ interface VendorPayment {
   payment_type: string;
   amount: number;
   status: string;
-  purchase_total: number;
-  total_paid: number;
+  purchase_total?: number;
   remaining_amount: number;
 }
 
@@ -39,10 +43,7 @@ export default function VendorPaymentPurchaseSummaryPage() {
           return;
         }
         const all = Array.isArray(data) ? (data as VendorPayment[]) : [];
-        const filtered = all
-          .filter((x) => x.purchase_number === params.purchaseNumber)
-          .sort((a, b) => (a.installment_number ?? 0) - (b.installment_number ?? 0));
-        setRows(filtered);
+        setRows(all.filter((x) => x.purchase_number === params.purchaseNumber));
       } catch {
         showToast({ title: "Failed to load vendor payments", description: "Something went wrong.", variant: "error" });
       } finally {
@@ -52,26 +53,39 @@ export default function VendorPaymentPurchaseSummaryPage() {
     if (params.purchaseNumber) fetchRows();
   }, [params.purchaseNumber, showToast]);
 
+  const sortedRows = useMemo(() => sortReceivedPaymentsChronologically(rows), [rows]);
+
   const summary = useMemo(() => {
-    if (rows.length === 0) {
+    if (sortedRows.length === 0) {
       return {
         supplier_name: "",
         purchase_total: 0,
         approved_paid: 0,
+        recorded_incl_pending: 0,
         remaining_amount: 0,
       };
     }
-    const latest = rows[rows.length - 1];
-    const approvedPaid = rows
-      .filter((x) => x.status === "approved" || x.status === "completed")
+    const latest = sortedRows[sortedRows.length - 1];
+    const purchaseTotal = resolvePurchaseTotalFromPayments(sortedRows);
+    const approvedPaid = sortedRows
+      .filter((x) => {
+        const s = (x.status ?? "").toLowerCase();
+        return s === "approved" || s === "completed";
+      })
       .reduce((sum, x) => sum + Number(x.amount ?? 0), 0);
+    const recordedInclPending = sumPaymentsTowardRemaining(sortedRows);
+    const remaining =
+      purchaseTotal > 0
+        ? Math.max(0, purchaseTotal - recordedInclPending)
+        : Math.max(0, Number(latest.remaining_amount ?? 0));
     return {
       supplier_name: latest.supplier_name,
-      purchase_total: Number(latest.purchase_total ?? 0),
+      purchase_total: purchaseTotal > 0 ? purchaseTotal : Number(latest.purchase_total ?? 0),
       approved_paid: approvedPaid,
-      remaining_amount: Number(latest.remaining_amount ?? 0),
+      recorded_incl_pending: recordedInclPending,
+      remaining_amount: remaining,
     };
-  }, [rows]);
+  }, [sortedRows]);
 
   return (
     <div className="max-w-5xl mx-auto mt-6 space-y-6">
@@ -91,11 +105,12 @@ export default function VendorPaymentPurchaseSummaryPage() {
         <p className="text-sm text-muted-foreground text-center">No payments found for this purchase.</p>
       ) : (
         <>
-          <div className="bg-white border rounded-md p-4 text-sm grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="bg-white border rounded-md p-4 text-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div><span className="font-medium">Purchase:</span> {params.purchaseNumber}</div>
             <div><span className="font-medium">Supplier:</span> {summary.supplier_name}</div>
             <div><span className="font-medium">Purchase Total:</span> {summary.purchase_total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
             <div><span className="font-medium">Approved Paid:</span> {summary.approved_paid.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+            <div><span className="font-medium">Recorded (incl. pending):</span> {summary.recorded_incl_pending.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
             <div><span className="font-medium">Remaining:</span> {summary.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
           </div>
 
@@ -111,7 +126,7 @@ export default function VendorPaymentPurchaseSummaryPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((x) => (
+                {sortedRows.map((x) => (
                   <tr key={x.id} className="border-t">
                     <td className="px-4 py-2">{`Payment ${x.installment_number ?? 1}`}</td>
                     <td className="px-4 py-2">{new Date(x.payment_date).toLocaleDateString()}</td>

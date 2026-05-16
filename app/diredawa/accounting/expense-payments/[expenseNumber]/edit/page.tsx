@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
 
 export default function EditExpensePaymentPage() {
   const params = useParams<{ expenseNumber: string }>();
   const router = useRouter();
+  const auth = useAuth();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -18,6 +20,12 @@ export default function EditExpensePaymentPage() {
     amount: "",
     description: "",
   });
+
+  useEffect(() => {
+    if (auth?.isAccounting && !auth?.canManageRecords) {
+      router.replace(`/diredawa/accounting/expense-payments/${encodeURIComponent(params.expenseNumber)}`);
+    }
+  }, [auth?.isAccounting, auth?.canManageRecords, params.expenseNumber, router]);
 
   useEffect(() => {
     const fetchDetail = async () => {

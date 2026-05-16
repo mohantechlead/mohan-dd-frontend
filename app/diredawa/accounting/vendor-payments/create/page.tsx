@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import {
+  resolvePurchaseTotalFromPayments,
+  sortReceivedPaymentsChronologically,
+  sumPaymentsTowardRemaining,
+} from "@/lib/receivedPaymentsBalance";
 
 interface PurchaseOption {
   purchase_number: string;
@@ -12,9 +17,15 @@ interface PurchaseOption {
 }
 
 interface VendorPayment {
+  id?: string;
   purchase_number: string;
+  payment_number?: string;
+  payment_date?: string;
   amount: number;
   status?: string;
+  installment_number?: number;
+  remaining_amount?: number;
+  purchase_total?: number;
 }
 
 const VP_API_URL = "/api/accounting/vendor-payments";
@@ -67,17 +78,21 @@ export default function CreateVendorPaymentPage() {
   );
 
   const remainingAmount = useMemo(() => {
+    const pn = form.purchase_number;
+    if (!pn) return 0;
+
+    const forPurchase = existingPayments.filter((p) => p.purchase_number === pn);
+    const sorted = sortReceivedPaymentsChronologically(forPurchase);
+
+    const recorded = sumPaymentsTowardRemaining(sorted);
+    const purchaseTotalFromPayments = resolvePurchaseTotalFromPayments(sorted);
+    if (purchaseTotalFromPayments > 0) {
+      return Math.max(0, purchaseTotalFromPayments - recorded);
+    }
     if (!selectedPurchase) return 0;
     const purchaseTotal = Number(selectedPurchase.before_vat ?? 0);
-    const paid = existingPayments
-      .filter(
-        (p) =>
-          p.purchase_number === selectedPurchase.purchase_number &&
-          (p.status === "approved" || p.status === "completed")
-      )
-      .reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
-    return Math.max(0, purchaseTotal - paid);
-  }, [selectedPurchase, existingPayments]);
+    return Math.max(0, purchaseTotal - recorded);
+  }, [form.purchase_number, selectedPurchase, existingPayments]);
 
   useEffect(() => {
     const prefillPurchase = searchParams.get("purchaseNumber");
@@ -90,8 +105,11 @@ export default function CreateVendorPaymentPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!selectedPurchase) {
+    if (!form.purchase_number) {
       setForm((prev) => ({ ...prev, supplier_name: "", amount: "" }));
+      return;
+    }
+    if (!selectedPurchase) {
       return;
     }
     setForm((prev) => ({
@@ -99,7 +117,7 @@ export default function CreateVendorPaymentPage() {
       supplier_name: selectedPurchase.shipper ?? "",
       amount: prev.payment_type === "full" ? String(remainingAmount) : prev.amount,
     }));
-  }, [selectedPurchase, remainingAmount]);
+  }, [form.purchase_number, selectedPurchase, remainingAmount]);
 
   useEffect(() => {
     if (form.payment_type === "full") {

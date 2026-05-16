@@ -4,9 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import {
+  resolveOrderTotalFromPayments,
+  sortReceivedPaymentsChronologically,
+  sumPaymentsTowardRemaining,
+} from "@/lib/receivedPaymentsBalance";
 
 interface ReceivedPayment {
   id: string;
+  payment_number?: string;
   installment_number?: number;
   payment_date: string;
   order_number: string;
@@ -37,7 +43,7 @@ export default function ReceivedPaymentOrderSummaryPage() {
           return;
         }
         const all = Array.isArray(data) ? (data as ReceivedPayment[]) : [];
-        setRows(all.filter((x) => x.order_number === params.orderNumber).sort((a, b) => (a.installment_number ?? 0) - (b.installment_number ?? 0)));
+        setRows(all.filter((x) => x.order_number === params.orderNumber));
       } catch {
         showToast({ title: "Failed to load received payments", description: "Something went wrong.", variant: "error" });
       } finally {
@@ -47,12 +53,39 @@ export default function ReceivedPaymentOrderSummaryPage() {
     if (params.orderNumber) fetchRows();
   }, [params.orderNumber, showToast]);
 
+  const sortedRows = useMemo(() => sortReceivedPaymentsChronologically(rows), [rows]);
+
   const summary = useMemo(() => {
-    if (rows.length === 0) return { customer_name: "", order_total: 0, approved_paid: 0, remaining_amount: 0 };
-    const latest = rows[rows.length - 1];
-    const approvedPaid = rows.filter((x) => x.status === "approved" || x.status === "completed").reduce((sum, x) => sum + Number(x.amount ?? 0), 0);
-    return { customer_name: latest.customer_name, order_total: Number(latest.order_total ?? 0), approved_paid: approvedPaid, remaining_amount: Number(latest.remaining_amount ?? 0) };
-  }, [rows]);
+    if (sortedRows.length === 0) {
+      return {
+        customer_name: "",
+        order_total: 0,
+        approved_paid: 0,
+        recorded_incl_pending: 0,
+        remaining_amount: 0,
+      };
+    }
+    const latest = sortedRows[sortedRows.length - 1];
+    const orderTotal = resolveOrderTotalFromPayments(sortedRows);
+    const approvedPaid = sortedRows
+      .filter((x) => {
+        const s = (x.status ?? "").toLowerCase();
+        return s === "approved" || s === "completed";
+      })
+      .reduce((sum, x) => sum + Number(x.amount ?? 0), 0);
+    const recordedInclPending = sumPaymentsTowardRemaining(sortedRows);
+    const remaining =
+      orderTotal > 0
+        ? Math.max(0, orderTotal - recordedInclPending)
+        : Math.max(0, Number(latest.remaining_amount ?? 0));
+    return {
+      customer_name: latest.customer_name,
+      order_total: orderTotal > 0 ? orderTotal : Number(latest.order_total ?? 0),
+      approved_paid: approvedPaid,
+      recorded_incl_pending: recordedInclPending,
+      remaining_amount: remaining,
+    };
+  }, [sortedRows]);
 
   return (
     <div className="max-w-5xl mx-auto mt-6 space-y-6">
@@ -67,11 +100,12 @@ export default function ReceivedPaymentOrderSummaryPage() {
         <p className="text-sm text-muted-foreground text-center">No payments found for this order.</p>
       ) : (
         <>
-          <div className="bg-white border rounded-md p-4 text-sm grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="bg-white border rounded-md p-4 text-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div><span className="font-medium">Order:</span> {params.orderNumber}</div>
             <div><span className="font-medium">Customer:</span> {summary.customer_name}</div>
             <div><span className="font-medium">Order Total:</span> {summary.order_total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
             <div><span className="font-medium">Approved Paid:</span> {summary.approved_paid.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+            <div><span className="font-medium">Recorded (incl. pending):</span> {summary.recorded_incl_pending.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
             <div><span className="font-medium">Remaining:</span> {summary.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
           </div>
           <div className="border rounded-md overflow-hidden bg-white">
@@ -86,7 +120,7 @@ export default function ReceivedPaymentOrderSummaryPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((x) => (
+                {sortedRows.map((x) => (
                   <tr key={x.id} className="border-t">
                     <td className="px-4 py-2">{`Payment ${x.installment_number ?? 1}`}</td>
                     <td className="px-4 py-2">{new Date(x.payment_date).toLocaleDateString()}</td>
