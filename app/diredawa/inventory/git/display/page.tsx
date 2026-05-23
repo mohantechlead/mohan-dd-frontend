@@ -8,7 +8,12 @@ import { useAuth } from "@/components/authProvider";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { TableSearch } from "@/components/table-search";
-import { getGITColumns, GITRow } from "./columns";
+import { getGITColumns } from "./columns";
+import {
+  buildGitDisplayRow,
+  type GITDisplayRow,
+  type GITRow,
+} from "@/lib/gitMtConversion";
 import {
   Dialog,
   DialogContent,
@@ -25,9 +30,14 @@ export default function GITDisplayPage() {
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [wipeOffOpen, setWipeOffOpen] = useState(false);
-  const [selected, setSelected] = useState<GITRow | null>(null);
+  const [selected, setSelected] = useState<GITDisplayRow | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR<GITRow[]>(GIT_API_URL, fetcher);
+
+  const displayRows = useMemo(
+    () => (data || []).map(buildGitDisplayRow),
+    [data],
+  );
 
   useEffect(() => {
     if (error?.status === 401) auth?.loginRequiredRedirect();
@@ -35,19 +45,20 @@ export default function GITDisplayPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return data || [];
-    return (data || []).filter((r) =>
+    if (!q) return displayRows;
+    return displayRows.filter((r) =>
       [
         r.grn_no,
         r.purchase_no,
         r.item_name,
         r.code || "",
         r.variance_type,
-      ].some((v) => String(v).toLowerCase().includes(q))
+        r.grn_unit_label,
+      ].some((v) => String(v).toLowerCase().includes(q)),
     );
-  }, [data, search]);
+  }, [displayRows, search]);
 
-  const onWipeOff = (row: GITRow) => {
+  const onWipeOff = (row: GITDisplayRow) => {
     setSelected(row);
     setWipeOffOpen(true);
   };
@@ -92,6 +103,11 @@ export default function GITDisplayPage() {
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-2xl text-center my-2 font-bold">GIT List</h1>
+      <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto mb-3">
+        When the GRN line unit is <span className="font-medium">KG</span> (kilograms), received quantity is
+        divided by <span className="font-medium">1000</span> to show <span className="font-medium">MT</span>{" "}
+        before variance vs PO quantity. PO quantity is treated as MT. Wipe-off still uses the server record.
+      </p>
       <div className="flex justify-end mb-4">
         <TableSearch value={search} onChange={setSearch} placeholder="Search GIT..." />
       </div>
