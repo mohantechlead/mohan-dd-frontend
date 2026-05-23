@@ -34,7 +34,7 @@ interface Purchase {
   order_date: string;
   buyer: string;
   proforma_ref_no: string;
-  status: string;
+  status?: string | null;
   /** Sum of line totals (same as summed item total_price); from API */
   before_vat?: number;
   items: PurchaseItem[];
@@ -59,14 +59,16 @@ export default function DisplayPurchasesPage() {
   const filteredPurchases = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return purchases;
-    return purchases.filter(
-      (p) =>
-        p.purchase_number.toLowerCase().includes(q) ||
-        p.buyer.toLowerCase().includes(q) ||
-        (p.proforma_ref_no?.toLowerCase().includes(q)) ||
-        p.status.toLowerCase().includes(q) ||
-        p.items.some((i) => i.item_name.toLowerCase().includes(q))
-    );
+    return purchases.filter((p) => {
+      const items = Array.isArray(p.items) ? p.items : [];
+      return (
+        (p.purchase_number ?? "").toLowerCase().includes(q) ||
+        (p.buyer ?? "").toLowerCase().includes(q) ||
+        (p.proforma_ref_no ?? "").toLowerCase().includes(q) ||
+        (p.status ?? "").toLowerCase().includes(q) ||
+        items.some((i) => (i?.item_name ?? "").toLowerCase().includes(q))
+      );
+    });
   }, [purchases, search]);
 
   useEffect(() => {
