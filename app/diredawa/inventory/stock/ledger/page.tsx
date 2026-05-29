@@ -40,6 +40,98 @@ const parseNumericValue = (value: unknown): number => {
   return 0;
 };
 
+/** Normalize API / display dates to YYYY-MM-DD for range comparisons. */
+const entryDay = (entryDate: string | null): string | null => {
+  if (!entryDate?.trim()) return null;
+  const raw = entryDate.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const matchesDateRange = (
+  entry: StockLedgerEntry,
+  from: string,
+  to: string,
+): boolean => {
+  const day = entryDay(entry.entryDate);
+  if (from && (!day || day < from)) return false;
+  if (to && (!day || day > to)) return false;
+  return true;
+};
+
+const computeOpeningBalance = (
+  allEntries: StockLedgerEntry[],
+  from: string,
+): number => {
+  if (!from) return 0;
+  return allEntries.reduce((sum, entry) => {
+    const day = entryDay(entry.entryDate);
+    if (day && day < from) return sum + entry.raw;
+    return sum;
+  }, 0);
+};
+
+const sortEntriesChronologically = (list: StockLedgerEntry[]) =>
+  [...list].sort((a, b) => {
+    const ad = entryDay(a.entryDate) ?? "";
+    const bd = entryDay(b.entryDate) ?? "";
+    if (ad !== bd) return ad.localeCompare(bd);
+    return `${a.type}-${a.documentNo}`.localeCompare(`${b.type}-${b.documentNo}`);
+  });
+
+/** Filtered rows, running balance column, and summary cards for a date range. */
+function computeLedgerView(
+  allEntries: StockLedgerEntry[],
+  from: string,
+  to: string,
+) {
+  const hasDateFilter = Boolean(from || to);
+  const filteredEntries = sortEntriesChronologically(
+    allEntries.filter((entry) => matchesDateRange(entry, from, to)),
+  );
+
+  const totalIn = filteredEntries
+    .filter((entry) => entry.type === "GRN")
+    .reduce((sum, entry) => sum + entry.quantity, 0);
+  const totalOut = filteredEntries
+    .filter((entry) => entry.type === "DN")
+    .reduce((sum, entry) => sum + entry.quantity, 0);
+
+  const openingBalance = computeOpeningBalance(allEntries, from);
+  let runningQty = openingBalance;
+  const entriesWithRunning = filteredEntries.map((entry) => {
+    runningQty += entry.raw;
+    return { ...entry, runningQty };
+  });
+
+  const periodNet = totalIn - totalOut;
+  const closingBalance =
+    entriesWithRunning.length > 0
+      ? entriesWithRunning[entriesWithRunning.length - 1].runningQty
+      : openingBalance;
+
+  // Summary card: net movement in range when filtered; full stock when not.
+  const summaryBalance = hasDateFilter ? periodNet : closingBalance;
+
+  return {
+    filteredEntries,
+    entriesWithRunning,
+    stats: {
+      totalIn,
+      totalOut,
+      periodNet,
+      openingBalance,
+      closingBalance,
+      summaryBalance,
+    },
+  };
+}
+
 const getMatchingItem = (
   items: Array<Record<string, unknown>>,
   selected: StockItem,
@@ -71,6 +163,11 @@ export default function StockLedgerPage() {
   const [error, setError] = useState<string | null>(null);
   const [stockItem, setStockItem] = useState<StockItem | null>(null);
   const [entries, setEntries] = useState<StockLedgerEntry[]>([]);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [appliedDateFrom, setAppliedDateFrom] = useState("");
+  const [appliedDateTo, setAppliedDateTo] = useState("");
+  const [dateFilterError, setDateFilterError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!code && !item) {
@@ -174,13 +271,9 @@ export default function StockLedgerPage() {
           dnEntriesPromise,
         ]);
 
-        const merged: StockLedgerEntry[] = [...grnEntries, ...dnEntries]
-          .filter((entry) => entry !== null)
-          .sort((a, b) => {
-            const at = a.entryDate ? new Date(a.entryDate).getTime() : 0;
-            const bt = b.entryDate ? new Date(b.entryDate).getTime() : 0;
-            return at - bt;
-          });
+        const merged: StockLedgerEntry[] = sortEntriesChronologically(
+          [...grnEntries, ...dnEntries].filter((entry) => entry !== null),
+        );
 
         if (mounted) {
           setStockItem(matched);
@@ -201,24 +294,30 @@ export default function StockLedgerPage() {
     };
   }, [auth, code, item]);
 
-  const entriesWithRunning = useMemo(() => {
-    let runningQty = 0;
-    return entries.map((entry) => {
-      runningQty += entry.raw;
-      return { ...entry, runningQty };
-    });
-  }, [entries]);
+  const hasDateFilter = Boolean(appliedDateFrom || appliedDateTo);
 
-  const stats = useMemo(() => {
-    const totalIn = entries
-      .filter((entry) => entry.type === "GRN")
-      .reduce((sum, entry) => sum + entry.quantity, 0);
-    const totalOut = entries
-      .filter((entry) => entry.type === "DN")
-      .reduce((sum, entry) => sum + entry.quantity, 0);
-    const currentBalance = totalIn - totalOut;
-    return { totalIn, totalOut, currentBalance };
-  }, [entries]);
+  const { entriesWithRunning, stats } = useMemo(
+    () => computeLedgerView(entries, appliedDateFrom, appliedDateTo),
+    [entries, appliedDateFrom, appliedDateTo],
+  );
+
+  const applyDateFilters = () => {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setDateFilterError("From date cannot be after to date.");
+      return;
+    }
+    setDateFilterError(null);
+    setAppliedDateFrom(dateFrom);
+    setAppliedDateTo(dateTo);
+  };
+
+  const resetDateFilters = () => {
+    setDateFrom("");
+    setDateTo("");
+    setAppliedDateFrom("");
+    setAppliedDateTo("");
+    setDateFilterError(null);
+  };
 
   const exportToExcel = () => {
     if (!entriesWithRunning.length || !stockItem) return;
@@ -261,30 +360,93 @@ export default function StockLedgerPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <p className="mb-3 text-sm font-medium">Date filters</p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-xs text-muted-foreground">
+              From date
+            </label>
+            <input
+              type="date"
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-muted-foreground">
+              To date
+            </label>
+            <input
+              type="date"
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+          <div className="flex items-end gap-2 md:col-span-2">
+            <Button type="button" onClick={applyDateFilters}>
+              Apply Filters
+            </Button>
+            <Button type="button" variant="outline" onClick={resetDateFilters}>
+              Reset
+            </Button>
+          </div>
+        </div>
+        {dateFilterError && (
+          <p className="mt-2 text-sm text-red-600">{dateFilterError}</p>
+        )}
+        {hasDateFilter && !dateFilterError && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Showing entries
+            {appliedDateFrom ? ` from ${appliedDateFrom}` : ""}
+            {appliedDateTo ? ` to ${appliedDateTo}` : ""}. Total In, Total Out,
+            and Balance are calculated for this range only (Balance = In − Out).
+            {stats.closingBalance !== stats.periodNet && (
+              <>
+                {" "}
+                Stock at end of range:{" "}
+                {formatQuantityDisplay(stats.closingBalance)}.
+              </>
+            )}
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 lg:flex-1">
           <div className="rounded-xl border bg-card px-4 py-3 shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">Total In</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              {hasDateFilter ? "Total In (filtered)" : "Total In"}
+            </p>
             <p className="mt-1 text-lg font-semibold text-emerald-700">
               {formatQuantityDisplay(stats.totalIn)}
             </p>
           </div>
           <div className="rounded-xl border bg-card px-4 py-3 shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">Total Out</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              {hasDateFilter ? "Total Out (filtered)" : "Total Out"}
+            </p>
             <p className="mt-1 text-lg font-semibold text-rose-700">
               {formatQuantityDisplay(stats.totalOut)}
             </p>
           </div>
           <div className="rounded-xl border bg-card px-4 py-3 shadow-sm">
             <p className="text-xs font-medium text-muted-foreground">
-              Current Balance
+              {hasDateFilter ? "Balance (filtered)" : "Current Balance"}
             </p>
             <p className="mt-1 text-lg font-semibold">
-              {formatQuantityDisplay(stats.currentBalance)}
+              {formatQuantityDisplay(stats.summaryBalance)}
             </p>
+            {hasDateFilter && stats.closingBalance !== stats.periodNet && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Stock at end: {formatQuantityDisplay(stats.closingBalance)}
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="default"
             className="shadow-sm"
@@ -310,10 +472,16 @@ export default function StockLedgerPage() {
               {error}
             </p>
           </div>
-        ) : entriesWithRunning.length === 0 ? (
+        ) : entries.length === 0 ? (
           <div className="flex min-h-[180px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
               No DN/GRN transactions found for this stock item.
+            </p>
+          </div>
+        ) : entriesWithRunning.length === 0 ? (
+          <div className="flex min-h-[180px] items-center justify-center">
+            <p className="text-sm text-muted-foreground">
+              No transactions in the selected date range.
             </p>
           </div>
         ) : (

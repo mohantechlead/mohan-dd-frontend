@@ -87,6 +87,7 @@ interface PurchaseFormState {
   freight_price: string;
   insurance: string;
   shipment_type: ShipmentType | "";
+  remark: string;
 }
 
 const PURCHASE_API_URL = "/api/purchases";
@@ -120,6 +121,7 @@ export default function CreatePurchasePage() {
     freight_price: "",
     insurance: "",
     shipment_type: "",
+    remark: "",
   });
 
   const [currentItem, setCurrentItem] = useState<PurchaseItemForm>({
@@ -433,6 +435,7 @@ export default function CreatePurchasePage() {
       freightTrim === "" ? null : parseFloat(freightTrim);
     const payload = {
       ...form,
+      status: "pending",
       order_date: form.order_date,
       measurement_type: form.measurement_type.trim()
         ? form.measurement_type
@@ -442,6 +445,7 @@ export default function CreatePurchasePage() {
         freightParsed === null || Number.isNaN(freightParsed)
           ? null
           : freightParsed,
+      remark: form.remark.trim() ? form.remark.trim() : null,
       items: items.map((it) => ({
         item_id: it.item_id?.trim() || null,
         item_name: it.item_name,
@@ -783,6 +787,18 @@ export default function CreatePurchasePage() {
                   value={form.insurance}
                   onChange={handleHeaderChange}
                   className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Remark
+                </label>
+                <textarea
+                  name="remark"
+                  value={form.remark}
+                  onChange={handleHeaderChange}
+                  className="w-full border rounded-md px-3 py-2"
+                  rows={3}
                 />
               </div>
             </div>

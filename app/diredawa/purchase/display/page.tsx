@@ -190,7 +190,7 @@ export default function DisplayPurchasesPage() {
       ) : (
         <>
           <div className="flex justify-end mb-4">
-          <TableSearch value={search} onChange={setSearch} placeholder="Search purchases, vendor, items..." />
+          <TableSearch value={search} onChange={setSearch} placeholder="Search purchases, supplier, items..." />
         </div>
           <div className="border rounded-md overflow-hidden bg-white">
           <table className="w-full text-sm">
@@ -199,7 +199,7 @@ export default function DisplayPurchasesPage() {
                 <th className="text-left px-4 py-2">Purchase Number</th>
                 <th className="text-left px-4 py-2">Date</th>
                 <th className="text-right px-4 py-2">Before VAT</th>
-                <th className="text-left px-4 py-2">Vendor Name</th>
+                <th className="text-left px-4 py-2">Supplier Name</th>
                 <th className="text-left px-4 py-2">Status</th>
                 {canManageRecords && (
                   <th className="text-right px-4 py-2">Actions</th>
@@ -245,7 +245,9 @@ export default function DisplayPurchasesPage() {
                       })}
                     </td>
                     <td className="px-4 py-2">{purchase.buyer}</td>
-                    <td className="px-4 py-2 capitalize">{purchase.status}</td>
+                    <td className="px-4 py-2 capitalize">
+                      {purchase.status?.trim() ? purchase.status : "pending"}
+                    </td>
                     {canManageRecords && (
                       <td className="px-4 py-2 text-right">
                         <div className="flex justify-end gap-2">

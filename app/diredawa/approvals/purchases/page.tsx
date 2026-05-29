@@ -9,7 +9,7 @@ import { useAuth } from "@/components/authProvider";
 interface Purchase {
   id: string;
   purchase_number: string;
-  status: string;
+  status?: string | null;
 }
 
 const PURCHASES_API_URL = "/api/purchases";
@@ -30,12 +30,16 @@ export default function PurchaseApprovalsPage() {
     string | null
   >(null);
 
+  const normalizeStatus = (value: unknown) =>
+    String(value ?? "").trim().toLowerCase();
+
   useEffect(() => {
     const fetchPurchases = async () => {
       try {
         const res = await fetch(PURCHASES_API_URL, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
         const data: unknown = await res.json();
         if (!res.ok) {
@@ -55,14 +59,16 @@ export default function PurchaseApprovalsPage() {
           });
           return;
         }
-        const list = (data as Purchase[]).filter(
-          (p) => (p as Purchase).status === "pending"
-        );
+        const list = (data as Purchase[]).filter((p) => {
+          const status = String((p as Purchase).status ?? "").trim().toLowerCase();
+          // Back-compat: older rows may have empty/null status; treat as pending for approvals.
+          return status === "pending" || status === "";
+        });
         setPurchases(
           list.map((p) => ({
             id: (p as Purchase).id,
             purchase_number: (p as Purchase).purchase_number,
-            status: (p as Purchase).status,
+            status: (p as Purchase).status?.trim() ? (p as Purchase).status : "pending",
           }))
         );
       } catch {
@@ -93,6 +99,7 @@ export default function PurchaseApprovalsPage() {
       const res = await fetch(`/api/purchases/${encodeURIComponent(purchaseNumber)}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ approved_by_id: auth.userId }),
       });
       const data: unknown = await res.json();
@@ -113,12 +120,28 @@ export default function PurchaseApprovalsPage() {
         });
         return;
       }
-      setPurchases((prev) =>
-        prev.filter((p) => p.purchase_number !== purchaseNumber)
-      );
+
+      const approvedPayload = data as {
+        status?: unknown;
+        approval_date?: unknown;
+      };
+      const approved =
+        normalizeStatus(approvedPayload.status) === "approved" ||
+        Boolean(approvedPayload.approval_date);
+
+      if (!approved) {
+        showToast({
+          title: "Approval not applied",
+          description: `Purchase ${purchaseNumber} was not marked approved. Please try again.`,
+          variant: "error",
+        });
+        return;
+      }
+
+      setPurchases((prev) => prev.filter((p) => p.purchase_number !== purchaseNumber));
       showToast({
         title: "Purchase approved",
-        description: `Purchase ${(data as Purchase).purchase_number} has been approved.`,
+        description: `Purchase ${purchaseNumber} has been approved.`,
         variant: "success",
       });
     } catch {

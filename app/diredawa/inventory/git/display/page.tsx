@@ -53,8 +53,9 @@ export default function GITDisplayPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return displayRows;
-    return displayRows.filter((r) =>
+    const rows = !q
+      ? displayRows
+      : displayRows.filter((r) =>
       [
         r.grn_no,
         r.purchase_no,
@@ -64,6 +65,20 @@ export default function GITDisplayPage() {
         r.grn_unit_label,
       ].some((v) => String(v).toLowerCase().includes(q)),
     );
+
+    const extractPoNumber = (value: string) => {
+      const matches = String(value ?? "").match(/\d+/g);
+      if (!matches || matches.length === 0) return -Infinity;
+      const n = Number(matches[matches.length - 1]);
+      return Number.isFinite(n) ? n : -Infinity;
+    };
+
+    return [...rows].sort((a, b) => {
+      const aNum = extractPoNumber(a.purchase_no);
+      const bNum = extractPoNumber(b.purchase_no);
+      if (bNum !== aNum) return bNum - aNum;
+      return String(b.purchase_no ?? "").localeCompare(String(a.purchase_no ?? ""));
+    });
   }, [displayRows, search]);
 
   const onWipeOff = (row: GITDisplayRow) => {

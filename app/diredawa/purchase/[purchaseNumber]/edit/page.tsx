@@ -49,6 +49,7 @@ interface PurchaseDetail {
   freight_price?: number | null;
   insurance?: string | null;
   shipment_type: string;
+  remark?: string | null;
   items: PurchaseItemApi[];
 }
 
@@ -115,6 +116,7 @@ export default function EditPurchasePage() {
     freight_price: "",
     insurance: "",
     shipment_type: "",
+    remark: "",
   });
 
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItemForm[]>([]);
@@ -199,6 +201,7 @@ export default function EditPurchasePage() {
             p.freight_price != null ? String(p.freight_price) : "",
           insurance: p.insurance || "",
           shipment_type: p.shipment_type,
+          remark: p.remark || "",
         });
         const lines = (p.items ?? []).map(mapApiLineToForm);
         setPurchaseItems(lines);
@@ -288,6 +291,7 @@ export default function EditPurchasePage() {
       freight_price: form.freight_price ? Number(form.freight_price) : null,
       insurance: form.insurance || null,
       shipment_type: form.shipment_type,
+      remark: form.remark.trim() ? form.remark.trim() : null,
       items: purchaseItems.map((it) => {
         const qty = Number(it.quantity) || 0;
         const price = Number(it.price) || 0;
@@ -531,6 +535,17 @@ export default function EditPurchasePage() {
                   }))
                 }
                 className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Remark</label>
+              <textarea
+                value={form.remark}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, remark: e.target.value }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+                rows={3}
               />
             </div>
           </div>

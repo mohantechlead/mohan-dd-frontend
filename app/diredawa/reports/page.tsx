@@ -68,6 +68,8 @@ type ViewMode =
 type EntityConfig = {
   label: string;
   endpoint: string;
+  /** Row transforms populate real line quantities; otherwise Quantity matches Count. */
+  supportsQuantityMetric: boolean;
   transform: (raw: unknown) => RowRecord[];
 };
 
@@ -75,6 +77,7 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   sales: {
     label: "Sales Orders",
     endpoint: "/api/orders",
+    supportsQuantityMetric: true,
     transform: (raw) => {
       const orders = normalizeList(raw);
       const rows: RowRecord[] = [];
@@ -103,6 +106,7 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   purchases: {
     label: "Purchases",
     endpoint: "/api/purchases",
+    supportsQuantityMetric: true,
     transform: (raw) => {
       const purchases = normalizeList(raw);
       const rows: RowRecord[] = [];
@@ -136,6 +140,7 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   grn: {
     label: "Inventory - GRN",
     endpoint: "/api/inventory/grn",
+    supportsQuantityMetric: true,
     transform: (raw) => {
       const grns = normalizeList(raw);
       const rows: RowRecord[] = [];
@@ -161,6 +166,7 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   dn: {
     label: "Inventory - DN",
     endpoint: "/api/inventory/dn",
+    supportsQuantityMetric: true,
     transform: (raw) => {
       const dns = normalizeList(raw);
       const rows: RowRecord[] = [];
@@ -186,6 +192,7 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   shippingInvoices: {
     label: "Shipping Invoices",
     endpoint: "/api/inventory/shipping-invoices",
+    supportsQuantityMetric: false,
     transform: (raw) => {
       const invoices = normalizeList(raw);
       return invoices.map((inv) => ({
@@ -201,10 +208,13 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   receivedPayments: {
     label: "Received Payments",
     endpoint: "/api/accounting/received-payments",
+    supportsQuantityMetric: false,
     transform: (raw) => {
       const payments = normalizeList(raw);
       return payments.map((p) => ({
-        date: safeDate(p.date || p.payment_date || p.created_at),
+        date: safeDate(
+          p.payment_date || p.date || p.created_at || p.updated_at,
+        ),
         reference: safeText(p.payment_number || p.received_payment_no || p.id),
         customer: safeText(p.customer_name || p.customer),
         status: safeText(p.status),
@@ -216,10 +226,13 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   vendorPayments: {
     label: "Vendor Payments",
     endpoint: "/api/accounting/vendor-payments",
+    supportsQuantityMetric: false,
     transform: (raw) => {
       const payments = normalizeList(raw);
       return payments.map((p) => ({
-        date: safeDate(p.date || p.payment_date || p.created_at),
+        date: safeDate(
+          p.payment_date || p.date || p.created_at || p.updated_at,
+        ),
         reference: safeText(p.payment_number || p.vendor_payment_no || p.id),
         supplier: safeText(p.vendor_name || p.supplier_name || p.vendor),
         status: safeText(p.status),
@@ -231,12 +244,23 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
   expensePayments: {
     label: "Expense Payments",
     endpoint: "/api/accounting/expense-payments",
+    supportsQuantityMetric: false,
     transform: (raw) => {
       const payments = normalizeList(raw);
       return payments.map((p) => ({
-        date: safeDate(p.date || p.payment_date || p.created_at),
-        reference: safeText(p.payment_number || p.expense_payment_no || p.id),
-        customer: safeText(p.expense_type || p.party || p.description),
+        date: safeDate(
+          p.expense_date ||
+            p.date ||
+            p.payment_date ||
+            p.created_at ||
+            p.updated_at,
+        ),
+        reference: safeText(
+          p.expense_number || p.payment_number || p.expense_payment_no || p.id,
+        ),
+        customer: safeText(
+          p.payee || p.expense_type || p.party || p.category || p.description,
+        ),
         status: safeText(p.status),
         amount: toNumber(p.amount || p.total_amount || p.paid_amount),
         quantity: 1,
@@ -263,6 +287,22 @@ export default function ReportsPage() {
 
   useEffect(() => {
     setViewMode("total");
+    setMetric((m) =>
+      !ENTITY_CONFIG[entity].supportsQuantityMetric && m === "quantity"
+        ? "amount"
+        : m,
+    );
+  }, [entity]);
+
+  const metricOptions = useMemo(() => {
+    const base: Array<{ value: Metric; label: string }> = [
+      { value: "amount", label: "Amount" },
+      { value: "count", label: "Count" },
+    ];
+    if (ENTITY_CONFIG[entity].supportsQuantityMetric) {
+      base.splice(1, 0, { value: "quantity", label: "Quantity" });
+    }
+    return base;
   }, [entity]);
 
   const viewOptions = useMemo(() => getViewOptions(entity), [entity]);
@@ -469,11 +509,7 @@ export default function ReportsPage() {
           label="Metric"
           value={metric}
           onChange={(v) => setMetric(v as Metric)}
-          options={[
-            { value: "amount", label: "Amount" },
-            { value: "quantity", label: "Quantity" },
-            { value: "count", label: "Count" },
-          ]}
+          options={metricOptions}
         />
         {viewOptions.length > 1 && (
           <LabeledSelect
@@ -788,10 +824,35 @@ function safeText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Normalize API dates to ISO UTC. Handles:
+ * - ISO / RFC date strings
+ * - Unix timestamps in seconds or ms (number or numeric string) — ms values ≥ 1e12
+ */
 function safeDate(value: unknown): string {
-  if (typeof value !== "string" || !value) return "";
-  const d = new Date(value);
+  const ms = parseToUnixMs(value);
+  if (ms == null) return "";
+  const d = new Date(ms);
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
+function parseToUnixMs(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/^\d+$/.test(trimmed)) {
+      const n = Number(trimmed);
+      if (!Number.isFinite(n)) return null;
+      return n < 1e12 ? n * 1000 : n;
+    }
+    const parsed = Date.parse(trimmed);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return null;
 }
 
 function toDateOnly(isoDate: string): string {
