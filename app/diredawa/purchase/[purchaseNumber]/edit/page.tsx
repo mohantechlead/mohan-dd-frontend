@@ -531,6 +531,22 @@ export default function EditPurchasePage() {
               />
             </div>
             <div>
+              <label className="block font-medium mb-1">Freight Price</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.freight_price}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    freight_price: e.target.value,
+                  }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
               <label className="block font-medium mb-1">Insurance</label>
               <input
                 value={form.insurance}

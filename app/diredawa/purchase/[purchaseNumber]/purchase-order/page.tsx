@@ -38,6 +38,8 @@ interface PurchaseDetail {
   // legacy fallback (older API responses / other UI parts)
   payment_terms?: string | null;
   freight?: string | null;
+  freight_price?: number | null;
+  insurance_chargers?: string | null;
   shipment_type?: string | null;
   items: PurchaseItem[];
 }
@@ -132,6 +134,31 @@ export default function PurchaseOrderPage() {
         ? purchase.items.reduce((s, i) => s + i.total_price, 0)
         : 0,
     [purchase]
+  );
+
+  const parseCharge = (value: unknown): number => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    const raw = String(value ?? "").trim();
+    if (!raw) return 0;
+    const normalized = raw.replace(/,/g, "");
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const freightCharge = useMemo(
+    () =>
+      purchase?.freight_price != null
+        ? Number(purchase.freight_price) || 0
+        : parseCharge(purchase?.freight),
+    [purchase?.freight_price, purchase?.freight]
+  );
+  const insuranceCharge = useMemo(
+    () => parseCharge(purchase?.insurance_chargers),
+    [purchase?.insurance_chargers]
+  );
+  const totalCif = useMemo(
+    () => totalPrice + freightCharge + insuranceCharge,
+    [totalPrice, freightCharge, insuranceCharge]
   );
 
   const getHsCode = (itemName: string) =>
@@ -400,6 +427,54 @@ export default function PurchaseOrderPage() {
                 </tr>
               </tbody>
             </table>
+            <div className="mt-2 flex justify-end">
+              <table className="text-xs border border-black min-w-[340px]">
+                <tbody>
+                  <tr className="border-b">
+                    <td className="px-3 py-1.5 font-medium">
+                      TOTAL FOB US $
+                    </td>
+                    <td className="px-3 py-1.5 text-right font-medium">
+                      {totalPrice.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-3 py-1.5 font-medium">
+                      Freight US $
+                    </td>
+                    <td className="px-3 py-1.5 text-right font-medium">
+                      {freightCharge.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-3 py-1.5 font-medium">
+                      Insurance Charges US $
+                    </td>
+                    <td className="px-3 py-1.5 text-right font-medium">
+                      {insuranceCharge.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-1.5 font-bold">Grand Total $</td>
+                    <td className="px-3 py-1.5 text-right font-bold">
+                      {totalCif.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
