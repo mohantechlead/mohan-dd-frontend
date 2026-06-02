@@ -32,7 +32,8 @@ interface Purchase {
   id: string;
   purchase_number: string;
   order_date: string;
-  buyer: string;
+  shipper?: string | null;
+  buyer?: string | null;
   proforma_ref_no: string;
   status?: string | null;
   /** Sum of line totals (same as summed item total_price); from API */
@@ -63,7 +64,7 @@ export default function DisplayPurchasesPage() {
       const items = Array.isArray(p.items) ? p.items : [];
       return (
         (p.purchase_number ?? "").toLowerCase().includes(q) ||
-        (p.buyer ?? "").toLowerCase().includes(q) ||
+        (p.shipper ?? p.buyer ?? "").toLowerCase().includes(q) ||
         (p.proforma_ref_no ?? "").toLowerCase().includes(q) ||
         (p.status ?? "").toLowerCase().includes(q) ||
         items.some((i) => (i?.item_name ?? "").toLowerCase().includes(q))
@@ -244,7 +245,9 @@ export default function DisplayPurchasesPage() {
                         maximumFractionDigits: 1,
                       })}
                     </td>
-                    <td className="px-4 py-2">{purchase.buyer}</td>
+                    <td className="px-4 py-2">
+                      {purchase.shipper?.trim() || purchase.buyer || "—"}
+                    </td>
                     <td className="px-4 py-2 capitalize">
                       {purchase.status?.trim() ? purchase.status : "pending"}
                     </td>

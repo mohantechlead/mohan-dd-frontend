@@ -350,6 +350,7 @@ export default function PurchaseOrderPage() {
                       </td>
                       <td className="px-2 py-2 text-right">
                         ${item.price.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
                           maximumFractionDigits: 3,
                         })}
                       </td>
@@ -369,13 +370,14 @@ export default function PurchaseOrderPage() {
                       </td>
                       <td className="px-2 py-2 text-right">
                         ${item.total_price.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
                           maximumFractionDigits: 3,
                         })}
                       </td>
                       <td className="px-2 py-2 text-right">
                         {(item.before_vat ?? item.total_price).toLocaleString(
                           undefined,
-                          { maximumFractionDigits: 3 }
+                          { minimumFractionDigits: 2, maximumFractionDigits: 3 }
                         )}
                       </td>
                     </tr>
@@ -391,6 +393,7 @@ export default function PurchaseOrderPage() {
                   <td className="px-2 py-2" colSpan={4} />
                   <td className="px-2 py-2 text-right">
                     ${totalPrice.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
                   </td>

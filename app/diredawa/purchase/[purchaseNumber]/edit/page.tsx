@@ -48,6 +48,7 @@ interface PurchaseDetail {
   freight: string;
   freight_price?: number | null;
   insurance?: string | null;
+  insurance_chargers?: string | null;
   shipment_type: string;
   remark?: string | null;
   items: PurchaseItemApi[];
@@ -115,6 +116,7 @@ export default function EditPurchasePage() {
     freight: "",
     freight_price: "",
     insurance: "",
+    insurance_chargers: "",
     shipment_type: "",
     remark: "",
   });
@@ -200,6 +202,7 @@ export default function EditPurchasePage() {
           freight_price:
             p.freight_price != null ? String(p.freight_price) : "",
           insurance: p.insurance || "",
+          insurance_chargers: p.insurance_chargers || "",
           shipment_type: p.shipment_type,
           remark: p.remark || "",
         });
@@ -290,6 +293,9 @@ export default function EditPurchasePage() {
       freight: form.freight.trim() ? form.freight : null,
       freight_price: form.freight_price ? Number(form.freight_price) : null,
       insurance: form.insurance || null,
+      insurance_chargers: form.insurance_chargers.trim()
+        ? form.insurance_chargers.trim()
+        : null,
       shipment_type: form.shipment_type,
       remark: form.remark.trim() ? form.remark.trim() : null,
       items: purchaseItems.map((it) => {
@@ -520,6 +526,31 @@ export default function EditPurchasePage() {
                 value={form.freight}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, freight: e.target.value }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Insurance</label>
+              <input
+                value={form.insurance}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, insurance: e.target.value }))
+                }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">
+                Insurance Chargers
+              </label>
+              <input
+                value={form.insurance_chargers}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    insurance_chargers: e.target.value,
+                  }))
                 }
                 className="w-full border rounded-md px-3 py-2"
               />

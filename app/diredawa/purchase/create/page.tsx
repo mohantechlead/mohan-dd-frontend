@@ -86,6 +86,7 @@ interface PurchaseFormState {
   freight: Freight | "";
   freight_price: string;
   insurance: string;
+  insurance_chargers: string;
   shipment_type: ShipmentType | "";
   remark: string;
 }
@@ -120,6 +121,7 @@ export default function CreatePurchasePage() {
     freight: "",
     freight_price: "",
     insurance: "",
+    insurance_chargers: "",
     shipment_type: "",
     remark: "",
   });
@@ -445,6 +447,9 @@ export default function CreatePurchasePage() {
         freightParsed === null || Number.isNaN(freightParsed)
           ? null
           : freightParsed,
+      insurance_chargers: form.insurance_chargers.trim()
+        ? form.insurance_chargers.trim()
+        : null,
       remark: form.remark.trim() ? form.remark.trim() : null,
       items: items.map((it) => ({
         item_id: it.item_id?.trim() || null,
@@ -785,6 +790,17 @@ export default function CreatePurchasePage() {
                 <input
                   name="insurance"
                   value={form.insurance}
+                  onChange={handleHeaderChange}
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Insurance Chargers
+                </label>
+                <input
+                  name="insurance_chargers"
+                  value={form.insurance_chargers}
                   onChange={handleHeaderChange}
                   className="w-full border rounded-md px-3 py-2"
                 />
