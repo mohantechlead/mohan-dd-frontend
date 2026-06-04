@@ -119,7 +119,6 @@ const ENTITY_CONFIG: Record<ReportEntity, EntityConfig> = {
             item: safeText(item.item_name),
             shipper: safeText(purchase.shipper),
             buyer: safeText(purchase.buyer),
-            supplier: safeText(purchase.buyer),
             customer: safeText(purchase.buyer),
             status: safeText(purchase.status),
             measurementType: safeText(purchase.measurement_type),
@@ -284,9 +283,12 @@ export default function ReportsPage() {
   const [error, setError] = useState("");
   const [rows, setRows] = useState<RowRecord[]>([]);
   const [hiddenSeriesKeys, setHiddenSeriesKeys] = useState<Set<string>>(new Set());
+  /** "" = top 5 comparison; otherwise trend for one product/buyer/customer/supplier/shipper */
+  const [drillDownFilter, setDrillDownFilter] = useState("");
 
   useEffect(() => {
     setViewMode("total");
+    setDrillDownFilter("");
     setMetric((m) =>
       !ENTITY_CONFIG[entity].supportsQuantityMetric && m === "quantity"
         ? "amount"
@@ -308,10 +310,18 @@ export default function ReportsPage() {
   const viewOptions = useMemo(() => getViewOptions(entity), [entity]);
 
   useEffect(() => {
+    if (!viewOptions.some((opt) => opt.value === viewMode)) {
+      setViewMode("total");
+    }
+    setDrillDownFilter("");
+  }, [viewMode, entity, viewOptions]);
+
+  useEffect(() => {
     setHiddenSeriesKeys(new Set());
   }, [
     entity,
     viewMode,
+    drillDownFilter,
     granularity,
     metric,
     dateFrom,
@@ -363,10 +373,32 @@ export default function ReportsPage() {
     });
   }, [rows, dateFrom, dateTo]);
 
+  const drillDownOptions = useMemo(() => {
+    if (!supportsEntityDrillDown(entity, viewMode)) return [];
+    const names = new Set<string>();
+    for (const row of dateFilteredRows) {
+      const name = getGroupValue(row, viewMode);
+      if (name && name !== "Unknown") names.add(name);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [dateFilteredRows, entity, viewMode]);
+
+  const chartRows = useMemo(() => {
+    if (!drillDownFilter || !supportsEntityDrillDown(entity, viewMode)) {
+      return dateFilteredRows;
+    }
+    return dateFilteredRows.filter(
+      (row) => getGroupValue(row, viewMode) === drillDownFilter,
+    );
+  }, [dateFilteredRows, drillDownFilter, entity, viewMode]);
+
   const chartModel = useMemo(() => {
-    if (viewMode !== "total") {
+    const singleEntityTrend =
+      !!drillDownFilter && supportsEntityDrillDown(entity, viewMode);
+
+    if (viewMode !== "total" && !singleEntityTrend) {
       const groupTotals = new Map<string, number>();
-      for (const row of dateFilteredRows) {
+      for (const row of chartRows) {
         const groupValue = getGroupValue(row, viewMode);
         const base =
           metric === "count"
@@ -385,7 +417,7 @@ export default function ReportsPage() {
         string,
         { refs: Set<string>; values: Record<string, number> }
       >();
-      for (const row of dateFilteredRows) {
+      for (const row of chartRows) {
         const period = toPeriodKey(row.date, granularity);
         if (!period) continue;
         const groupValue = getGroupValue(row, viewMode);
@@ -421,8 +453,11 @@ export default function ReportsPage() {
       return { data, lineKeys: topGroups };
     }
 
+    const seriesLabel =
+      singleEntityTrend && drillDownFilter ? drillDownFilter : "actual";
+
     const byPeriod = new Map<string, { value: number; refs: Set<string> }>();
-    for (const row of dateFilteredRows) {
+    for (const row of chartRows) {
       const period = toPeriodKey(row.date, granularity);
       if (!period) continue;
       const base =
@@ -443,11 +478,11 @@ export default function ReportsPage() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([period, info]) => ({
         period,
-        actual: round2(info.value),
+        [seriesLabel]: round2(info.value),
         refs: Array.from(info.refs).slice(0, 3),
       }));
-    return { data, lineKeys: ["actual"] };
-  }, [dateFilteredRows, granularity, metric, viewMode]);
+    return { data, lineKeys: [seriesLabel] };
+  }, [chartRows, drillDownFilter, entity, granularity, metric, viewMode]);
 
   const pieData = useMemo(() => {
     const totals = new Map<string, number>();
@@ -519,6 +554,21 @@ export default function ReportsPage() {
             options={viewOptions}
           />
         )}
+        {supportsEntityDrillDown(entity, viewMode) &&
+          drillDownOptions.length > 0 && (
+          <LabeledSelect
+            label={getDrillDownSelectLabel(entity, viewMode)}
+            value={drillDownFilter}
+            onChange={setDrillDownFilter}
+            options={[
+              {
+                value: "",
+                label: getDrillDownAllLabel(entity, viewMode),
+              },
+              ...drillDownOptions.map((name) => ({ value: name, label: name })),
+            ]}
+          />
+        )}
         <div className="space-y-1">
           <label className="text-xs font-medium">From Date</label>
           <input
@@ -555,6 +605,13 @@ export default function ReportsPage() {
 
       <div className="text-xs text-muted-foreground">
         Applied range: {dateFrom || "Any"} to {dateTo || "Any"}
+        {drillDownFilter ? (
+          <>
+            {" "}
+            · Showing trend for{" "}
+            <span className="font-medium text-foreground">{drillDownFilter}</span>
+          </>
+        ) : null}
       </div>
 
       <div className="rounded-md border bg-white p-4">
@@ -880,13 +937,57 @@ function getGroupValue(row: RowRecord, mode: Exclude<ViewMode, "total">) {
   return valueMap[mode] || "Unknown";
 }
 
+/** Views that support a second dropdown for one entity's trend line. */
+const ENTITY_DRILL_DOWN: Partial<Record<ReportEntity, ViewMode[]>> = {
+  sales: ["item", "buyer", "shipper"],
+  purchases: ["item", "buyer", "shipper"],
+  grn: ["item", "supplier"],
+  dn: ["item", "customer"],
+  receivedPayments: ["customer"],
+  vendorPayments: ["supplier"],
+  expensePayments: ["customer"],
+  shippingInvoices: ["customer"],
+};
+
+function supportsEntityDrillDown(
+  entity: ReportEntity,
+  mode: ViewMode,
+): mode is Exclude<ViewMode, "total"> {
+  if (mode === "total") return false;
+  return ENTITY_DRILL_DOWN[entity]?.includes(mode) ?? false;
+}
+
+function getDrillDownSelectLabel(
+  entity: ReportEntity,
+  mode: Exclude<ViewMode, "total">,
+): string {
+  if (mode === "item") return "Product";
+  if (mode === "buyer") return "Buyer";
+  if (mode === "shipper") return "Shipper";
+  if (mode === "supplier") return "Supplier";
+  if (mode === "customer") {
+    if (entity === "expensePayments") return "Payee";
+    if (entity === "shippingInvoices") return "Order";
+    return "Customer";
+  }
+  return "Filter";
+}
+
+function getDrillDownAllLabel(
+  entity: ReportEntity,
+  mode: Exclude<ViewMode, "total">,
+): string {
+  const noun = getDrillDownSelectLabel(entity, mode).toLowerCase();
+  return `All ${noun}s (top 5)`;
+}
+
 function getViewOptions(
   entity: ReportEntity,
 ): Array<{ value: ViewMode; label: string }> {
   if (entity === "sales" || entity === "purchases") {
     return [
       { value: "total", label: "Total" },
-      { value: "item", label: "Per Item" },
+      { value: "item", label: "Per Product" },
       { value: "shipper", label: "Per Shipper" },
       { value: "buyer", label: "Per Buyer" },
       { value: "measurementType", label: "Per Measurement Type" },
@@ -899,7 +1000,7 @@ function getViewOptions(
   if (entity === "grn") {
     return [
       { value: "total", label: "Total" },
-      { value: "item", label: "Per Item" },
+      { value: "item", label: "Per Product" },
       { value: "supplier", label: "Per Supplier" },
       { value: "measurementType", label: "Per Measurement Type" },
     ];
@@ -907,7 +1008,7 @@ function getViewOptions(
   if (entity === "dn") {
     return [
       { value: "total", label: "Total" },
-      { value: "item", label: "Per Item" },
+      { value: "item", label: "Per Product" },
       { value: "customer", label: "Per Customer" },
       { value: "measurementType", label: "Per Measurement Type" },
     ];
