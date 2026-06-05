@@ -90,7 +90,6 @@ function computeLedgerView(
   from: string,
   to: string,
 ) {
-  const hasDateFilter = Boolean(from || to);
   const filteredEntries = sortEntriesChronologically(
     allEntries.filter((entry) => matchesDateRange(entry, from, to)),
   );
@@ -115,9 +114,6 @@ function computeLedgerView(
       ? entriesWithRunning[entriesWithRunning.length - 1].runningQty
       : openingBalance;
 
-  // Summary card: net movement in range when filtered; full stock when not.
-  const summaryBalance = hasDateFilter ? periodNet : closingBalance;
-
   return {
     filteredEntries,
     entriesWithRunning,
@@ -127,30 +123,46 @@ function computeLedgerView(
       periodNet,
       openingBalance,
       closingBalance,
-      summaryBalance,
     },
   };
 }
 
-const getMatchingItem = (
+const stockListQuantity = (stockItem: StockItem | null): number =>
+  parseNumericValue(stockItem?.quantity);
+
+/** Same matching rules as backend stock aggregation (by business code). */
+const lineMatchesStock = (
+  item: Record<string, unknown>,
+  selected: StockItem,
+): boolean => {
+  const selectedCode = (selected.code ?? "").trim().toLowerCase();
+  if (selectedCode) {
+    const rawCode = item.code ?? item.internal_code;
+    const itemCode =
+      typeof rawCode === "string" ? rawCode.trim().toLowerCase() : "";
+    return Boolean(itemCode) && selectedCode === itemCode;
+  }
+  const selectedName = selected.item_name.trim().toLowerCase();
+  const itemName =
+    typeof item.item_name === "string"
+      ? item.item_name.trim().toLowerCase()
+      : "";
+  return itemName === selectedName;
+};
+
+/** Sum all GRN/DN lines for this stock code (backend sums every matching row). */
+const sumMatchingLines = (
   items: Array<Record<string, unknown>>,
   selected: StockItem,
-): Record<string, unknown> | null => {
-  const selectedCode = (selected.code ?? "").trim().toLowerCase();
-  const selectedName = selected.item_name.trim().toLowerCase();
-  return (
-    items.find((item) => {
-      const rawCode = item.code ?? item.internal_code;
-      const itemCode =
-        typeof rawCode === "string" ? rawCode.trim().toLowerCase() : "";
-      const itemName =
-        typeof item.item_name === "string"
-          ? item.item_name.trim().toLowerCase()
-          : "";
-      if (selectedCode && itemCode) return selectedCode === itemCode;
-      return itemName === selectedName;
-    }) ?? null
-  );
+): { quantity: number; bags: number } => {
+  let quantity = 0;
+  let bags = 0;
+  for (const item of items) {
+    if (!lineMatchesStock(item, selected)) continue;
+    quantity += parseNumericValue(item.quantity);
+    bags += parseNumericValue(item.bags);
+  }
+  return { quantity, bags };
 };
 
 export default function StockLedgerPage() {
@@ -198,6 +210,9 @@ export default function StockLedgerPage() {
         const params = new URLSearchParams();
         if (code) params.set("code", code);
         if (item) params.set("item", item);
+        if (urlDateFrom && urlDateFrom === urlDateTo) {
+          params.set("as_of_date", urlDateFrom);
+        }
         const stockRes = await fetch(`${STOCK_API_URL}?${params.toString()}`, {
           credentials: "include",
         });
@@ -235,8 +250,8 @@ export default function StockLedgerPage() {
             const detailItems = Array.isArray(detail.items)
               ? (detail.items as Array<Record<string, unknown>>)
               : [];
-            const matchedItem = getMatchingItem(detailItems, matched);
-            const qty = parseNumericValue(matchedItem?.quantity);
+            const lineTotals = sumMatchingLines(detailItems, matched);
+            const qty = lineTotals.quantity;
             return {
               type: "GRN" as const,
               documentNo: docNo,
@@ -245,7 +260,7 @@ export default function StockLedgerPage() {
                   ? detail.date
                   : null,
               quantity: qty,
-              bags: parseNumericValue(matchedItem?.bags),
+              bags: lineTotals.bags,
               direction: 1 as const,
               raw: qty,
             };
@@ -263,8 +278,8 @@ export default function StockLedgerPage() {
             const detailItems = Array.isArray(detail.items)
               ? (detail.items as Array<Record<string, unknown>>)
               : [];
-            const matchedItem = getMatchingItem(detailItems, matched);
-            const qty = parseNumericValue(matchedItem?.quantity);
+            const lineTotals = sumMatchingLines(detailItems, matched);
+            const qty = lineTotals.quantity;
             return {
               type: "DN" as const,
               documentNo: docNo,
@@ -273,7 +288,7 @@ export default function StockLedgerPage() {
                   ? detail.date
                   : null,
               quantity: qty,
-              bags: parseNumericValue(matchedItem?.bags),
+              bags: lineTotals.bags,
               direction: -1 as const,
               raw: -qty,
             };
@@ -306,7 +321,7 @@ export default function StockLedgerPage() {
     return () => {
       mounted = false;
     };
-  }, [auth, code, item]);
+  }, [auth, code, item, urlDateFrom, urlDateTo]);
 
   const hasDateFilter = Boolean(appliedDateFrom || appliedDateTo);
 
@@ -314,6 +329,14 @@ export default function StockLedgerPage() {
     () => computeLedgerView(entries, appliedDateFrom, appliedDateTo),
     [entries, appliedDateFrom, appliedDateTo],
   );
+
+  // Match stock list: full balance from stock API; filtered = net In − Out for range.
+  const summaryBalance = useMemo(() => {
+    if (!hasDateFilter) {
+      return stockListQuantity(stockItem);
+    }
+    return stats.periodNet;
+  }, [hasDateFilter, stockItem, stats.periodNet]);
 
   const applyDateFilters = () => {
     if (dateFrom && dateTo && dateFrom > dateTo) {
@@ -451,7 +474,7 @@ export default function StockLedgerPage() {
               {hasDateFilter ? "Balance (filtered)" : "Current Balance"}
             </p>
             <p className="mt-1 text-lg font-semibold">
-              {formatQuantityDisplay(stats.summaryBalance)}
+              {formatQuantityDisplay(summaryBalance)}
             </p>
             {hasDateFilter && stats.closingBalance !== stats.periodNet && (
               <p className="mt-1 text-xs text-muted-foreground">
