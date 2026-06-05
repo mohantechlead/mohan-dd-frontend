@@ -161,6 +161,8 @@ export default function PurchaseOrderPage() {
     [totalPrice, freightCharge, insuranceCharge]
   );
 
+  const shipmentTypeLabel = (purchase?.shipment_type?.trim() || "FOB");
+
   const getHsCode = (itemName: string) =>
     itemOptions.find(
       (o) => o.item_name.toLowerCase() === itemName.toLowerCase()
@@ -432,7 +434,7 @@ export default function PurchaseOrderPage() {
                 <tbody>
                   <tr className="border-b">
                     <td className="px-3 py-1.5 font-medium">
-                      TOTAL FOB US $
+                      TOTAL {shipmentTypeLabel} US $
                     </td>
                     <td className="px-3 py-1.5 text-right font-medium">
                       {totalPrice.toLocaleString(undefined, {
