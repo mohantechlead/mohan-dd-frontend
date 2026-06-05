@@ -158,16 +158,30 @@ export default function StockLedgerPage() {
   const searchParams = useSearchParams();
   const code = (searchParams.get("code") ?? "").trim();
   const item = (searchParams.get("item") ?? "").trim();
+  const urlDateFrom = (searchParams.get("date_from") ?? "").trim();
+  const urlDateTo = (
+    searchParams.get("date_to") ??
+    searchParams.get("as_of_date") ??
+    ""
+  ).trim();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stockItem, setStockItem] = useState<StockItem | null>(null);
   const [entries, setEntries] = useState<StockLedgerEntry[]>([]);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [appliedDateFrom, setAppliedDateFrom] = useState("");
-  const [appliedDateTo, setAppliedDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(urlDateFrom);
+  const [dateTo, setDateTo] = useState(urlDateTo);
+  const [appliedDateFrom, setAppliedDateFrom] = useState(urlDateFrom);
+  const [appliedDateTo, setAppliedDateTo] = useState(urlDateTo);
   const [dateFilterError, setDateFilterError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!urlDateFrom && !urlDateTo) return;
+    setDateFrom(urlDateFrom);
+    setDateTo(urlDateTo);
+    setAppliedDateFrom(urlDateFrom);
+    setAppliedDateTo(urlDateTo);
+  }, [urlDateFrom, urlDateTo]);
 
   useEffect(() => {
     if (!code && !item) {

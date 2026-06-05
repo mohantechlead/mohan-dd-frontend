@@ -3,12 +3,27 @@
 import { DataTable } from "@/components/data-table";
 import { getStockColumns, Items } from "./columns";
 import useSWR from "swr";
-import fetcher from "@/lib/fetcher";
 import { useAuth } from "@/components/authProvider";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const GRN_API_URL = "/api/inventory/stock";
+
+async function stockFetcher(url: string): Promise<Items[]> {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) {
+    const error = new Error(
+      "An error occurred while fetching the data.",
+    ) as Error & {
+      info?: unknown;
+      status?: number;
+    };
+    error.info = await res.json();
+    error.status = res.status;
+    throw error;
+  }
+  return res.json();
+}
 
 export default function DemoPage() {
   const router = useRouter();
@@ -32,15 +47,17 @@ export default function DemoPage() {
     const params = new URLSearchParams();
     if (appliedFilters.code) params.set("code", appliedFilters.code);
     if (appliedFilters.item) params.set("item", appliedFilters.item);
-    if (appliedFilters.as_of_date) params.set("as_of_date", appliedFilters.as_of_date);
-    if (appliedFilters.min_quantity) params.set("min_quantity", appliedFilters.min_quantity);
+    if (appliedFilters.as_of_date)
+      params.set("as_of_date", appliedFilters.as_of_date);
+    if (appliedFilters.min_quantity)
+      params.set("min_quantity", appliedFilters.min_quantity);
     if (appliedFilters.grn_no) params.set("grn_no", appliedFilters.grn_no);
     if (appliedFilters.dn_no) params.set("dn_no", appliedFilters.dn_no);
     const query = params.toString();
     return query ? `${GRN_API_URL}?${query}` : GRN_API_URL;
   }, [appliedFilters]);
 
-  const { data, error, isLoading } = useSWR<Items[]>(swrKey, fetcher);
+  const { data, error, isLoading } = useSWR<Items[]>(swrKey, stockFetcher);
 
   useEffect(() => {
     if (error?.status === 401) {
@@ -80,6 +97,10 @@ export default function DemoPage() {
     const params = new URLSearchParams();
     if (row.code) params.set("code", row.code);
     params.set("item", row.item_name);
+    if (appliedFilters.as_of_date) {
+      params.set("date_from", appliedFilters.as_of_date);
+      params.set("date_to", appliedFilters.as_of_date);
+    }
     router.push(`/diredawa/inventory/stock/ledger?${params.toString()}`);
   };
 
@@ -104,12 +125,15 @@ export default function DemoPage() {
           value={item}
           onChange={(e) => setItem(e.target.value)}
         />
-        <input
-          className="h-10 rounded-md border px-3 text-sm"
-          type="date"
-          value={asOfDate}
-          onChange={(e) => setAsOfDate(e.target.value)}
-        />
+        <div className="space-y-1">
+          <input
+            className="h-10 w-full rounded-md border px-3 text-sm"
+            type="date"
+            value={asOfDate}
+            onChange={(e) => setAsOfDate(e.target.value)}
+            title="Show GRN/DN movements on this document date only"
+          />
+        </div>
         <input
           className="h-10 rounded-md border px-3 text-sm"
           type="number"
@@ -148,6 +172,15 @@ export default function DemoPage() {
           </button>
         </div>
       </div>
+      {appliedFilters.as_of_date && (
+        <p className="mb-2 text-xs text-muted-foreground">
+          Showing net stock movement on document date{" "}
+          <span className="font-medium text-foreground">
+            {appliedFilters.as_of_date}
+          </span>{" "}
+          (GRN/DN with that date only).
+        </p>
+      )}
       <DataTable columns={columns} data={data || []} />
     </div>
   );
