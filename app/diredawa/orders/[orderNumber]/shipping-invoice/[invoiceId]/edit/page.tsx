@@ -81,7 +81,10 @@ export default function EditShippingInvoicePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const [originalInvoiceNumber, setOriginalInvoiceNumber] = useState("");
+
   const [shippingForm, setShippingForm] = useState({
+    invoice_number: "",
     invoice_date: "",
     waybill_number: "",
     ecd_no: "",
@@ -151,7 +154,9 @@ export default function EditShippingInvoicePage() {
 
         if (invoiceRes.ok) {
           const invData = (await invoiceRes.json()) as ShippingInvoiceDetail;
+          setOriginalInvoiceNumber(invData.invoice_number);
           setShippingForm({
+            invoice_number: invData.invoice_number,
             invoice_date: invData.invoice_date,
             waybill_number: invData.waybill_number || "",
             ecd_no: invData.ecd_no || "",
@@ -253,6 +258,53 @@ export default function EditShippingInvoicePage() {
       return;
     }
 
+    const invoiceNumber = shippingForm.invoice_number.trim();
+    if (!invoiceNumber) {
+      showToast({
+        title: "Invoice number required",
+        description: "Please enter an invoice number before submitting.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (
+      invoiceNumber.toLowerCase() !== originalInvoiceNumber.toLowerCase().trim()
+    ) {
+      try {
+        const checkRes = await fetch(SHIPPING_INVOICES_API_URL, {
+          credentials: "include",
+        });
+        if (checkRes.ok) {
+          const raw = await checkRes.json();
+          const invoices = Array.isArray(raw)
+            ? raw
+            : Array.isArray((raw as { results?: unknown })?.results)
+              ? (raw as { results: { id?: string; invoice_number?: string }[] })
+                  .results
+              : [];
+          const isDuplicate = invoices.some(
+            (inv) =>
+              String(inv?.invoice_number ?? "")
+                .toLowerCase()
+                .trim() === invoiceNumber.toLowerCase() &&
+              String(inv?.id ?? "") !== String(invoiceId),
+          );
+          if (isDuplicate) {
+            showToast({
+              title: "Duplicate invoice number",
+              description:
+                "This invoice number already exists. Please use a different one.",
+              variant: "error",
+            });
+            return;
+          }
+        }
+      } catch {
+        // Continue to submit; backend will also validate
+      }
+    }
+
     if (!shippingForm.invoice_date) {
       showToast({
         title: "Invoice date required",
@@ -287,6 +339,7 @@ export default function EditShippingInvoicePage() {
     }
 
     const payload = {
+      invoice_number: invoiceNumber,
       invoice_date: shippingForm.invoice_date,
       waybill_number: shippingForm.waybill_number || null,
       ecd_no: shippingForm.ecd_no.trim() || null,
@@ -405,7 +458,6 @@ export default function EditShippingInvoicePage() {
           onSubmit={handleSubmit}
           className="space-y-6 bg-white border rounded-md p-6"
         >
-          {/* Reuse layout from add shipping details, but without invoice_number (not editable) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-3">
               <div>
@@ -414,6 +466,21 @@ export default function EditShippingInvoicePage() {
                   value={orderNumber}
                   readOnly
                   className="w-full border rounded-md px-3 py-2 bg-muted/40"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">
+                  Invoice Number *
+                </label>
+                <input
+                  value={shippingForm.invoice_number}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      invoice_number: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded-md px-3 py-2"
                 />
               </div>
               <div>
