@@ -476,9 +476,8 @@ export default function LoadingInstructionPage() {
               <div className="mt-8 h-12 border-b border-black w-48" />
             </div>
             <div className="flex flex-col justify-end">
-              <p className="font-semibold">
-                Date: {formatAuthorizedDate(invoice.authorized_at)}
-              </p>
+              <p className="font-semibold mb-1">Date:</p>
+              <div className="mt-8 h-12 border-b border-black w-48" />
             </div>
           </div>
         </div>
