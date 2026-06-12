@@ -31,7 +31,8 @@ interface Field<T extends FieldValues> {
   label: string;
   /** Show a required asterisk next to the label */
   required?: boolean;
-  type?: "text" | "email" | "password" | "number" | "textarea" | string;
+  type?: "text" | "email" | "password" | "number" | "textarea" | "checkbox" | string;
+  description?: string;
   placeholder?: string;
   dropdownConfig?: DropdownConfig;
   dependentDropdownConfig?: DependentDropdownConfig;
@@ -152,6 +153,32 @@ function FormField<T extends FieldValues>({
           }
           disabled={isDisabled}
         />
+      </div>
+    );
+  }
+
+  if (field.type === "checkbox") {
+    const checked = Boolean(methods.watch(field.name));
+    return (
+      <div className="flex flex-col gap-1">
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border border-input"
+            checked={checked}
+            onChange={(e) =>
+              methods.setValue(field.name, e.target.checked as PathValue<T, Path<T>>)
+            }
+          />
+          <span>
+            <FieldLabel label={field.label} required={field.required} />
+            {field.description ? (
+              <span className="block text-xs text-muted-foreground mt-1">
+                {field.description}
+              </span>
+            ) : null}
+          </span>
+        </label>
       </div>
     );
   }

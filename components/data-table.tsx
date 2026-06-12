@@ -22,11 +22,17 @@ import { TablePagination, clamp, getPageCount } from "@/components/table-paginat
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  onRowClick?: (row: TData) => void
+  getRowId?: (row: TData) => string
+  selectedRowId?: string
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onRowClick,
+  getRowId,
+  selectedRowId,
 }: DataTableProps<TData, TValue>) {
   const totalItems = data.length
   const pageSizeOptions = useMemo(() => [10, 20, 50, 100], [])
@@ -72,10 +78,19 @@ export function DataTable<TData, TValue>({
         </TableHeader>
         <TableBody>
           {table.getPaginationRowModel().rows?.length ? (
-            table.getPaginationRowModel().rows.map((row) => (
+            table.getPaginationRowModel().rows.map((row) => {
+              const rowId = getRowId?.(row.original)
+              const isSelected = rowId != null && rowId === selectedRowId
+              return (
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
+                className={
+                  onRowClick
+                    ? `cursor-pointer hover:bg-muted/50 ${isSelected ? "bg-muted/70" : ""}`
+                    : undefined
+                }
+                onClick={() => onRowClick?.(row.original)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
@@ -83,7 +98,8 @@ export function DataTable<TData, TValue>({
                   </TableCell>
                 ))}
               </TableRow>
-            ))
+              )
+            })
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center">

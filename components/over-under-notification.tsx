@@ -15,7 +15,11 @@ interface OverUnderItem {
   invoiced: number;
   delivered: number;
   variance: number;
+  unit?: string | null;
 }
+
+const unitSuffix = (unit?: string | null) =>
+  unit?.trim() ? ` ${unit.trim()}` : "";
 
 interface OverUnderNotificationProps {
   open: boolean;
@@ -61,7 +65,10 @@ export function OverUnderNotification({
                   <li key={idx} className="text-sm font-medium">
                     <span className="text-amber-900 dark:text-amber-100">{it.item_name}</span>
                     <span className="text-amber-700 dark:text-amber-300 ml-2">
-                      — Invoiced: {it.invoiced}, Delivered: {it.delivered} (over by {it.variance})
+                      — Invoiced: {it.invoiced}
+                      {unitSuffix(it.unit)}, Delivered: {it.delivered}
+                      {unitSuffix(it.unit)} (over by {it.variance}
+                      {unitSuffix(it.unit)})
                     </span>
                   </li>
                 ))}
@@ -80,7 +87,10 @@ export function OverUnderNotification({
                   <li key={idx} className="text-sm font-medium">
                     <span className="text-red-900 dark:text-red-100">{it.item_name}</span>
                     <span className="text-red-700 dark:text-red-300 ml-2">
-                      — Invoiced: {it.invoiced}, Delivered: {it.delivered} (short by {it.variance})
+                      — Invoiced: {it.invoiced}
+                      {unitSuffix(it.unit)}, Delivered: {it.delivered}
+                      {unitSuffix(it.unit)} (short by {it.variance}
+                      {unitSuffix(it.unit)})
                     </span>
                   </li>
                 ))}

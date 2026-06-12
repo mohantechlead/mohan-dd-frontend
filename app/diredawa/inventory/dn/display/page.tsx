@@ -23,8 +23,12 @@ import { TableSearch } from "@/components/table-search";
 import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 import { OverUnderNotification } from "@/components/over-under-notification";
 import { cn, compareDocumentNumberDesc } from "@/lib/utils";
-import { SearchableDropdown, type DropdownOption } from "@/components/searchable-dropdown";
+import {
+  SearchableDropdown,
+  type DropdownOption,
+} from "@/components/searchable-dropdown";
 import { parseInventoryItemsJson } from "@/lib/parseInventoryItems";
+import { DnInvoiceInsightPanel } from "@/components/dn-invoice-insight";
 
 interface OverUnderItem {
   item_name: string;
@@ -58,6 +62,7 @@ export default function DemoPage() {
   const [editReceiverName, setEditReceiverName] = useState("");
   const [editAuthorizedBy, setEditAuthorizedBy] = useState("");
   const [editRemark, setEditRemark] = useState("");
+  const [editIsLast, setEditIsLast] = useState(false);
   const [editItems, setEditItems] = useState<
     Array<{
       item_name: string;
@@ -77,6 +82,7 @@ export default function DemoPage() {
     overItems: OverUnderItem[];
     underItems: OverUnderItem[];
   } | null>(null);
+  const [insightDN, setInsightDN] = useState<DN | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR<DN[]>(DN_API_URL, fetcher);
 
@@ -89,6 +95,7 @@ export default function DemoPage() {
             d.dn_no.toLowerCase().includes(q) ||
             d.customer_name.toLowerCase().includes(q) ||
             d.sales_no.toLowerCase().includes(q) ||
+            (d.invoice_no?.toLowerCase().includes(q) ?? false) ||
             (d.remark?.toLowerCase().includes(q) ?? false) ||
             d.items.some((i) => i.item_name.toLowerCase().includes(q)),
         )
@@ -121,7 +128,8 @@ export default function DemoPage() {
             const name = item.item_name;
             const code = item.internal_code?.trim();
             return {
-              value: id && id.length > 0 ? id : `${idx}::${name}::${code ?? ""}`,
+              value:
+                id && id.length > 0 ? id : `${idx}::${name}::${code ?? ""}`,
               display: name,
               subtext: item.hscode || code || undefined,
               internalCode: code || undefined,
@@ -165,6 +173,7 @@ export default function DemoPage() {
         setEditReceiverName(detail.receiver_name || "");
         setEditAuthorizedBy(detail.authorized_by || "");
         setEditRemark(typeof detail.remark === "string" ? detail.remark : "");
+        setEditIsLast(Boolean(detail.is_last));
         setEditItems(
           Array.isArray(detail.items)
             ? detail.items.map((item: Record<string, unknown>) => ({
@@ -180,7 +189,8 @@ export default function DemoPage() {
                     ? ""
                     : String(item.bags),
                 internal_code:
-                  item.internal_code === null || item.internal_code === undefined
+                  item.internal_code === null ||
+                  item.internal_code === undefined
                     ? ""
                     : String(item.internal_code),
               }))
@@ -240,6 +250,7 @@ export default function DemoPage() {
             receiver_name: editReceiverName || null,
             authorized_by: editAuthorizedBy || null,
             remark: editRemark.trim(),
+            is_last: editIsLast,
             items: editItems.map((item) => {
               const qty = parseDecimalQuantity(item.quantity);
               const bagsRaw = item.bags;
@@ -365,7 +376,36 @@ export default function DemoPage() {
           placeholder="Search delivery notes, customer, items..."
         />
       </div>
-      <DataTable columns={columns} data={filteredData} />
+      <p className="text-xs text-muted-foreground mb-2">
+        Click a row to see related DNs on the same invoice and delivery
+        variance.
+      </p>
+      <DataTable
+        columns={columns}
+        data={filteredData}
+        getRowId={(row) => row.dn_no}
+        selectedRowId={insightDN?.dn_no}
+        onRowClick={(row) => setInsightDN(row)}
+      />
+
+      {insightDN ? (
+        <div className="mt-6 border rounded-lg p-4 bg-muted/20">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="text-lg font-semibold">
+              Invoice delivery insight — DN {insightDN.dn_no}
+            </h2>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setInsightDN(null)}
+            >
+              Close
+            </Button>
+          </div>
+          <DnInvoiceInsightPanel dn={insightDN} />
+        </div>
+      ) : null}
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -448,6 +488,20 @@ export default function DemoPage() {
                 />
               </Field>
               <Field className="w-full">
+                <FieldLabel>Last delivery for this invoice</FieldLabel>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border border-input"
+                    checked={editIsLast}
+                    onChange={(e) => setEditIsLast(e.target.checked)}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Check only on the final DN for this invoice.
+                  </span>
+                </label>
+              </Field>
+              <Field className="w-full">
                 <FieldLabel>Remark (optional)</FieldLabel>
                 <textarea
                   className={cn(
@@ -497,7 +551,11 @@ export default function DemoPage() {
                       setEditItems((prev) =>
                         prev.map((r, i) =>
                           i === idx
-                            ? { ...r, item_name: name, internal_code: internalCode }
+                            ? {
+                                ...r,
+                                item_name: name,
+                                internal_code: internalCode,
+                              }
                             : r,
                         ),
                       );

@@ -4,6 +4,10 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
+import type {
+  DnDeliveryComparisonRow,
+  DnRelated,
+} from "@/components/dn-invoice-insight";
 
 export type DNItem = {
   code?: string;
@@ -17,8 +21,11 @@ export type DN = {
   dn_no: string;
   customer_name: string;
   sales_no: string;
+  invoice_no?: string | null;
   remark?: string | null;
   items: DNItem[];
+  related_dns?: DnRelated[];
+  delivery_comparison?: DnDeliveryComparisonRow[];
 };
 
 export function getDNColumns(
@@ -38,7 +45,10 @@ export function getDNColumns(
             <button
               type="button"
               className="text-primary hover:underline font-medium text-left"
-              onClick={() => onView(row.original)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onView(row.original);
+              }}
             >
               {dnNo}
             </button>
@@ -49,6 +59,11 @@ export function getDNColumns(
     },
     { accessorKey: "customer_name", header: "Customer Name" },
     { accessorKey: "sales_no", header: "Sales No" },
+    {
+      accessorKey: "invoice_no",
+      header: "Invoice No",
+      cell: ({ row }) => row.original.invoice_no?.trim() || "—",
+    },
     {
       accessorKey: "items",
       header: "Items",
@@ -79,7 +94,10 @@ export function getDNColumns(
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onView(row.original)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onView(row.original);
+              }}
               title="View details"
             >
               <Eye className="w-4 h-4" />
@@ -89,7 +107,10 @@ export function getDNColumns(
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onEdit(row.original)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(row.original);
+              }}
             >
               <Pencil className="w-4 h-4" />
             </Button>
@@ -98,7 +119,10 @@ export function getDNColumns(
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(row.original)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(row.original);
+              }}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -114,6 +138,11 @@ export const columns: ColumnDef<DN>[] = [
   { accessorKey: "dn_no", header: "Delivery Number" },
   { accessorKey: "customer_name", header: "Customer Name" },
   { accessorKey: "sales_no", header: "Sales No" },
+  {
+    accessorKey: "invoice_no",
+    header: "Invoice No",
+    cell: ({ row }) => row.original.invoice_no?.trim() || "—",
+  },
   {
     accessorKey: "items",
     header: "Items",

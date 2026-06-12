@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { Form } from "@/components/form";
@@ -14,7 +14,11 @@ import {
   isInSet,
 } from "@/lib/referenceListValidation";
 import { resolveGrnDnLinesFromInventory } from "@/lib/resolveGrnDnInventoryItems";
-import { formatQuantityDisplay, parseDecimalQuantity } from "@/lib/inventoryQuantity";
+import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
+import {
+  formatQuantityDisplay,
+  parseDecimalQuantity,
+} from "@/lib/inventoryQuantity";
 
 interface DnFormValues {
   date: string;
@@ -30,6 +34,7 @@ interface DnFormValues {
   receiver_phone: string;
   authorized_by: string;
   remark?: string;
+  is_last?: boolean;
   total_quantity?: number;
   items: {
     item_id?: string;
@@ -42,7 +47,7 @@ interface DnFormValues {
   }[];
 }
 
-const DN_API_URL = "/api/inventory/dn"
+const DN_API_URL = "/api/inventory/dn";
 
 interface OverUnderItem {
   item_name: string;
@@ -63,16 +68,24 @@ export default function DN() {
   const [dnNoDuplicate, setDnNoDuplicate] = useState(false);
   const [checkingDnNo, setCheckingDnNo] = useState(false);
   const [isTotalCalculated, setIsTotalCalculated] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  function TotalQuantityCalculator({ onCalculated }: { onCalculated: (qty: number) => void }) {
+  function TotalQuantityCalculator({
+    onCalculated,
+  }: {
+    onCalculated: (qty: number) => void;
+  }) {
     const { watch } = useFormContext<DnFormValues>();
     const items = watch("items") || [];
 
     const computedTotal = useMemo(() => {
-      return (items as Array<{ quantity?: number | string | null }>).reduce((sum, it) => {
-        const n = parseDecimalQuantity(it.quantity);
-        return sum + (Number.isFinite(n) ? n : 0);
-      }, 0);
+      return (items as Array<{ quantity?: number | string | null }>).reduce(
+        (sum, it) => {
+          const n = parseDecimalQuantity(it.quantity);
+          return sum + (Number.isFinite(n) ? n : 0);
+        },
+        0,
+      );
     }, [items]);
 
     return (
@@ -92,7 +105,8 @@ export default function DN() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Click <span className="font-medium">Calculate Total</span> before submitting.
+          Click <span className="font-medium">Calculate Total</span> before
+          submitting.
         </p>
       </div>
     );
@@ -143,8 +157,13 @@ export default function DN() {
         });
         return;
       }
-      const invoiceUrl = `/api/inventory/shipping-invoices?order_number=${encodeURIComponent(salesNo)}`;
-      const invoiceSet = await fetchDisplayValueSet(invoiceUrl, "invoice_number");
+      const invoiceUrl = `/api/inventory/shipping-invoices?order_number=${encodeURIComponent(
+        salesNo,
+      )}`;
+      const invoiceSet = await fetchDisplayValueSet(
+        invoiceUrl,
+        "invoice_number",
+      );
       const inv = String(values.invoice_no ?? "").trim();
       if (!isInSet(inv, invoiceSet)) {
         showToast({
@@ -204,7 +223,9 @@ export default function DN() {
       return;
     }
 
-    const resolvedItems = await resolveGrnDnLinesFromInventory(values.items ?? []);
+    const resolvedItems = await resolveGrnDnLinesFromInventory(
+      values.items ?? [],
+    );
     if (!resolvedItems.ok) {
       showToast({
         title: "Invalid items",
@@ -217,32 +238,45 @@ export default function DN() {
     const remarkTrimmed = String(values.remark ?? "").trim();
 
     // Transform values to match backend schema exactly
+    const strField = (value: unknown) => String(value ?? "").trim();
+
     const payload = {
-      customer_name: values.customer_name,
-      dn_no: values.dn_no,
-      plate_no: values.plate_no,
-      sales_no: values.sales_no,
-      date: values.date, // ISO string is fine
-      ECD_no: values.ECD_no, // ensure correct case
-      gatepass_no: values.gatepass_no,
-      invoice_no: values.invoice_no,
-      despathcher_name: values.despathcher_name,
-      receiver_name: values.receiver_name,
-      authorized_by: values.authorized_by,
+      customer_name: strField(values.customer_name),
+      dn_no: strField(values.dn_no),
+      plate_no: strField(values.plate_no),
+      sales_no: strField(values.sales_no),
+      date: values.date,
+      ECD_no: strField(values.ECD_no),
+      gatepass_no: strField(values.gatepass_no),
+      invoice_no: strField(values.invoice_no),
+      despathcher_name: strField(values.despathcher_name),
+      receiver_name: strField(values.receiver_name),
+      authorized_by: strField(values.authorized_by),
+      is_last: Boolean(values.is_last),
       ...(remarkTrimmed ? { remark: remarkTrimmed } : {}),
-      items: resolvedItems.lines.map((line) => ({
-        ...(line.item_id ? { item_id: line.item_id } : {}),
-        code: line.code,
-        item_name: line.item_name,
-        quantity: line.quantity,
-        unit_measurement: line.unit_measurement,
-        bags: Number(line.bags),
-        internal_code: line.internal_code,
-      })),
+      items: resolvedItems.lines.map((line) => {
+        const bagsRaw = String(line.bags ?? "").trim();
+        const bagsParsed = bagsRaw !== "" ? Number(bagsRaw) : null;
+        return {
+          ...(line.item_id ? { item_id: line.item_id } : {}),
+          code: line.code,
+          item_name: line.item_name,
+          quantity: line.quantity,
+          unit_measurement: strField(line.unit_measurement),
+          bags:
+            bagsParsed !== null && Number.isFinite(bagsParsed)
+              ? bagsParsed
+              : null,
+          internal_code: line.internal_code,
+        };
+      }),
     };
-  
+
+    if (submitting) return;
+
     console.log("Payload sent to backend:", payload);
-  
+
+    setSubmitting(true);
     try {
       const res = await fetch(DN_API_URL, {
         method: "POST",
@@ -250,37 +284,35 @@ export default function DN() {
         credentials: "include",
         body: JSON.stringify(payload),
       });
-  
-      let data: unknown;
-      try {
-        data = await res.json();
-      } catch {
-        data = {};
+
+      const rawText = await res.text();
+      let data: unknown = {};
+      if (rawText.trim()) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = { detail: rawText.slice(0, 500) };
+        }
+      } else if (!res.ok) {
+        data = { detail: `Request failed (${res.status}). No response body.` };
       }
 
       if (!res.ok) {
-        console.error("Error creating DN:", data);
-        const err = (typeof data === "object" && data !== null ? data : {}) as Record<string, unknown>;
-        const message =
-          typeof err?.detail === "string"
-            ? err.detail
-            : Array.isArray(err?.detail)
-              ? (err.detail as string[]).join(". ")
-              : typeof err?.message === "string"
-                ? err.message
-                : typeof err?.error === "string"
-                  ? err.error
-                  : "Please check the form and try again.";
+        console.error("Error creating DN:", res.status, data);
         showToast({
           title: "Failed to create Delivery Note",
-          description: message,
+          description: formatApiErrorMessage(data),
           variant: "error",
         });
         return;
       }
-  
+
       console.log("DN created successfully:", data);
-      const resData = data as { dn_no?: string; over_items?: OverUnderItem[]; under_items?: OverUnderItem[] };
+      const resData = data as {
+        dn_no?: string;
+        over_items?: OverUnderItem[];
+        under_items?: OverUnderItem[];
+      };
       showToast({
         title: "Delivery Note created",
         description: "The delivery note has been created successfully.",
@@ -299,32 +331,46 @@ export default function DN() {
       }
     } catch (error) {
       console.error("Error creating DN:", error);
-      const msg = error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      const msg =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.";
       showToast({
         title: "Failed to create Delivery Note",
         description: msg,
         variant: "error",
       });
+    } finally {
+      setSubmitting(false);
     }
   };
-  
 
   return (
     <div className="max-w-3xl mx-auto mt-10">
-
       <div>
-        <Button onClick={() => router.push('/diredawa/inventory/dn/display')}>Display Delivery Notes</Button>
+        <Button onClick={() => router.push("/diredawa/inventory/dn/display")}>
+          Display Delivery Notes
+        </Button>
       </div>
 
-      <h1 className="text-2xl font-bold mb-2 text-center">Create Delivery Note</h1>
+      <h1 className="text-2xl font-bold mb-2 text-center">
+        Create Delivery Note
+      </h1>
       <p className="text-sm text-muted-foreground text-center mb-6">
-        Fields marked <span className="text-destructive">*</span> are required. Each item line must be chosen from the inventory list.
+        Fields marked <span className="text-destructive">*</span> are required.
+        Each item line must be chosen from the inventory list.
       </p>
 
       <Form<DnFormValues>
-        defaultValues={{ items: [] }}
+        defaultValues={{ items: [], is_last: false }}
         fields={[
-          { name: "date", label: "Date", type: "date", placeholder: "Enter Date", required: true },
+          {
+            name: "date",
+            label: "Date",
+            type: "date",
+            placeholder: "Enter Date",
+            required: true,
+          },
           {
             name: "dn_no",
             label: "Delivery Number",
@@ -339,12 +385,15 @@ export default function DN() {
               if (checkingDnNo) return;
               setCheckingDnNo(true);
               try {
-                const res = await fetch(`${DN_API_URL}/${encodeURIComponent(v)}`);
+                const res = await fetch(
+                  `${DN_API_URL}/${encodeURIComponent(v)}`,
+                );
                 if (res.ok) {
                   setDnNoDuplicate(true);
                   showToast({
                     title: "Delivery Note number already exists",
-                    description: "This DN number is already used. Please change it.",
+                    description:
+                      "This DN number is already used. Please change it.",
                     variant: "error",
                   });
                 } else if (res.status === 404) {
@@ -357,11 +406,34 @@ export default function DN() {
               }
             },
           },
-          { name: "customer_name", label: "Customer Name", required: true, placeholder: "Search customer...", dropdownConfig: { url: "/api/partners/customers", displayKey: "name" } },
-          { name: "plate_no", label: "Plate No", placeholder: "Enter Plate No" },
-          { name: "sales_no", label: "Order No", required: true, placeholder: "Search order...", dropdownConfig: { url: "/api/orders", displayKey: "order_number" } },
+          {
+            name: "customer_name",
+            label: "Customer Name",
+            required: true,
+            placeholder: "Search customer...",
+            dropdownConfig: {
+              url: "/api/partners/customers",
+              displayKey: "name",
+            },
+          },
+          {
+            name: "plate_no",
+            label: "Plate No",
+            placeholder: "Enter Plate No",
+          },
+          {
+            name: "sales_no",
+            label: "Order No",
+            required: true,
+            placeholder: "Search order...",
+            dropdownConfig: { url: "/api/orders", displayKey: "order_number" },
+          },
           { name: "ECD_no", label: "ECD No", placeholder: "Enter ECD No" },
-          { name: "gatepass_no", label: "Gate Pass Number", placeholder: "Enter Gate Pass Number" },
+          {
+            name: "gatepass_no",
+            label: "Gate Pass Number",
+            placeholder: "Enter Gate Pass Number",
+          },
           {
             name: "invoice_no",
             label: "Invoice Number",
@@ -369,28 +441,48 @@ export default function DN() {
             placeholder: "Search invoice...",
             dependentDropdownConfig: {
               dependsOn: "sales_no",
-              urlTemplate: "/api/inventory/shipping-invoices?order_number={value}",
+              urlTemplate:
+                "/api/inventory/shipping-invoices?order_number={value}",
               displayKey: "invoice_number",
             },
           },
-          { name: "despathcher_name", label: "Despatcher Name", placeholder: "Enter Despatcher Name" },
-          { name: "receiver_name", label: "Reciever Name", placeholder: "Enter Reciever Name" },
-          { name: "authorized_by", label: "Authorized By", placeholder: "Enter Authorized By" },
+          {
+            name: "despathcher_name",
+            label: "Despatcher Name",
+            placeholder: "Enter Despatcher Name",
+          },
+          {
+            name: "receiver_name",
+            label: "Reciever Name",
+            placeholder: "Enter Reciever Name",
+          },
+          {
+            name: "authorized_by",
+            label: "Authorized By",
+            placeholder: "Enter Authorized By",
+          },
           {
             name: "remark",
             label: "Remark (optional)",
             type: "textarea",
             placeholder: "Optional notes",
           },
+          {
+            name: "is_last",
+            label: "Last delivery for this invoice",
+            type: "checkbox",
+            description: "Check only on the final DN for this invoice.",
+          },
         ]}
         onSubmit={handleSubmit}
-        submitText="Submit Delivery Note"
+        submitText={submitting ? "Submitting..." : "Submit Delivery Note"}
       >
         <h2 className="text-center font-semibold mt-4">
           Delivery Note Items <span className="text-destructive">*</span>
         </h2>
         <p className="text-xs text-center text-muted-foreground mb-2">
-          At least one line: item from list, quantity, unit, bags — then Calculate Total.
+          At least one line: item from list, quantity, unit, bags — then
+          Calculate Total.
         </p>
         <ItemsForm />
         <TotalQuantityCalculator
