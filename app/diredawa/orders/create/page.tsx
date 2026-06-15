@@ -45,6 +45,7 @@ interface OrderItem {
   quantity: number;
   total_price: number;
   measurement: string;
+  country_of_origin?: string;
 }
 
 /** Form state for current item - price/quantity as string so inputs can be cleared */
@@ -55,6 +56,7 @@ interface OrderItemForm {
   quantity: string;
   total_price: number;
   measurement: string;
+  country_of_origin: string;
 }
 
 interface OrderFormState {
@@ -116,6 +118,7 @@ export default function CreateOrderPage() {
     quantity: "",
     total_price: 0,
     measurement: "",
+    country_of_origin: "",
   });
 
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -309,6 +312,8 @@ export default function CreateOrderPage() {
       price: priceVal,
       quantity: qtyVal,
       total_price: total,
+      country_of_origin:
+        currentItem.country_of_origin.trim() || form.country_of_origin.trim(),
     };
 
     setItems((prev) => [...prev, itemToAdd]);
@@ -320,6 +325,7 @@ export default function CreateOrderPage() {
       quantity: "",
       total_price: 0,
       measurement: "",
+      country_of_origin: form.country_of_origin,
     });
   };
 
@@ -415,7 +421,10 @@ export default function CreateOrderPage() {
       freight_price: freightPriceVal && !Number.isNaN(parseFloat(freightPriceVal))
         ? parseFloat(freightPriceVal)
         : null,
-      items,
+      items: items.map((it) => ({
+        ...it,
+        country_of_origin: (it.country_of_origin ?? "").trim() || null,
+      })),
     };
 
     setIsSubmitting(true);
@@ -997,6 +1006,18 @@ export default function CreateOrderPage() {
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Country of Origin
+              </label>
+              <input
+                name="country_of_origin"
+                value={currentItem.country_of_origin}
+                onChange={handleItemChange}
+                placeholder={form.country_of_origin || "e.g. CHINA"}
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
             </div>
 
             <div className="flex flex-col gap-3 mt-4">
@@ -1027,6 +1048,7 @@ export default function CreateOrderPage() {
                     <tr>
                       <th className="text-left px-3 py-2">Item</th>
                       <th className="text-left px-3 py-2">HS CODE</th>
+                      <th className="text-left px-3 py-2">Origin</th>
                       <th className="text-right px-3 py-2">Qty</th>
                       <th className="text-right px-3 py-2">Price</th>
                       <th className="text-right px-3 py-2">Total</th>
@@ -1037,6 +1059,11 @@ export default function CreateOrderPage() {
                       <tr key={idx} className="border-t">
                         <td className="px-3 py-2">{it.item_name}</td>
                         <td className="px-3 py-2">{it.hs_code}</td>
+                        <td className="px-3 py-2">
+                          {it.country_of_origin?.trim() ||
+                            form.country_of_origin ||
+                            "—"}
+                        </td>
                         <td className="px-3 py-2 text-right">{it.quantity}</td>
                         <td className="px-3 py-2 text-right">
                           {it.price.toLocaleString(undefined, {

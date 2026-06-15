@@ -14,6 +14,7 @@ interface OrderItem {
   quantity: number;
   total_price: number;
   measurement: string;
+  country_of_origin?: string | null;
 }
 
 interface OrderDetail {
@@ -280,6 +281,8 @@ export default function ProformaInvoicePage() {
                   <th className="px-2 py-2 w-10">No.</th>
                   <th className="px-2 py-2">Item</th>
 
+                  <th className="px-2 py-2">Country of Origin</th>
+
                   <th className="px-2 py-2 text-right">
                     <div>Price in</div>
                     <div>USD</div>
@@ -307,6 +310,11 @@ export default function ProformaInvoicePage() {
                         HS-code:{item.hs_code}
                       </div>
                     </td>
+                    <td className="px-2 py-2">
+                      {item.country_of_origin?.trim() ||
+                        order.country_of_origin ||
+                        "—"}
+                    </td>
                     <td className="px-2 py-2 text-right">
                       ${formatExactNumber(item.price)}
                     </td>
@@ -320,7 +328,7 @@ export default function ProformaInvoicePage() {
                   </tr>
                 ))}
                 <tr>
-                  <td className="px-2 py-2 font-semibold" colSpan={5}>
+                  <td className="px-2 py-2 font-semibold" colSpan={6}>
                     Total
                     <span className="ml-4 text-[10px] text-muted-foreground">
                       Amount in Words: USD {amountInWords(totalPrice)} ONLY

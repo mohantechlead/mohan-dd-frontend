@@ -17,6 +17,7 @@ interface OrderItemForm {
   quantity: number | string;
   total_price: number;
   measurement: string;
+  country_of_origin: string;
 }
 
 interface OrderDetail {
@@ -39,7 +40,15 @@ interface OrderDetail {
   freight: string;
   freight_price?: number | null;
   shipment_type: string;
-  items?: { item_name: string; hs_code: string; price: number; quantity: number; total_price: number; measurement: string }[];
+  items?: {
+    item_name: string;
+    hs_code: string;
+    price: number;
+    quantity: number;
+    total_price: number;
+    measurement: string;
+    country_of_origin?: string | null;
+  }[];
 }
 
 export default function EditOrderPage() {
@@ -67,6 +76,7 @@ export default function EditOrderPage() {
     quantity: "",
     total_price: 0,
     measurement: "",
+    country_of_origin: "",
   });
   const [itemOptions, setItemOptions] = useState<
     { item_name: string; hscode: string; internal_code: string | null }[]
@@ -186,6 +196,8 @@ export default function EditOrderPage() {
             quantity: String(it.quantity),
             total_price: it.total_price,
             measurement: it.measurement,
+            country_of_origin:
+              it.country_of_origin?.trim() || detail.country_of_origin || "",
           }));
           setOrderItems(items);
           setItemsTotal(items.reduce((sum, it) => sum + (Number(it.total_price) || 0), 0));
@@ -280,6 +292,7 @@ export default function EditOrderPage() {
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
         measurement: it.measurement,
+        country_of_origin: it.country_of_origin.trim() || null,
       })),
     };
 
@@ -811,6 +824,22 @@ export default function EditOrderPage() {
                   className="w-full border rounded-md px-3 py-2 bg-white"
                 />
               </div>
+              <div>
+                <label className="block font-medium mb-1">
+                  Country of Origin
+                </label>
+                <input
+                  value={currentItem.country_of_origin}
+                  onChange={(e) =>
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      country_of_origin: e.target.value,
+                    }))
+                  }
+                  placeholder={form.country_of_origin || "e.g. CHINA"}
+                  className="w-full border rounded-md px-3 py-2 bg-white"
+                />
+              </div>
             </div>
             <Button
               type="button"
@@ -847,6 +876,9 @@ export default function EditOrderPage() {
                     price: priceNum,
                     quantity: qtyNum,
                     total_price: total,
+                    country_of_origin:
+                      currentItem.country_of_origin.trim() ||
+                      form.country_of_origin,
                   },
                 ]);
                 setIsTotalCalculated(false);
@@ -857,6 +889,7 @@ export default function EditOrderPage() {
                   quantity: "",
                   total_price: 0,
                   measurement: "",
+                  country_of_origin: form.country_of_origin,
                 });
               }}
             >
@@ -1033,6 +1066,26 @@ export default function EditOrderPage() {
                               return next;
                             })
                           }
+                          className="w-full border rounded-md px-3 py-2 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">
+                          Country of Origin
+                        </label>
+                        <input
+                          value={it.country_of_origin}
+                          onChange={(e) =>
+                            setOrderItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                country_of_origin: e.target.value,
+                              };
+                              return next;
+                            })
+                          }
+                          placeholder={form.country_of_origin || "e.g. CHINA"}
                           className="w-full border rounded-md px-3 py-2 bg-white"
                         />
                       </div>
