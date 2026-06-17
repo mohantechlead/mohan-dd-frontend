@@ -6,6 +6,10 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatExactNumber } from "@/lib/utils";
+import {
+  findMatchingOrderLine,
+  resolveDocumentHsCode,
+} from "@/lib/resolveDocumentHsCode";
 
 interface OrderItem {
   item_name: string;
@@ -70,6 +74,7 @@ interface ShippingInvoiceDetail {
     net_weight?: number | null;
     gross_weight?: number | null;
     country_of_origin?: string | null;
+    hscode?: string | null;
   }[];
 }
 
@@ -392,9 +397,8 @@ export default function TruckWaybillPage() {
               </thead>
               <tbody>
                 {itemsForTable.map((item, index) => {
-                  const orderItem =
-                    order.items.find((o) => o.item_name === item.item_name) ??
-                    null;
+                  const orderItem = findMatchingOrderLine(order.items, item) ?? null;
+                  const hsCode = resolveDocumentHsCode(item, order.items);
                   const packagesLabel =
                     item.bags != null
                       ? `${formatExactNumber(item.bags)} packages`
@@ -422,9 +426,9 @@ export default function TruckWaybillPage() {
                           {unitLabel}{" "}
                           {item.item_name}
                         </div>
-                        {orderItem?.hs_code ? (
+                        {hsCode ? (
                           <div className="text-[10px] text-muted-foreground">
-                            HS-code:{orderItem.hs_code}
+                            HS-code:{hsCode}
                           </div>
                         ) : null}
                       </td>

@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 import { amountInWords, formatExactNumber } from "@/lib/utils";
+import {
+  findMatchingOrderLine,
+  resolveDocumentHsCode,
+} from "@/lib/resolveDocumentHsCode";
 
 interface OrderItem {
   item_name: string;
@@ -49,6 +53,7 @@ interface ShippingInvoiceItem {
   net_weight?: number | null;
   gross_weight?: number | null;
   country_of_origin?: string | null;
+  hscode?: string | null;
 }
 
 interface ShippingInvoiceDetail {
@@ -375,9 +380,8 @@ export default function CommercialInvoicePage() {
               </thead>
               <tbody>
                 {itemsForTable.map((item, index) => {
-                  const orderItem =
-                    order.items.find((o) => o.item_name === item.item_name) ??
-                    null;
+                  const orderItem = findMatchingOrderLine(order.items, item) ?? null;
+                  const hsCode = resolveDocumentHsCode(item, order.items);
                   return (
                     <tr key={index} className="border-b align-top">
                       <td className="px-2 py-2 print:py-1 text-left">
@@ -385,9 +389,9 @@ export default function CommercialInvoicePage() {
                       </td>
                       <td className="px-2 py-2 print:py-1">
                         <div>{item.item_name}</div>
-                        {orderItem?.hs_code ? (
+                        {hsCode ? (
                           <div className="text-xs print:text-xs text-muted-foreground">
-                            HS-code:{orderItem.hs_code}
+                            HS-code:{hsCode}
                           </div>
                         ) : null}
                       </td>

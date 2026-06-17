@@ -6,6 +6,10 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatExactNumber } from "@/lib/utils";
+import {
+  findMatchingOrderLine,
+  resolveDocumentHsCode,
+} from "@/lib/resolveDocumentHsCode";
 
 interface OrderItem {
   item_name: string;
@@ -49,6 +53,7 @@ interface ShippingInvoiceItem {
   net_weight?: number | null;
   gross_weight?: number | null;
   country_of_origin?: string | null;
+  hscode?: string | null;
 }
 
 interface ShippingInvoiceDetail {
@@ -266,10 +271,11 @@ export default function CertificateOfOriginPage() {
                         : item.quantity != null
                           ? item.quantity
                           : 0;
-                    const orderLine = order.items.find(
-                      (o) => o.item_name === item.item_name
+                    const orderLine = findMatchingOrderLine(
+                      order.items,
+                      item,
                     );
-                    const hsCode = orderLine?.hs_code ?? "";
+                    const hsCode = resolveDocumentHsCode(item, order.items);
                     const unit = (
                       orderLine?.measurement ||
                       item.measurement ||

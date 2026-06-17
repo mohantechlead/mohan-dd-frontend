@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatExactNumber } from "@/lib/utils";
+import { resolveDocumentHsCode } from "@/lib/resolveDocumentHsCode";
 
 interface OrderItem {
   item_name: string;
@@ -48,6 +49,7 @@ interface ShippingInvoiceItem {
   net_weight?: number | null;
   gross_weight?: number | null;
   country_of_origin?: string | null;
+  hscode?: string | null;
 }
 
 interface ShippingInvoiceDetail {
@@ -340,34 +342,32 @@ export default function BillOfLadingPage() {
                 </tr>
               </thead>
               <tbody>
-                {itemsForTable.map((item, index) => (
-                  <tr key={index} className="border-t align-top">
-                    <td className="px-2 py-2">
-                      {invoice.container_number ?? ""}
-                    </td>
-                    <td className="px-2 py-2">
-                      <div>{item.item_name}</div>
-                      {order.items.find((o) => o.item_name === item.item_name)
-                        ?.hs_code && (
-                        <div className="text-[10px] text-muted-foreground">
-                          HS-code:
-                          {
-                            order.items.find(
-                              (o) => o.item_name === item.item_name
-                            )?.hs_code
-                          }
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-2 py-2">{item.measurement}</td>
-                    <td className="px-2 py-2 text-right">
-                      {formatExactNumber(item.net_weight)}
-                    </td>
-                    <td className="px-2 py-2 text-right">
-                      {formatExactNumber(item.gross_weight)}
-                    </td>
-                  </tr>
-                ))}
+                {itemsForTable.map((item, index) => {
+                  const hsCode = resolveDocumentHsCode(item, order.items);
+                  return (
+                    <tr key={index} className="border-t align-top">
+                      <td className="px-2 py-2">
+                        {invoice.container_number ?? ""}
+                      </td>
+                      <td className="px-2 py-2">
+                        <div>{item.item_name}</div>
+                        {hsCode ? (
+                          <div className="text-[10px] text-muted-foreground">
+                            HS-code:
+                            {hsCode}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-2 py-2">{item.measurement}</td>
+                      <td className="px-2 py-2 text-right">
+                        {formatExactNumber(item.net_weight)}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {formatExactNumber(item.gross_weight)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
