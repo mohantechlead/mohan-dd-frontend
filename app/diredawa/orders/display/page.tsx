@@ -33,10 +33,12 @@ interface Order {
   proforma_ref_no: string;
   status: string;
   approved_by?: string | null;
+  invoice_numbers?: string[];
   items: OrderItem[];
 }
 
 const ORDERS_API_URL = "/api/orders";
+const SHIPPING_INVOICES_API_URL = "/api/inventory/shipping-invoices";
 
 export default function DisplayOrdersPage() {
   const router = useRouter();
@@ -59,9 +61,12 @@ export default function DisplayOrdersPage() {
       (o) =>
         o.order_number.toLowerCase().includes(q) ||
         o.buyer.toLowerCase().includes(q) ||
-        (o.proforma_ref_no?.toLowerCase().includes(q)) ||
-        (o.status?.toLowerCase().includes(q)) ||
-        o.items.some((i) => i.item_name.toLowerCase().includes(q))
+        o.proforma_ref_no?.toLowerCase().includes(q) ||
+        o.status?.toLowerCase().includes(q) ||
+        (o.invoice_numbers ?? []).some((inv) =>
+          inv.toLowerCase().includes(q),
+        ) ||
+        o.items.some((i) => i.item_name.toLowerCase().includes(q)),
     );
   }, [orders, search]);
 
@@ -76,14 +81,21 @@ export default function DisplayOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch(ORDERS_API_URL, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      const data = await res.json();
+      const [ordersRes, invoicesRes] = await Promise.all([
+        fetch(ORDERS_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }),
+        fetch(SHIPPING_INVOICES_API_URL, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }),
+      ]);
+      const data = await ordersRes.json();
 
-      if (!res.ok) {
+      if (!ordersRes.ok) {
         showToast({
           title: "Failed to load orders",
           description:
@@ -93,6 +105,26 @@ export default function DisplayOrdersPage() {
           variant: "error",
         });
         return;
+      }
+
+      const invoiceNumbersByOrder = new Map<string, string[]>();
+      if (invoicesRes.ok) {
+        const invoiceData = await invoicesRes.json();
+        const invoices = Array.isArray(invoiceData)
+          ? invoiceData
+          : Array.isArray((invoiceData as { results?: unknown })?.results)
+            ? (invoiceData as { results: { order_number?: string; invoice_number?: string }[] })
+                .results
+            : [];
+        for (const inv of invoices) {
+          const orderNo = String(inv.order_number ?? "").trim();
+          const invoiceNo = String(inv.invoice_number ?? "").trim();
+          if (!orderNo || !invoiceNo) continue;
+          const key = orderNo.toLowerCase();
+          const list = invoiceNumbersByOrder.get(key) ?? [];
+          list.push(invoiceNo);
+          invoiceNumbersByOrder.set(key, list);
+        }
       }
 
       // Ensure newest/highest order numbers show first.
@@ -105,7 +137,11 @@ export default function DisplayOrdersPage() {
         return Number.isFinite(n) ? n : -Infinity;
       };
 
-      const sorted = [...(data as Order[])].sort((a, b) => {
+      const sorted = [...(data as Order[])].map((order) => ({
+        ...order,
+        invoice_numbers:
+          invoiceNumbersByOrder.get(order.order_number.toLowerCase()) ?? [],
+      })).sort((a, b) => {
         const aNum = extractOrderNumber(a.order_number);
         const bNum = extractOrderNumber(b.order_number);
         if (bNum !== aNum) return bNum - aNum;
@@ -201,7 +237,7 @@ export default function DisplayOrdersPage() {
       ) : (
         <>
           <div className="flex justify-end mb-4">
-            <TableSearch value={search} onChange={setSearch} placeholder="Search orders, customer, items..." />
+            <TableSearch value={search} onChange={setSearch} placeholder="Search orders, customer, invoice no, items..." />
           </div>
           <div className="rounded-xl border border-border bg-white shadow-sm overflow-x-auto">
           <table className="w-full text-sm border-collapse">
