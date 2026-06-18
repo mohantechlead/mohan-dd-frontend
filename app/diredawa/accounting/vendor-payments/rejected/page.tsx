@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatMoney } from "@/lib/utils";
 
 interface VendorPayment {
   id: string;
@@ -73,7 +74,7 @@ export default function RejectedVendorPaymentsPage() {
                   <td className="px-4 py-2">{new Date(x.payment_date).toLocaleDateString()}</td>
                   <td className="px-4 py-2">{x.purchase_number}</td>
                   <td className="px-4 py-2">{x.supplier_name}</td>
-                  <td className="px-4 py-2 text-right">{Number(x.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                  <td className="px-4 py-2 text-right">{formatMoney(x.amount)}</td>
                   <td className="px-4 py-2">{x.status_remark || "—"}</td>
                 </tr>
               ))

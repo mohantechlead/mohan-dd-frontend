@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatAggregatedTotal } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -209,9 +210,7 @@ export default function OrderDetailPage() {
                     })}
                   </td>
                   <td className="px-4 py-2">
-                    {totalPrice.toLocaleString(undefined, {
-                      maximumFractionDigits: 20,
-                    })}
+                    {formatAggregatedTotal(totalPrice, order.items)}
                   </td>
                   <td className="px-4 py-2">{order.buyer}</td>
                   <td className="px-4 py-2 capitalize">{order.status}</td>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
 import { TableSearch } from "@/components/table-search";
+import { formatMoney } from "@/lib/utils";
 
 interface ExpensePayment {
   id: string;
@@ -119,7 +120,7 @@ export default function DisplayExpensePaymentsPage() {
                       <td className="px-4 py-2">{new Date(x.expense_date).toLocaleDateString()}</td>
                       <td className="px-4 py-2">{x.payee}</td>
                       <td className="px-4 py-2">{x.category}</td>
-                      <td className="px-4 py-2 text-right">{Number(x.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2 text-right">{formatMoney(x.amount)}</td>
                       <td className="px-4 py-2 capitalize">{x.status}</td>
                       {showActionsColumn && (
                         <td className="px-4 py-2">

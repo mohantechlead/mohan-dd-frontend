@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatMoney } from "@/lib/utils";
 
 interface VendorPayment {
   payment_number: string;
@@ -63,10 +64,10 @@ export default function VendorPaymentDetailPage() {
           <div><span className="font-medium">Purchase Number:</span> {item.purchase_number}</div>
           <div><span className="font-medium">Supplier Name:</span> {item.supplier_name}</div>
           <div><span className="font-medium">Payment Type:</span> <span className="capitalize">{item.payment_type}</span></div>
-          <div><span className="font-medium">Amount:</span> {item.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          <div><span className="font-medium">Purchase Total:</span> {item.purchase_total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          <div><span className="font-medium">Total Paid:</span> {item.total_paid.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          <div><span className="font-medium">Remaining Amount:</span> {item.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+          <div><span className="font-medium">Amount:</span> {formatMoney(item.amount)}</div>
+          <div><span className="font-medium">Purchase Total:</span> {formatMoney(item.purchase_total)}</div>
+          <div><span className="font-medium">Total Paid:</span> {formatMoney(item.total_paid)}</div>
+          <div><span className="font-medium">Remaining Amount:</span> {formatMoney(item.remaining_amount)}</div>
           <div><span className="font-medium">Completion Status:</span> <span className="capitalize">{item.payment_completion_status}</span></div>
           <div><span className="font-medium">Remark:</span> {item.remark || "—"}</div>
           <div className="pt-2">

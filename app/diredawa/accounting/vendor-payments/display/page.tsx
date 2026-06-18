@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { TableSearch } from "@/components/table-search";
 import {
+import { formatMoney } from "@/lib/utils";
   resolvePurchaseTotalFromPayments,
   sortReceivedPaymentsChronologically,
   sumPaymentsTowardRemaining,
@@ -193,10 +194,10 @@ export default function DisplayVendorPaymentsPage() {
                           </td>
                           <td className="px-4 py-2">{group.supplier_name}</td>
                           <td className="px-4 py-2 text-right">
-                            {group.total_amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            {formatMoney(group.total_amount)}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {group.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            {formatMoney(group.remaining_amount)}
                           </td>
                           <td className="px-4 py-2 capitalize">{group.completion_status}</td>
                           <td className="px-4 py-2">
@@ -265,7 +266,7 @@ export default function DisplayVendorPaymentsPage() {
                                         <td className="px-3 py-2">{new Date(x.payment_date).toLocaleDateString()}</td>
                                         <td className="px-3 py-2 capitalize">{x.payment_type}</td>
                                         <td className="px-3 py-2 text-right">
-                                          {Number(x.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                          {formatMoney(x.amount)}
                                         </td>
                                         <td className="px-3 py-2 capitalize">{x.status}</td>
                                         <td className="px-3 py-2">

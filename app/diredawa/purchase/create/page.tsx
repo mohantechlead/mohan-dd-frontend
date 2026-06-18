@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Lock, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
+import { cn, formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice, multiplyDecimalValues } from "@/lib/utils";
 import {
   parseInventoryItemsJson,
   type InventoryItemOption,
@@ -295,7 +295,7 @@ export default function CreatePurchasePage() {
       if (name === "price" || name === "quantity") {
         const priceNum = parseFloat(String(next.price)) || 0;
         const qty = parseFloat(String(next.quantity)) || 0;
-        next.total_price = priceNum * qty;
+        next.total_price = multiplyDecimalValues(priceNum, qty);
       }
       return next;
     });
@@ -323,7 +323,7 @@ export default function CreatePurchasePage() {
     const priceVal = priceNum || 0;
     const qtyVal = qtyNum || 0;
     const total =
-      currentItem.total_price || priceVal * qtyVal;
+      currentItem.total_price || multiplyDecimalValues(priceVal, qtyVal);
 
     const itemToAdd: PurchaseItem = {
       item_id: currentItem.item_id.trim() || undefined,
@@ -1076,10 +1076,12 @@ export default function CreatePurchasePage() {
                   Total Price
                 </label>
                 <input
-                  type="number"
-                  name="total_price"
-                  value={currentItem.total_price}
                   readOnly
+                  value={formatMultipliedTotal(
+                    currentItem.total_price,
+                    currentItem.price,
+                    currentItem.quantity,
+                  )}
                   className="w-full border rounded-md px-3 py-2 bg-muted/50"
                 />
               </div>
@@ -1103,7 +1105,7 @@ export default function CreatePurchasePage() {
                   Add Item
                 </Button>
                 <span className="ml-auto text-sm font-semibold">
-                  Total Price: ${itemsTotal.toFixed(2)}
+                  Total Price: ${formatAggregatedTotal(itemsTotal, items)}
                 </span>
               </div>
               <Button
@@ -1136,14 +1138,14 @@ export default function CreatePurchasePage() {
                         <td className="px-3 py-2">{it.hs_code}</td>
                         <td className="px-3 py-2 text-right">{it.quantity}</td>
                         <td className="px-3 py-2 text-right">
-                          {it.price.toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
-                          })}
+                          {formatUnitPrice(it.price)}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          {it.total_price.toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
-                          })}
+                          {formatMultipliedTotal(
+                            it.total_price,
+                            it.price,
+                            it.quantity,
+                          )}
                         </td>
                       </tr>
                     ))}

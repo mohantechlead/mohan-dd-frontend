@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
-import { amountInWords, formatExactNumber } from "@/lib/utils";
+import { amountInWords, formatExactNumber, formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -316,14 +316,18 @@ export default function ProformaInvoicePage() {
                         "—"}
                     </td>
                     <td className="px-2 py-2 text-right">
-                      ${formatExactNumber(item.price)}
+                      ${formatUnitPrice(item.price)}
                     </td>
                     <td className="px-2 py-2 text-right">
                       {formatExactNumber(item.quantity)}
                     </td>
                     <td className="px-2 py-2">{item.measurement || order.measurement_type || "-"}</td>
                     <td className="px-2 py-2 text-right">
-                      ${formatExactNumber(item.total_price)}
+                      ${formatMultipliedTotal(
+                        item.total_price,
+                        item.price,
+                        item.quantity,
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -335,7 +339,7 @@ export default function ProformaInvoicePage() {
                     </span>
                   </td>
                   <td className="px-2 py-2 text-right font-semibold">
-                    ${formatExactNumber(totalPrice)}
+                    ${formatAggregatedTotal(totalPrice, order.items)}
                   </td>
                 </tr>
               </tbody>

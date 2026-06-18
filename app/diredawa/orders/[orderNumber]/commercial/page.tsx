@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
-import { amountInWords, formatExactNumber } from "@/lib/utils";
+import { amountInWords, formatExactNumber, formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 import {
   findMatchingOrderLine,
   resolveDocumentHsCode,
@@ -407,10 +407,14 @@ export default function CommercialInvoicePage() {
                         {formatExactNumber(item.quantity)}
                       </td>
                       <td className="px-2 py-2 print:py-1 text-right">
-                        ${formatExactNumber(item.price)}
+                        ${formatUnitPrice(item.price)}
                       </td>
                       <td className="px-2 py-2 print:py-1 text-right">
-                        ${formatExactNumber(item.total_price)}
+                        ${formatMultipliedTotal(
+                          item.total_price,
+                          item.price,
+                          item.quantity,
+                        )}
                       </td>
                     </tr>
                   );
@@ -423,7 +427,7 @@ export default function CommercialInvoicePage() {
                     </span>
                   </td>
                   <td className="px-2 py-2 print:py-1 text-right font-semibold">
-                    ${formatExactNumber(totalAmount)}
+                    ${formatAggregatedTotal(totalAmount, itemsForTable)}
                   </td>
                 </tr>
               </tbody>

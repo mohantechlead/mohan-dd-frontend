@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { amountInWords } from "@/lib/utils";
+import { amountInWords, formatExactNumber, formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 
 interface PurchaseItem {
   purchase_number: string;
@@ -378,35 +378,29 @@ export default function PurchaseOrderPage() {
                         {hsCode || "—"}
                       </td>
                       <td className="px-2 py-2 text-right">
-                        ${item.price.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 3,
-                        })}
+                        ${formatUnitPrice(item.price)}
                       </td>
                       <td className="px-2 py-2 text-right">
-                        {item.quantity.toLocaleString(undefined, {
-                          maximumFractionDigits: 3,
-                        })}
+                        {formatExactNumber(item.quantity)}
                       </td>
                       <td className="px-2 py-2 text-right">
-                        {(item.remaining ?? item.quantity).toLocaleString(
-                          undefined,
-                          { maximumFractionDigits: 3 }
-                        )}
+                        {formatExactNumber(item.remaining ?? item.quantity)}
                       </td>
                       <td className="px-2 py-2">
                         {item.measurement || "—"}
                       </td>
                       <td className="px-2 py-2 text-right">
-                        ${item.total_price.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 3,
-                        })}
+                        ${formatMultipliedTotal(
+                          item.total_price,
+                          item.price,
+                          item.quantity,
+                        )}
                       </td>
                       <td className="px-2 py-2 text-right">
-                        {(item.before_vat ?? item.total_price).toLocaleString(
-                          undefined,
-                          { minimumFractionDigits: 2, maximumFractionDigits: 3 }
+                        {formatMultipliedTotal(
+                          item.before_vat ?? item.total_price,
+                          item.price,
+                          item.quantity,
                         )}
                       </td>
                     </tr>
@@ -421,10 +415,7 @@ export default function PurchaseOrderPage() {
                   </td>
                   <td className="px-2 py-2" colSpan={4} />
                   <td className="px-2 py-2 text-right">
-                    ${totalPrice.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    ${formatAggregatedTotal(totalPrice, purchase.items)}
                   </td>
                 </tr>
               </tbody>
@@ -437,10 +428,7 @@ export default function PurchaseOrderPage() {
                       TOTAL {shipmentTypeLabel} US $
                     </td>
                     <td className="px-3 py-1.5 text-right font-medium">
-                      {totalPrice.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatAggregatedTotal(totalPrice, purchase.items)}
                     </td>
                   </tr>
                   <tr className="border-b">
@@ -448,10 +436,7 @@ export default function PurchaseOrderPage() {
                       Freight US $
                     </td>
                     <td className="px-3 py-1.5 text-right font-medium">
-                      {freightCharge.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatUnitPrice(freightCharge)}
                     </td>
                   </tr>
                   <tr className="border-b">
@@ -459,19 +444,13 @@ export default function PurchaseOrderPage() {
                       Insurance Charges US $
                     </td>
                     <td className="px-3 py-1.5 text-right font-medium">
-                      {insuranceCharge.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatUnitPrice(insuranceCharge)}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-1.5 font-bold">Grand Total $</td>
                     <td className="px-3 py-1.5 text-right font-bold">
-                      {totalCif.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatUnitPrice(totalCif)}
                     </td>
                   </tr>
                 </tbody>

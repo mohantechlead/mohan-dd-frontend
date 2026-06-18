@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
+import { formatMoney } from "@/lib/utils";
   resolvePurchaseTotalFromPayments,
   sortReceivedPaymentsChronologically,
   sumPaymentsTowardRemaining,
@@ -220,7 +221,7 @@ export default function CreateVendorPaymentPage() {
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                 required
               />
-              <p className="text-xs text-muted-foreground mt-1">Remaining: {remainingAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <p className="text-xs text-muted-foreground mt-1">Remaining: {formatMoney(remainingAmount)}</p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">Remark</label>

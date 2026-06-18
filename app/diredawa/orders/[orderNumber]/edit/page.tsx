@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { validateLineItemsAgainstInventory } from "@/lib/referenceListValidation";
+import { formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice, parseMoneyInput, multiplyDecimalValues } from "@/lib/utils";
 
 const CUSTOMERS_API_URL = "/api/partners/customers";
 const SUPPLIERS_API_URL = "/api/partners/suppliers";
@@ -192,7 +193,7 @@ export default function EditOrderPage() {
           const items = detail.items.map((it) => ({
             item_name: it.item_name,
             hs_code: it.hs_code,
-            price: String(it.price),
+            price: formatUnitPrice(it.price),
             quantity: String(it.quantity),
             total_price: it.total_price,
             measurement: it.measurement,
@@ -288,7 +289,7 @@ export default function EditOrderPage() {
       items: orderItems.map((it) => ({
         item_name: it.item_name,
         hs_code: it.hs_code,
-        price: Number(it.price) || 0,
+        price: parseMoneyInput(it.price),
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
         measurement: it.measurement,
@@ -769,18 +770,30 @@ export default function EditOrderPage() {
               <div>
                 <label className="block font-medium mb-1">Price</label>
                 <input
-                  type="number"
-                  step="any"
+                  inputMode="decimal"
                   value={currentItem.price}
                   onChange={(e) =>
                     setCurrentItem((prev) => ({
                       ...prev,
                       price: e.target.value,
-                      total_price:
-                        (Number(e.target.value) || 0) *
-                        (Number(prev.quantity) || 0),
+                      total_price: multiplyDecimalValues(
+                        parseMoneyInput(e.target.value),
+                        Number(prev.quantity) || 0,
+                      ),
                     }))
                   }
+                  onBlur={(e) => {
+                    const formatted = formatUnitPrice(e.target.value);
+                    if (!formatted) return;
+                    setCurrentItem((prev) => ({
+                      ...prev,
+                      price: formatted,
+                      total_price: multiplyDecimalValues(
+                        parseMoneyInput(formatted),
+                        Number(prev.quantity) || 0,
+                      ),
+                    }));
+                  }}
                   className="w-full border rounded-md px-3 py-2 bg-white"
                 />
               </div>
@@ -794,9 +807,10 @@ export default function EditOrderPage() {
                     setCurrentItem((prev) => ({
                       ...prev,
                       quantity: e.target.value,
-                      total_price:
-                        (Number(prev.price) || 0) *
-                        (Number(e.target.value) || 0),
+                      total_price: multiplyDecimalValues(
+                        parseMoneyInput(prev.price),
+                        Number(e.target.value) || 0,
+                      ),
                     }))
                   }
                   className="w-full border rounded-md px-3 py-2 bg-white"
@@ -805,9 +819,12 @@ export default function EditOrderPage() {
               <div>
                 <label className="block font-medium mb-1">Total Price</label>
                 <input
-                  type="number"
-                  value={currentItem.total_price}
                   readOnly
+                  value={formatMultipliedTotal(
+                    currentItem.total_price,
+                    currentItem.price,
+                    currentItem.quantity,
+                  )}
                   className="w-full border rounded-md px-3 py-2 bg-muted/40"
                 />
               </div>
@@ -868,7 +885,7 @@ export default function EditOrderPage() {
                   });
                   return;
                 }
-                const total = priceNum * qtyNum;
+                const total = multiplyDecimalValues(priceNum, qtyNum);
                 setOrderItems((prev) => [
                   ...prev,
                   {
@@ -1003,19 +1020,33 @@ export default function EditOrderPage() {
                       <div>
                         <label className="block font-medium mb-1">Price</label>
                         <input
-                          type="number"
-                          step="any"
+                          inputMode="decimal"
                           value={it.price}
                           onChange={(e) => {
                             const priceStr = e.target.value;
-                            const price = Number(priceStr) || 0;
+                            const price = parseMoneyInput(priceStr);
                             const qty = Number(it.quantity) || 0;
                             setOrderItems((prev) => {
                               const next = [...prev];
                               next[idx] = {
                                 ...next[idx],
                                 price: priceStr,
-                                total_price: qty * price,
+                                total_price: multiplyDecimalValues(price, qty),
+                              };
+                              return next;
+                            });
+                          }}
+                          onBlur={(e) => {
+                            const formatted = formatUnitPrice(e.target.value);
+                            if (!formatted) return;
+                            const price = parseMoneyInput(formatted);
+                            const qty = Number(it.quantity) || 0;
+                            setOrderItems((prev) => {
+                              const next = [...prev];
+                              next[idx] = {
+                                ...next[idx],
+                                price: formatted,
+                                total_price: multiplyDecimalValues(price, qty),
                               };
                               return next;
                             });
@@ -1032,13 +1063,13 @@ export default function EditOrderPage() {
                           onChange={(e) => {
                             const qtyStr = e.target.value;
                             const qty = Number(qtyStr) || 0;
-                            const price = Number(it.price) || 0;
+                            const price = parseMoneyInput(it.price);
                             setOrderItems((prev) => {
                               const next = [...prev];
                               next[idx] = {
                                 ...next[idx],
                                 quantity: qtyStr,
-                                total_price: qty * price,
+                                total_price: multiplyDecimalValues(price, qty),
                               };
                               return next;
                             });
@@ -1049,9 +1080,12 @@ export default function EditOrderPage() {
                       <div>
                         <label className="block font-medium mb-1">Total Price</label>
                         <input
-                          type="number"
-                          value={it.total_price}
                           readOnly
+                          value={formatMultipliedTotal(
+                            it.total_price,
+                            it.price,
+                            it.quantity,
+                          )}
                           className="w-full border rounded-md px-3 py-2 bg-muted/40"
                         />
                       </div>
@@ -1099,10 +1133,7 @@ export default function EditOrderPage() {
           <div className="flex items-center justify-between gap-4 mt-6 -mx-6 -mb-6 px-6 py-5 bg-black rounded-b-md">
             <span className="text-white text-lg font-semibold">
               Total Price: $
-              {itemsTotal.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {formatAggregatedTotal(itemsTotal, orderItems)}
             </span>
             <div className="flex items-center gap-4">
             <Button

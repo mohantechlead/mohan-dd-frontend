@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatMoney } from "@/lib/utils";
 
 interface ExpensePayment {
   id: string;
@@ -65,7 +66,7 @@ export default function ExpensePaymentDetailPage() {
           <div><span className="font-medium">Date:</span> {new Date(item.expense_date).toLocaleDateString()}</div>
           <div><span className="font-medium">Payee:</span> {item.payee}</div>
           <div><span className="font-medium">Category:</span> {item.category}</div>
-          <div><span className="font-medium">Amount:</span> {Number(item.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+          <div><span className="font-medium">Amount:</span> {formatMoney(item.amount)}</div>
           <div><span className="font-medium">Status:</span> <span className="capitalize">{item.status}</span></div>
           <div><span className="font-medium">Reference No:</span> {item.reference_number || "—"}</div>
           <div><span className="font-medium">Remark:</span> {item.status_remark || "—"}</div>

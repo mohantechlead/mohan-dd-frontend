@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
+import { formatMoney } from "@/lib/utils";
   resolvePurchaseTotalFromPayments,
   sortReceivedPaymentsChronologically,
   sumPaymentsTowardRemaining,
@@ -108,10 +109,10 @@ export default function VendorPaymentPurchaseSummaryPage() {
           <div className="bg-white border rounded-md p-4 text-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div><span className="font-medium">Purchase:</span> {params.purchaseNumber}</div>
             <div><span className="font-medium">Supplier:</span> {summary.supplier_name}</div>
-            <div><span className="font-medium">Purchase Total:</span> {summary.purchase_total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div><span className="font-medium">Approved Paid:</span> {summary.approved_paid.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div><span className="font-medium">Recorded (incl. pending):</span> {summary.recorded_incl_pending.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div><span className="font-medium">Remaining:</span> {summary.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+            <div><span className="font-medium">Purchase Total:</span> {formatMoney(summary.purchase_total)}</div>
+            <div><span className="font-medium">Approved Paid:</span> {formatMoney(summary.approved_paid)}</div>
+            <div><span className="font-medium">Recorded (incl. pending):</span> {formatMoney(summary.recorded_incl_pending)}</div>
+            <div><span className="font-medium">Remaining:</span> {formatMoney(summary.remaining_amount)}</div>
           </div>
 
           <div className="border rounded-md overflow-hidden bg-white">
@@ -131,7 +132,7 @@ export default function VendorPaymentPurchaseSummaryPage() {
                     <td className="px-4 py-2">{`Payment ${x.installment_number ?? 1}`}</td>
                     <td className="px-4 py-2">{new Date(x.payment_date).toLocaleDateString()}</td>
                     <td className="px-4 py-2 capitalize">{x.payment_type}</td>
-                    <td className="px-4 py-2 text-right">{Number(x.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2 text-right">{formatMoney(x.amount)}</td>
                     <td className="px-4 py-2 capitalize">{x.status}</td>
                   </tr>
                 ))}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatMoney } from "@/lib/utils";
 
 interface VendorPayment {
   payment_number: string;
@@ -126,7 +127,7 @@ export default function EditVendorPaymentPage() {
           <div>
             <label className="block font-medium mb-1">Amount *</label>
             <input type="number" min="0" step="0.01" className="w-full border rounded-md px-3 py-2" value={form.amount} readOnly={form.payment_type === "full"} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} required />
-            <p className="text-xs text-muted-foreground mt-1">Remaining: {remainingAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+            <p className="text-xs text-muted-foreground mt-1">Remaining: {formatMoney(remainingAmount)}</p>
           </div>
           <div>
             <label className="block font-medium mb-1">Remark</label>

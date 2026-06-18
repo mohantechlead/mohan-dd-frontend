@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatMoney } from "@/lib/utils";
 
 interface ReceivedPayment { id: string; payment_number: string; payment_date: string; order_number: string; customer_name: string; amount: number; status_remark?: string | null; status: string; }
 const API_URL = "/api/accounting/received-payments";
@@ -18,7 +19,7 @@ export default function RejectedReceivedPaymentsPage() {
       <div className="border rounded-md overflow-hidden bg-white"><table className="w-full text-sm"><thead className="bg-muted/60"><tr><th className="px-4 py-2 text-left">Payment No.</th><th className="px-4 py-2 text-left">Date</th><th className="px-4 py-2 text-left">Order</th><th className="px-4 py-2 text-left">Customer</th><th className="px-4 py-2 text-right">Amount</th><th className="px-4 py-2 text-left">Remark</th></tr></thead><tbody>
         {loading ? <tr><td colSpan={6} className="px-4 py-4 text-center">Loading rejected received payments...</td></tr>
           : rows.length === 0 ? <tr><td colSpan={6} className="px-4 py-4 text-center">No rejected received payments found.</td></tr>
-            : rows.map((x) => <tr key={x.id} className="border-t"><td className="px-4 py-2">{x.payment_number}</td><td className="px-4 py-2">{new Date(x.payment_date).toLocaleDateString()}</td><td className="px-4 py-2">{x.order_number}</td><td className="px-4 py-2">{x.customer_name}</td><td className="px-4 py-2 text-right">{Number(x.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td className="px-4 py-2">{x.status_remark || "—"}</td></tr>)}
+            : rows.map((x) => <tr key={x.id} className="border-t"><td className="px-4 py-2">{x.payment_number}</td><td className="px-4 py-2">{new Date(x.payment_date).toLocaleDateString()}</td><td className="px-4 py-2">{x.order_number}</td><td className="px-4 py-2">{x.customer_name}</td><td className="px-4 py-2 text-right">{formatMoney(x.amount)}</td><td className="px-4 py-2">{x.status_remark || "—"}</td></tr>)}
       </tbody></table></div>
     </div>
   );

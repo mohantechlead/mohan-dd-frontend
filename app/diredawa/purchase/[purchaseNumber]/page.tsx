@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 
 interface PurchaseItem {
   purchase_number: string;
@@ -253,19 +254,20 @@ export default function PurchaseDetailPage() {
                         {line.remaining ?? line.quantity}
                       </td>
                       <td className="px-4 py-2 text-right">
-                        {line.price.toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })}
+                        {formatUnitPrice(line.price)}
                       </td>
                       <td className="px-4 py-2 text-right">
-                        {line.total_price.toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })}
+                        {formatMultipliedTotal(
+                          line.total_price,
+                          line.price,
+                          line.quantity,
+                        )}
                       </td>
                       <td className="px-4 py-2 text-right">
-                        {(line.before_vat ?? line.total_price).toLocaleString(
-                          undefined,
-                          { maximumFractionDigits: 2 }
+                        {formatMultipliedTotal(
+                          line.before_vat ?? line.total_price,
+                          line.price,
+                          line.quantity,
                         )}
                       </td>
                     </tr>

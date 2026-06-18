@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import {
+  formatAggregatedTotal,
+  formatMultipliedTotal,
+  formatUnitPrice,
+  parseMoneyInput,
+  multiplyDecimalValues,
+  normalizeCalculatedDecimal,
+} from "@/lib/utils";
 
 const SHIPPING_INVOICES_API_URL = "/api/inventory/shipping-invoices";
 const ITEMS_API_URL = "/api/inventory/items";
@@ -232,7 +240,7 @@ export default function ShippingDetailsPage() {
       vessel: shippingForm.vessel || null,
       freight_amount:
         shippingForm.freight_amount.trim() !== ""
-          ? Number(shippingForm.freight_amount)
+          ? parseMoneyInput(shippingForm.freight_amount)
           : null,
       reference_no: shippingForm.reference_no.trim() || null,
       total_bags:
@@ -249,7 +257,7 @@ export default function ShippingDetailsPage() {
           : null,
       final_price:
         shippingForm.final_price.trim() !== ""
-          ? Number(shippingForm.final_price)
+          ? parseMoneyInput(shippingForm.final_price)
           : null,
       invoice_remark: shippingForm.invoice_remark || null,
       packing_list_remark: shippingForm.packing_list_remark || null,
@@ -263,7 +271,7 @@ export default function ShippingDetailsPage() {
         hscode: it.hscode?.trim() || null,
         code: it.code?.trim() || null,
         notes: it.notes?.trim() || null,
-        price: Number(it.price) || 0,
+        price: parseMoneyInput(it.price),
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
         measurement: it.measurement,
@@ -534,8 +542,7 @@ export default function ShippingDetailsPage() {
             <div>
               <label className="block font-medium mb-1">Freight Amount</label>
               <input
-                type="number"
-                step="0.01"
+                inputMode="decimal"
                 value={shippingForm.freight_amount}
                 onChange={(e) =>
                   setShippingForm((prev) => ({
@@ -543,14 +550,21 @@ export default function ShippingDetailsPage() {
                     freight_amount: e.target.value,
                   }))
                 }
+                onBlur={(e) => {
+                  const formatted = formatUnitPrice(e.target.value);
+                  if (!formatted) return;
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    freight_amount: formatted,
+                  }));
+                }}
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block font-medium mb-1">Final Price</label>
               <input
-                type="number"
-                step="0.01"
+                inputMode="decimal"
                 value={shippingForm.final_price}
                 onChange={(e) =>
                   setShippingForm((prev) => ({
@@ -558,6 +572,14 @@ export default function ShippingDetailsPage() {
                     final_price: e.target.value,
                   }))
                 }
+                onBlur={(e) => {
+                  const formatted = formatUnitPrice(e.target.value);
+                  if (!formatted) return;
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    final_price: formatted,
+                  }));
+                }}
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>
@@ -744,20 +766,31 @@ export default function ShippingDetailsPage() {
             <div>
               <label className="block font-medium mb-1">Price</label>
               <input
-                type="number"
+                inputMode="decimal"
                 value={shippingItem.price}
                 onChange={(e) => {
                   const priceStr = e.target.value;
-                  const priceNum = parseFloat(priceStr) || 0;
+                  const priceNum = parseMoneyInput(priceStr);
                   const qtyNum = parseFloat(shippingItem.quantity) || 0;
                   setShippingItem((prev) => ({
                     ...prev,
                     price: priceStr,
-                    total_price: priceNum * qtyNum,
+                    total_price: multiplyDecimalValues(priceNum, qtyNum),
+                  }));
+                }}
+                onBlur={(e) => {
+                  const formatted = formatUnitPrice(e.target.value);
+                  if (!formatted) return;
+                  const priceNum = parseMoneyInput(formatted);
+                  const qtyNum = parseFloat(shippingItem.quantity) || 0;
+                  setShippingItem((prev) => ({
+                    ...prev,
+                    price: formatted,
+                    total_price: multiplyDecimalValues(priceNum, qtyNum),
                   }));
                 }}
                 className="w-full border rounded-md px-3 py-2"
-                placeholder="0"
+                placeholder="0.00"
               />
             </div>
             <div>
@@ -782,11 +815,11 @@ export default function ShippingDetailsPage() {
                 onChange={(e) => {
                   const qtyStr = e.target.value;
                   const qtyNum = parseFloat(qtyStr) || 0;
-                  const priceNum = parseFloat(shippingItem.price) || 0;
+                  const priceNum = parseMoneyInput(shippingItem.price);
                   setShippingItem((prev) => ({
                     ...prev,
                     quantity: qtyStr,
-                    total_price: priceNum * qtyNum,
+                    total_price: multiplyDecimalValues(priceNum, qtyNum),
                   }));
                 }}
                 className="w-full border rounded-md px-3 py-2"
@@ -796,9 +829,12 @@ export default function ShippingDetailsPage() {
             <div>
               <label className="block font-medium mb-1">Total Price</label>
               <input
-                type="number"
-                value={shippingItem.total_price}
                 readOnly
+                value={formatMultipliedTotal(
+                  shippingItem.total_price,
+                  shippingItem.price,
+                  shippingItem.quantity,
+                )}
                 className="w-full border rounded-md px-3 py-2 bg-muted/40"
                 placeholder="Auto-calculated"
               />
@@ -938,7 +974,7 @@ export default function ShippingDetailsPage() {
                 type="button"
                 size="sm"
                 onClick={() => {
-                const priceNum = parseFloat(shippingItem.price) || 0;
+                const priceNum = parseMoneyInput(shippingItem.price);
                 const qtyNum = parseFloat(shippingItem.quantity) || 0;
                 if (
                   !shippingItem.item_name ||
@@ -969,7 +1005,7 @@ export default function ShippingDetailsPage() {
                   });
                   return;
                 }
-                const total = priceNum * qtyNum;
+                const total = multiplyDecimalValues(priceNum, qtyNum);
                 setShippingItems((prev) => [
                   ...prev,
                   {
@@ -1006,9 +1042,7 @@ export default function ShippingDetailsPage() {
               {shippingItems.length > 0 && (
                 <span className="ml-auto text-sm font-semibold">
                   Total Price: $
-                  {itemsTotal.toLocaleString(undefined, {
-                    maximumFractionDigits: 20,
-                  })}
+                  {formatAggregatedTotal(itemsTotal, shippingItems)}
                 </span>
               )}
             </div>
@@ -1052,14 +1086,14 @@ export default function ShippingDetailsPage() {
                       <td className="px-2 py-1">{it.notes || "—"}</td>
                       <td className="px-2 py-1 text-right">{it.quantity}</td>
                       <td className="px-2 py-1 text-right">
-                        {Number(it.price).toLocaleString(undefined, {
-                          maximumFractionDigits: 20,
-                        })}
+                        {formatUnitPrice(it.price)}
                       </td>
                       <td className="px-2 py-1 text-right">
-                        {Number(it.total_price).toLocaleString(undefined, {
-                          maximumFractionDigits: 20,
-                        })}
+                        {formatMultipliedTotal(
+                          it.total_price,
+                          it.price,
+                          it.quantity,
+                        )}
                       </td>
                     </tr>
                   ))}

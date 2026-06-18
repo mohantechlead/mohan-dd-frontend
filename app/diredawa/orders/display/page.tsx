@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Pencil, Trash2 } from "lucide-react";
 import { TableSearch } from "@/components/table-search";
+import { formatExactNumber, formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -332,19 +333,17 @@ export default function DisplayOrdersPage() {
                           {item.item_name}
                         </td>
                         <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
-                          {item.quantity.toLocaleString(undefined, {
-                            maximumFractionDigits: 20,
-                          })}
+                          {formatExactNumber(item.quantity)}
                         </td>
                         <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
-                          {item.price.toLocaleString(undefined, {
-                            maximumFractionDigits: 20,
-                          })}
+                          {formatUnitPrice(item.price)}
                         </td>
                         <td className="px-4 py-2 text-right border-r border-slate-200 tabular-nums">
-                          {item.total_price.toLocaleString(undefined, {
-                            maximumFractionDigits: 20,
-                          })}
+                          {formatMultipliedTotal(
+                            item.total_price,
+                            item.price,
+                            item.quantity,
+                          )}
                         </td>
                         {idx === 0 ? (
                           <>

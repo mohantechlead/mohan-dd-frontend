@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { TableSearch } from "@/components/table-search";
 import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/utils";
 
 type PaymentStatus = "pending" | "approved" | "completed" | "cancelled" | string;
 type SourceType = "received" | "vendor" | "expense";
@@ -193,13 +194,13 @@ export default function AccountingLedgerPage() {
         <div className="rounded-lg border bg-white p-4">
           <p className="text-xs text-muted-foreground">Total Inflow</p>
           <p className="text-xl font-semibold text-emerald-700">
-            {totals.credit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {formatMoney(totals.credit)}
           </p>
         </div>
         <div className="rounded-lg border bg-white p-4">
           <p className="text-xs text-muted-foreground">Total Outflow</p>
           <p className="text-xl font-semibold text-rose-700">
-            {totals.debit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {formatMoney(totals.debit)}
           </p>
         </div>
         <div className="rounded-lg border bg-white p-4">
@@ -209,7 +210,7 @@ export default function AccountingLedgerPage() {
               totals.net >= 0 ? "text-emerald-700" : "text-rose-700"
             }`}
           >
-            {totals.net.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {formatMoney(totals.net)}
           </p>
         </div>
       </div>
@@ -301,12 +302,12 @@ export default function AccountingLedgerPage() {
                     <td className="px-3 py-2 capitalize">{r.status}</td>
                     <td className="px-3 py-2 text-right text-emerald-700">
                       {r.credit
-                        ? r.credit.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                        ? formatMoney(r.credit)
                         : "-"}
                     </td>
                     <td className="px-3 py-2 text-right text-rose-700">
                       {r.debit
-                        ? r.debit.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                        ? formatMoney(r.debit)
                         : "-"}
                     </td>
                     <td
@@ -314,9 +315,7 @@ export default function AccountingLedgerPage() {
                         r.runningBalance >= 0 ? "text-emerald-700" : "text-rose-700"
                       }`}
                     >
-                      {r.runningBalance.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatMoney(r.runningBalance)}
                     </td>
                   </tr>
                 ))

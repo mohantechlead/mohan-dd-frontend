@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -132,14 +133,14 @@ export default function CompletedOrdersPage() {
                           {item.quantity}
                         </td>
                         <td className="px-4 py-2 text-right">
-                          {item.price.toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
-                          })}
+                          {formatUnitPrice(item.price)}
                         </td>
                         <td className="px-4 py-2 text-right">
-                          {item.total_price.toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
-                          })}
+                          {formatMultipliedTotal(
+                            item.total_price,
+                            item.price,
+                            item.quantity,
+                          )}
                         </td>
                         <td className="px-4 py-2">{order.buyer}</td>
                         <td className="px-4 py-2">

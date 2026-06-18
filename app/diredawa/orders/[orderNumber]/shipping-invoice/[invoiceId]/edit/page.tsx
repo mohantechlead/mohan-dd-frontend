@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import {
+  formatAggregatedTotal,
+  formatMultipliedTotal,
+  formatUnitPrice,
+  parseMoneyInput,
+  multiplyDecimalValues,
+  normalizeCalculatedDecimal,
+} from "@/lib/utils";
 
 const SHIPPING_INVOICES_API_URL = "/api/inventory/shipping-invoices";
 const ITEMS_API_URL = "/api/inventory/items";
@@ -164,7 +172,9 @@ export default function EditShippingInvoicePage() {
             container_number: invData.container_number || "",
             vessel: invData.vessel || "",
             freight_amount:
-              invData.freight_amount != null ? String(invData.freight_amount) : "",
+              invData.freight_amount != null
+                ? formatUnitPrice(invData.freight_amount)
+                : "",
             reference_no: invData.reference_no || "",
             total_bags: invData.total_bags != null ? String(invData.total_bags) : "",
             total_net_weight:
@@ -175,7 +185,7 @@ export default function EditShippingInvoicePage() {
               invData.total_gross_weight != null
                 ? String(invData.total_gross_weight)
                 : "",
-            final_price: invData.final_price != null ? String(invData.final_price) : "",
+            final_price: invData.final_price != null ? formatUnitPrice(invData.final_price) : "",
             invoice_remark: invData.invoice_remark || "",
             packing_list_remark: invData.packing_list_remark || "",
             waybill_remark: invData.waybill_remark || "",
@@ -189,9 +199,9 @@ export default function EditShippingInvoicePage() {
             hscode: it.hscode ?? "",
             code: it.code ?? "",
             notes: it.notes ?? "",
-            price: String(it.price),
+            price: formatUnitPrice(it.price),
             quantity: String(it.quantity),
-            total_price: it.total_price,
+            total_price: normalizeCalculatedDecimal(Number(it.total_price) || 0),
             measurement: it.measurement,
             package: it.package != null ? String(it.package) : "",
             drums: it.drums != null ? String(it.drums) : "",
@@ -205,7 +215,11 @@ export default function EditShippingInvoicePage() {
           }));
           setShippingItems(items);
           setItemsTotal(
-            items.reduce((sum, it) => sum + (Number(it.total_price) || 0), 0)
+            items.reduce(
+              (sum, it) =>
+                sum + normalizeCalculatedDecimal(Number(it.total_price) || 0),
+              0,
+            ),
           );
           setIsTotalCalculated(true);
         }
@@ -348,7 +362,7 @@ export default function EditShippingInvoicePage() {
       vessel: shippingForm.vessel || null,
       freight_amount:
         shippingForm.freight_amount.trim() !== ""
-          ? Number(shippingForm.freight_amount)
+          ? parseMoneyInput(shippingForm.freight_amount)
           : null,
       reference_no: shippingForm.reference_no.trim() || null,
       total_bags:
@@ -365,7 +379,7 @@ export default function EditShippingInvoicePage() {
           : null,
       final_price:
         shippingForm.final_price.trim() !== ""
-          ? Number(shippingForm.final_price)
+          ? parseMoneyInput(shippingForm.final_price)
           : null,
       invoice_remark: shippingForm.invoice_remark || null,
       packing_list_remark: shippingForm.packing_list_remark || null,
@@ -379,7 +393,7 @@ export default function EditShippingInvoicePage() {
         hscode: it.hscode?.trim() || null,
         code: it.code?.trim() || null,
         notes: it.notes?.trim() || null,
-        price: Number(it.price) || 0,
+        price: parseMoneyInput(it.price),
         quantity: Number(it.quantity) || 0,
         total_price: Number(it.total_price) || 0,
         measurement: it.measurement,
@@ -635,8 +649,7 @@ export default function EditShippingInvoicePage() {
               <div>
                 <label className="block font-medium mb-1">Freight Amount</label>
                 <input
-                  type="number"
-                  step="0.01"
+                  inputMode="decimal"
                   value={shippingForm.freight_amount}
                   onChange={(e) =>
                     setShippingForm((prev) => ({
@@ -644,14 +657,21 @@ export default function EditShippingInvoicePage() {
                       freight_amount: e.target.value,
                     }))
                   }
+                  onBlur={(e) => {
+                    const formatted = formatUnitPrice(e.target.value);
+                    if (!formatted) return;
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      freight_amount: formatted,
+                    }));
+                  }}
                   className="w-full border rounded-md px-3 py-2"
                 />
               </div>
               <div>
                 <label className="block font-medium mb-1">Final Price</label>
                 <input
-                  type="number"
-                  step="0.01"
+                  inputMode="decimal"
                   value={shippingForm.final_price}
                   onChange={(e) =>
                     setShippingForm((prev) => ({
@@ -659,6 +679,14 @@ export default function EditShippingInvoicePage() {
                       final_price: e.target.value,
                     }))
                   }
+                  onBlur={(e) => {
+                    const formatted = formatUnitPrice(e.target.value);
+                    if (!formatted) return;
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      final_price: formatted,
+                    }));
+                  }}
                   className="w-full border rounded-md px-3 py-2"
                 />
               </div>
@@ -782,10 +810,10 @@ export default function EditShippingInvoicePage() {
                       });
                       return;
                     }
-                    const total =
-                      shippingItem.total_price ||
-                      (Number(shippingItem.price) || 0) *
-                        (Number(shippingItem.quantity) || 0);
+                    const total = multiplyDecimalValues(
+                      parseMoneyInput(shippingItem.price),
+                      Number(shippingItem.quantity) || 0,
+                    );
                     setShippingItems((prev) => [
                       ...prev,
                       { ...shippingItem, total_price: total },
@@ -817,10 +845,7 @@ export default function EditShippingInvoicePage() {
                 </Button>
                 <span className="ml-auto text-sm font-semibold">
                   Total Price: $
-                  {itemsTotal.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatAggregatedTotal(itemsTotal, shippingItems)}
                 </span>
               </div>
             </div>
@@ -926,17 +951,32 @@ export default function EditShippingInvoicePage() {
               <div>
                 <label className="block font-medium mb-1">Price</label>
                 <input
-                  type="number"
+                  inputMode="decimal"
                   value={shippingItem.price}
                   onChange={(e) =>
                     setShippingItem((prev) => ({
                       ...prev,
                       price: e.target.value,
                       total_price:
-                        (Number(e.target.value) || 0) *
-                        (Number(prev.quantity) || 0),
+                        multiplyDecimalValues(
+                          parseMoneyInput(e.target.value),
+                          Number(prev.quantity) || 0,
+                        ),
                     }))
                   }
+                  onBlur={(e) => {
+                    const formatted = formatUnitPrice(e.target.value);
+                    if (!formatted) return;
+                    setShippingItem((prev) => ({
+                      ...prev,
+                      price: formatted,
+                      total_price:
+                        multiplyDecimalValues(
+                          parseMoneyInput(formatted),
+                          Number(prev.quantity) || 0,
+                        ),
+                    }));
+                  }}
                   className="w-full border rounded-md px-3 py-2 bg-white"
                 />
               </div>
@@ -949,9 +989,10 @@ export default function EditShippingInvoicePage() {
                     setShippingItem((prev) => ({
                       ...prev,
                       quantity: e.target.value,
-                      total_price:
-                        (Number(prev.price) || 0) *
-                        (Number(e.target.value) || 0),
+                      total_price: multiplyDecimalValues(
+                        parseMoneyInput(prev.price),
+                        Number(e.target.value) || 0,
+                      ),
                     }))
                   }
                   className="w-full border rounded-md px-3 py-2 bg-white"
@@ -960,9 +1001,12 @@ export default function EditShippingInvoicePage() {
               <div>
                 <label className="block font-medium mb-1">Total Price</label>
                 <input
-                  type="number"
-                  value={shippingItem.total_price}
                   readOnly
+                  value={formatMultipliedTotal(
+                    shippingItem.total_price,
+                    shippingItem.price,
+                    shippingItem.quantity,
+                  )}
                   className="w-full border rounded-md px-3 py-2 bg-muted/40"
                 />
               </div>
@@ -1235,18 +1279,33 @@ export default function EditShippingInvoicePage() {
                     <div>
                       <label className="block font-medium mb-1">Price</label>
                       <input
-                        type="number"
+                        inputMode="decimal"
                         value={it.price}
                         onChange={(e) => {
                           const priceStr = e.target.value;
-                          const price = Number(priceStr) || 0;
+                          const price = parseMoneyInput(priceStr);
                           const qty = Number(it.quantity) || 0;
                           setShippingItems((prev) => {
                             const next = [...prev];
                             next[idx] = {
                               ...next[idx],
                               price: priceStr,
-                              total_price: qty * price,
+                              total_price: multiplyDecimalValues(price, qty),
+                            };
+                            return next;
+                          });
+                        }}
+                        onBlur={(e) => {
+                          const formatted = formatUnitPrice(e.target.value);
+                          if (!formatted) return;
+                          const price = parseMoneyInput(formatted);
+                          const qty = Number(it.quantity) || 0;
+                          setShippingItems((prev) => {
+                            const next = [...prev];
+                            next[idx] = {
+                              ...next[idx],
+                              price: formatted,
+                              total_price: multiplyDecimalValues(price, qty),
                             };
                             return next;
                           });
@@ -1263,13 +1322,13 @@ export default function EditShippingInvoicePage() {
                         onChange={(e) => {
                           const qtyStr = e.target.value;
                           const qty = Number(qtyStr) || 0;
-                          const price = Number(it.price) || 0;
+                          const price = parseMoneyInput(it.price);
                           setShippingItems((prev) => {
                             const next = [...prev];
                             next[idx] = {
                               ...next[idx],
                               quantity: qtyStr,
-                              total_price: qty * price,
+                              total_price: multiplyDecimalValues(price, qty),
                             };
                             return next;
                           });
@@ -1281,9 +1340,12 @@ export default function EditShippingInvoicePage() {
                     <div>
                       <label className="block font-medium mb-1">Total Price</label>
                       <input
-                        type="number"
-                        value={it.total_price}
                         readOnly
+                        value={formatMultipliedTotal(
+                          it.total_price,
+                          it.price,
+                          it.quantity,
+                        )}
                         className="w-full border rounded-md px-3 py-2 bg-muted/40"
                       />
                     </div>

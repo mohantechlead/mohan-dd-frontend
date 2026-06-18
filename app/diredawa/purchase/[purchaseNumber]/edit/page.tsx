@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { validateLineItemsAgainstInventory } from "@/lib/referenceListValidation";
+import { formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice, multiplyDecimalValues } from "@/lib/utils";
 import {
   parseInventoryItemsJson,
   type InventoryItemOption,
@@ -686,7 +687,7 @@ export default function EditPurchasePage() {
                   onChange={(e) => {
                     const price = Number(e.target.value) || 0;
                     const qty = Number(currentItem.quantity) || 0;
-                    const total = price * qty;
+                    const total = multiplyDecimalValues(price, qty);
                     setCurrentItem((prev) => ({
                       ...prev,
                       price: e.target.value,
@@ -706,7 +707,7 @@ export default function EditPurchasePage() {
                   onChange={(e) => {
                     const qty = Number(e.target.value) || 0;
                     const price = Number(currentItem.price) || 0;
-                    const total = price * qty;
+                    const total = multiplyDecimalValues(price, qty);
                     setCurrentItem((prev) => ({
                       ...prev,
                       quantity: e.target.value,
@@ -721,9 +722,12 @@ export default function EditPurchasePage() {
               <div>
                 <label className="block font-medium mb-1">Total Price</label>
                 <input
-                  type="number"
-                  value={currentItem.total_price}
                   readOnly
+                  value={formatMultipliedTotal(
+                    currentItem.total_price,
+                    currentItem.price,
+                    currentItem.quantity,
+                  )}
                   className="w-full border rounded-md px-3 py-2 bg-muted/40"
                 />
               </div>
@@ -768,7 +772,7 @@ export default function EditPurchasePage() {
                   });
                   return;
                 }
-                const total = priceNum * qtyNum;
+                const total = multiplyDecimalValues(priceNum, qtyNum);
                 setPurchaseItems((prev) => [
                   ...prev,
                   {
@@ -872,7 +876,7 @@ export default function EditPurchasePage() {
                                       const row = next[idx];
                                       const price = Number(row.price) || 0;
                                       const qty = Number(row.quantity) || 0;
-                                      const total = price * qty;
+                                      const total = multiplyDecimalValues(price, qty);
                                       next[idx] = {
                                         ...row,
                                         item_id: opt.item_id ?? "",
@@ -927,7 +931,7 @@ export default function EditPurchasePage() {
                             const priceStr = e.target.value;
                             const price = Number(priceStr) || 0;
                             const qty = Number(it.quantity) || 0;
-                            const total = qty * price;
+                            const total = multiplyDecimalValues(price, qty);
                             setPurchaseItems((prev) => {
                               const next = [...prev];
                               next[idx] = {
@@ -953,7 +957,7 @@ export default function EditPurchasePage() {
                             const qtyStr = e.target.value;
                             const qty = Number(qtyStr) || 0;
                             const price = Number(it.price) || 0;
-                            const total = qty * price;
+                            const total = multiplyDecimalValues(price, qty);
                             const prevRem = Number(it.remaining) || 0;
                             const newRem = Math.min(prevRem, qty);
                             setPurchaseItems((prev) => {
@@ -999,9 +1003,12 @@ export default function EditPurchasePage() {
                       <div>
                         <label className="block font-medium mb-1">Total Price</label>
                         <input
-                          type="number"
-                          value={it.total_price}
                           readOnly
+                          value={formatMultipliedTotal(
+                            it.total_price,
+                            it.price,
+                            it.quantity,
+                          )}
                           className="w-full border rounded-md px-3 py-2 bg-muted/40"
                         />
                       </div>
@@ -1050,10 +1057,7 @@ export default function EditPurchasePage() {
           <div className="flex items-center justify-between gap-4 mt-6 -mx-6 -mb-6 px-6 py-5 bg-black rounded-b-md">
             <span className="text-white text-lg font-semibold">
               Total Price: $
-              {itemsTotal.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {formatAggregatedTotal(itemsTotal, purchaseItems)}
             </span>
             <div className="flex items-center gap-4">
               <Button
