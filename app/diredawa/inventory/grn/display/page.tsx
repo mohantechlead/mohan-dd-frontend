@@ -24,6 +24,7 @@ import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 import { cn, compareDocumentNumberDesc } from "@/lib/utils";
 import { SearchableDropdown, type DropdownOption } from "@/components/searchable-dropdown";
 import { parseInventoryItemsJson } from "@/lib/parseInventoryItems";
+import { OverUnderNotification } from "@/components/over-under-notification";
 
 const GRN_API_URL = "/api/inventory/grn";
 const ITEMS_API_URL = "/api/inventory/items";
@@ -31,6 +32,14 @@ const ITEMS_API_URL = "/api/inventory/items";
 type ItemDropdownOption = DropdownOption & {
   internalCode?: string;
 };
+
+interface OverUnderItem {
+  item_name: string;
+  invoiced: number;
+  delivered: number;
+  variance: number;
+  unit?: string | null;
+}
 
 export default function DemoPage() {
   const router = useRouter();
@@ -49,6 +58,13 @@ export default function DemoPage() {
   const [editEcdNo, setEditEcdNo] = useState("");
   const [editTransporterName, setEditTransporterName] = useState("");
   const [editRemark, setEditRemark] = useState("");
+  const [editIsLast, setEditIsLast] = useState(false);
+  const [overUnderOpen, setOverUnderOpen] = useState(false);
+  const [overUnderData, setOverUnderData] = useState<{
+    grnNo: string;
+    overItems: OverUnderItem[];
+    underItems: OverUnderItem[];
+  } | null>(null);
   const [editItems, setEditItems] = useState<
     Array<{
       item_name: string;
@@ -157,6 +173,7 @@ export default function DemoPage() {
         setEditEcdNo(detail.ECD_no || "");
         setEditTransporterName(detail.transporter_name || "");
         setEditRemark(typeof detail.remark === "string" ? detail.remark : "");
+        setEditIsLast(Boolean(detail.is_last));
         setEditItems(
           Array.isArray(detail.items)
             ? detail.items.map((item: Record<string, unknown>) => ({
@@ -186,6 +203,7 @@ export default function DemoPage() {
         setEditEcdNo("");
         setEditTransporterName("");
         setEditRemark("");
+        setEditIsLast(false);
         setEditItems([]);
       }
     } catch {
@@ -196,6 +214,7 @@ export default function DemoPage() {
       setEditEcdNo("");
       setEditTransporterName("");
       setEditRemark("");
+      setEditIsLast(false);
       setEditItems([]);
     }
     setEditOpen(true);
@@ -246,6 +265,7 @@ export default function DemoPage() {
           ECD_no: editEcdNo || null,
           transporter_name: editTransporterName || null,
           remark: editRemark.trim(),
+          is_last: editIsLast,
           items: editItems.map((item) => {
             const qty = parseDecimalQuantity(item.quantity);
             const bagsRaw = item.bags;
@@ -281,6 +301,22 @@ export default function DemoPage() {
       setEditOpen(false);
       setSelectedGRN(null);
       mutate();
+      const resData = data as {
+        grn_no?: string;
+        over_items?: OverUnderItem[];
+        under_items?: OverUnderItem[];
+      };
+      if (
+        (resData.over_items && resData.over_items.length > 0) ||
+        (resData.under_items && resData.under_items.length > 0)
+      ) {
+        setOverUnderData({
+          grnNo: resData.grn_no || grnNo,
+          overItems: resData.over_items || [],
+          underItems: resData.under_items || [],
+        });
+        setOverUnderOpen(true);
+      }
     } catch {
       showToast({
         title: "Failed to update GRN",
@@ -426,6 +462,20 @@ export default function DemoPage() {
                   value={editTransporterName}
                   onChange={(e) => setEditTransporterName(e.target.value)}
                 />
+              </Field>
+              <Field className="md:col-span-2">
+                <FieldLabel>Last receipt for this purchase</FieldLabel>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border border-input"
+                    checked={editIsLast}
+                    onChange={(e) => setEditIsLast(e.target.checked)}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Check only on the final GRN for this purchase.
+                  </span>
+                </label>
               </Field>
               <Field className="md:col-span-2">
                 <FieldLabel>Remark (optional)</FieldLabel>
@@ -596,6 +646,17 @@ export default function DemoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {overUnderData && (
+        <OverUnderNotification
+          open={overUnderOpen}
+          onOpenChange={setOverUnderOpen}
+          dnNo={overUnderData.grnNo}
+          overItems={overUnderData.overItems}
+          underItems={overUnderData.underItems}
+          variant="receipt"
+        />
+      )}
     </div>
   );
 }

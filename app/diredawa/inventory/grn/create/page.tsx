@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
 import { useFormContext } from "react-hook-form";
+import { OverUnderNotification } from "@/components/over-under-notification";
 import {
   fetchDisplayValueSet,
   fetchInventoryItemNameSet,
@@ -28,6 +29,7 @@ interface GrnFormValues {
   ECD_no: string;
   transporter_name: string;
   remark?: string;
+  is_last?: boolean;
   items: {
     item_id?: string;
     code?: string;
@@ -39,11 +41,25 @@ interface GrnFormValues {
   }[];
 }
 
-const GRN_API_URL = "/api/inventory/grn"
+const GRN_API_URL = "/api/inventory/grn";
+
+interface OverUnderItem {
+  item_name: string;
+  invoiced: number;
+  delivered: number;
+  variance: number;
+  unit?: string | null;
+}
 
 export default function HomePage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const [overUnderOpen, setOverUnderOpen] = useState(false);
+  const [overUnderData, setOverUnderData] = useState<{
+    grnNo: string;
+    overItems: OverUnderItem[];
+    underItems: OverUnderItem[];
+  } | null>(null);
   const [isTotalCalculated, setIsTotalCalculated] = useState(false);
   const [grnNoDuplicate, setGrnNoDuplicate] = useState(false);
   const [checkingGrnNo, setCheckingGrnNo] = useState(false);
@@ -215,6 +231,7 @@ export default function HomePage() {
       date: values.date, // ISO string is fine
       ECD_no: values.ECD_no, // ensure correct case
       transporter_name: values.transporter_name,
+      is_last: Boolean(values.is_last),
       ...(remarkTrimmed ? { remark: remarkTrimmed } : {}),
       items: resolvedItems.lines.map((line) => ({
         ...(line.item_id ? { item_id: line.item_id } : {}),
@@ -266,11 +283,27 @@ export default function HomePage() {
       }
   
       console.log("GRN created successfully:", data);
+      const resData = data as {
+        grn_no?: string;
+        over_items?: OverUnderItem[];
+        under_items?: OverUnderItem[];
+      };
       showToast({
         title: "GRN created",
         description: "The GRN has been created successfully.",
         variant: "success",
       });
+      if (
+        (resData.over_items && resData.over_items.length > 0) ||
+        (resData.under_items && resData.under_items.length > 0)
+      ) {
+        setOverUnderData({
+          grnNo: resData.grn_no || values.grn_no,
+          overItems: resData.over_items || [],
+          underItems: resData.under_items || [],
+        });
+        setOverUnderOpen(true);
+      }
     } catch (error) {
       console.error("Error creating GRN:", error);
       showToast({
@@ -296,7 +329,7 @@ export default function HomePage() {
       </p>
 
       <Form<GrnFormValues>
-        defaultValues={{ items: [] }}
+        defaultValues={{ items: [], is_last: false }}
         fields={[
           { name: "date", label: "Date", type: "date", placeholder: "Enter Date", required: true },
           {
@@ -345,6 +378,12 @@ export default function HomePage() {
             type: "textarea",
             placeholder: "Optional notes",
           },
+          {
+            name: "is_last",
+            label: "Last receipt for this purchase",
+            type: "checkbox",
+            description: "Check only on the final GRN for this purchase.",
+          },
         ]}
         onSubmit={handleSubmit}
         submitText="Submit GRN"
@@ -362,6 +401,17 @@ export default function HomePage() {
           }}
         />
       </Form>
+
+      {overUnderData && (
+        <OverUnderNotification
+          open={overUnderOpen}
+          onOpenChange={setOverUnderOpen}
+          dnNo={overUnderData.grnNo}
+          overItems={overUnderData.overItems}
+          underItems={overUnderData.underItems}
+          variant="receipt"
+        />
+      )}
     </div>
   );
 }

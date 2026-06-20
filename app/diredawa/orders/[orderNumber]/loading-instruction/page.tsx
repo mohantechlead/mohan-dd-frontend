@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
 import { formatExactNumber } from "@/lib/utils";
+import { findMatchingOrderLine } from "@/lib/resolveDocumentHsCode";
 import {
   Dialog,
   DialogContent,
@@ -15,12 +16,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+interface OrderItem {
+  item_name: string;
+  quantity: number;
+  measurement: string;
+}
+
 interface OrderDetail {
   id: string;
   order_number: string;
   order_date: string;
   buyer: string;
   buyer_address?: string | null;
+  measurement_type?: string | null;
+  items: OrderItem[];
 }
 
 interface ShippingInvoiceDetail {
@@ -97,6 +106,46 @@ function formatAuthorizedDate(value?: string | null): string {
       ? monthNames[monthIndex]
       : m;
   return `${monthLabel} ${Number(d)}, ${y}`;
+}
+
+function toKg(value: number, unit?: string | null): number {
+  const factor = KG_EQUIVALENTS[(unit || "").trim().toLowerCase()];
+  return factor != null ? value * factor : value;
+}
+
+function fromKg(kg: number, unit?: string | null): number | null {
+  const factor = KG_EQUIVALENTS[(unit || "").trim().toLowerCase()];
+  if (factor == null || factor === 0) return null;
+  return kg / factor;
+}
+
+function formatInSalesUnit(
+  kg: number,
+  orderLine: OrderItem | undefined,
+  orderMeasurementType?: string | null,
+): string | null {
+  const salesUnit = (
+    orderLine?.measurement ||
+    orderMeasurementType ||
+    ""
+  ).trim();
+  if (!salesUnit) return null;
+
+  const normalized = salesUnit.toLowerCase();
+  if (["kg", "kgs", "kilogram", "kilograms"].includes(normalized)) {
+    return null;
+  }
+
+  const inSalesUnit = fromKg(kg, salesUnit);
+  if (inSalesUnit != null) {
+    return `${formatExactNumber(inSalesUnit)} ${salesUnit}`;
+  }
+
+  if (orderLine?.quantity != null) {
+    return `${formatExactNumber(orderLine.quantity)} ${salesUnit}`;
+  }
+
+  return null;
 }
 
 export default function LoadingInstructionPage() {
@@ -399,6 +448,10 @@ export default function LoadingInstructionPage() {
               </thead>
               <tbody>
                 {invoice.items.map((item, index) => {
+                  const orderLine = order
+                    ? findMatchingOrderLine(order.items, item)
+                    : undefined;
+
                   const noOfUnit =
                     item.bags != null
                       ? `${formatExactNumber(item.bags)} bags`
@@ -408,26 +461,32 @@ export default function LoadingInstructionPage() {
                         ? `${formatExactNumber(item.quantity)} ${item.measurement || ""}`
                         : "—";
 
-                  const toKg = (value: number, unit?: string | null) => {
-                    const factor = KG_EQUIVALENTS[(unit || "").trim().toLowerCase()];
-                    return factor != null ? value * factor : value;
-                  };
-
-                  const remarks = (() => {
+                  const remarksKg = (() => {
                     if (item.net_weight != null) {
-                      const netInKg = toKg(item.net_weight, item.measurement);
-                      return `${formatExactNumber(netInKg)} KG`;
+                      return toKg(item.net_weight, item.measurement);
                     }
                     if (item.gross_weight != null) {
-                      const grossInKg = toKg(item.gross_weight, item.measurement);
-                      return `${formatExactNumber(grossInKg)} KG`;
+                      return toKg(item.gross_weight, item.measurement);
                     }
                     if (item.quantity != null) {
-                      const qtyInKg = toKg(item.quantity, item.measurement);
-                      return `${formatExactNumber(qtyInKg)} KG`;
+                      return toKg(item.quantity, item.measurement);
                     }
-                    return "—";
+                    return null;
                   })();
+
+                  const remarks =
+                    remarksKg != null
+                      ? `${formatExactNumber(remarksKg)} KG`
+                      : "—";
+
+                  const salesUnitLabel =
+                    remarksKg != null
+                      ? formatInSalesUnit(
+                          remarksKg,
+                          orderLine,
+                          order.measurement_type,
+                        )
+                      : null;
 
                   return (
                     <tr key={index} className="border-b border-black print:h-20">
@@ -457,7 +516,12 @@ export default function LoadingInstructionPage() {
                         {noOfUnit}
                       </td>
                       <td className="border border-black px-3 py-2 print:py-5">
-                        {remarks}
+                        <div>{remarks}</div>
+                        {salesUnitLabel ? (
+                          <div className="text-[11px] text-muted-foreground print:text-base print:text-black mt-0.5">
+                            Sales: {salesUnitLabel}
+                          </div>
+                        ) : null}
                       </td>
                     </tr>
                   );

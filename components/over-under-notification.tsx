@@ -27,6 +27,8 @@ interface OverUnderNotificationProps {
   dnNo: string;
   overItems: OverUnderItem[];
   underItems: OverUnderItem[];
+  /** "delivery" for DN (default), "receipt" for GRN */
+  variant?: "delivery" | "receipt";
 }
 
 export function OverUnderNotification({
@@ -35,9 +37,19 @@ export function OverUnderNotification({
   dnNo,
   overItems,
   underItems,
+  variant = "delivery",
 }: OverUnderNotificationProps) {
   const hasOver = overItems.length > 0;
   const hasUnder = underItems.length > 0;
+  const isReceipt = variant === "receipt";
+  const documentLabel = isReceipt ? "GRN" : "Delivery Note";
+  const referenceLabel = isReceipt ? "Ordered" : "Invoiced";
+  const actualLabel = isReceipt ? "Received" : "Delivered";
+  const overTitle = isReceipt ? "Over Receipt" : "Over Delivery";
+  const underTitle = isReceipt ? "Under Receipt" : "Under Delivery";
+  const dialogTitle = isReceipt
+    ? "Over / Under Receipt Notification"
+    : "Over / Under Delivery Notification";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,28 +57,30 @@ export function OverUnderNotification({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <AlertTriangle className="h-6 w-6 text-amber-600" />
-            Over / Under Delivery Notification
+            {dialogTitle}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           <p className="text-base font-medium">
-            Delivery Note <span className="font-bold text-primary">{dnNo}</span> has quantity variances compared to the invoice:
+            {documentLabel}{" "}
+            <span className="font-bold text-primary">{dnNo}</span> has quantity
+            variances compared to the {isReceipt ? "purchase order" : "invoice"}:
           </p>
 
           {hasOver && (
             <div className="rounded-lg border-2 border-amber-500/50 bg-amber-50 dark:bg-amber-950/20 p-4">
               <h3 className="font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2 mb-3">
                 <AlertTriangle className="h-5 w-5" />
-                Over Delivery
+                {overTitle}
               </h3>
               <ul className="space-y-2">
                 {overItems.map((it, idx) => (
                   <li key={idx} className="text-sm font-medium">
                     <span className="text-amber-900 dark:text-amber-100">{it.item_name}</span>
                     <span className="text-amber-700 dark:text-amber-300 ml-2">
-                      — Invoiced: {it.invoiced}
-                      {unitSuffix(it.unit)}, Delivered: {it.delivered}
+                      — {referenceLabel}: {it.invoiced}
+                      {unitSuffix(it.unit)}, {actualLabel}: {it.delivered}
                       {unitSuffix(it.unit)} (over by {it.variance}
                       {unitSuffix(it.unit)})
                     </span>
@@ -80,15 +94,15 @@ export function OverUnderNotification({
             <div className="rounded-lg border-2 border-red-500/50 bg-red-50 dark:bg-red-950/20 p-4">
               <h3 className="font-semibold text-red-800 dark:text-red-200 flex items-center gap-2 mb-3">
                 <AlertCircle className="h-5 w-5" />
-                Under Delivery
+                {underTitle}
               </h3>
               <ul className="space-y-2">
                 {underItems.map((it, idx) => (
                   <li key={idx} className="text-sm font-medium">
                     <span className="text-red-900 dark:text-red-100">{it.item_name}</span>
                     <span className="text-red-700 dark:text-red-300 ml-2">
-                      — Invoiced: {it.invoiced}
-                      {unitSuffix(it.unit)}, Delivered: {it.delivered}
+                      — {referenceLabel}: {it.invoiced}
+                      {unitSuffix(it.unit)}, {actualLabel}: {it.delivered}
                       {unitSuffix(it.unit)} (short by {it.variance}
                       {unitSuffix(it.unit)})
                     </span>
