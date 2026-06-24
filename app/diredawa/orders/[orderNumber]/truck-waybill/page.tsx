@@ -174,6 +174,8 @@ export default function TruckWaybillPage() {
         total_price: i.total_price,
         measurement: i.measurement,
         bags: null,
+        drums: null,
+        package: null,
         net_weight: null,
         gross_weight: null,
         country_of_origin: order.country_of_origin || null,
