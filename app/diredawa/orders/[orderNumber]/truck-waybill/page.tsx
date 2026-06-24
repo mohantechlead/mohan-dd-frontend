@@ -71,6 +71,8 @@ interface ShippingInvoiceDetail {
     total_price: number;
     measurement: string;
     bags?: number | null;
+    drums?: number | null;
+    package?: number | null;
     net_weight?: number | null;
     gross_weight?: number | null;
     country_of_origin?: string | null;
@@ -402,7 +404,11 @@ export default function TruckWaybillPage() {
                   const packagesLabel =
                     item.bags != null
                       ? `${formatExactNumber(item.bags)} packages`
-                      : "-";
+                      : item.drums != null
+                        ? `${formatExactNumber(item.drums)} packages`
+                        : item.package != null
+                          ? `${formatExactNumber(item.package)} packages`
+                          : "-";
                   const unitLabel =
                     item.measurement || orderItem?.measurement || "-";
                   const netLabel =
