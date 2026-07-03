@@ -33,7 +33,7 @@ export interface DnDeliveryComparisonRow {
   this_dn_quantity: number;
   this_dn_unit?: string | null;
   comparison_unit?: string | null;
-  variance: number;
+  variance: number | null;
   per_dn_deliveries?: DnPerDnDelivery[];
 }
 
@@ -44,9 +44,6 @@ export interface DnInvoiceInsightSource {
   related_dns?: DnRelated[];
   delivery_comparison?: DnDeliveryComparisonRow[];
 }
-
-const qtyLabel = (unit?: string | null) =>
-  unit?.trim() ? ` (${unit.trim()})` : "";
 
 const formatQtyUnit = (qty: number, unit?: string | null) =>
   `${formatQuantityDisplay(qty)}${unit?.trim() ? ` ${unit.trim()}` : ""}`;
@@ -112,8 +109,10 @@ export function DnInvoiceInsightPanel({ dn }: { dn: DnInvoiceInsightSource }) {
             Invoice vs Delivered by DN
           </h3>
           <p className="px-4 py-2 text-xs text-muted-foreground border-b">
-            Each DN column shows quantity and unit as entered. Total and
-            variance use MT comparison (KG ÷ 1000 when invoice is MT).
+            Each DN column shows quantity and unit as entered. When the
+            invoice is in MT and DN lines are in KG, totals and variance
+            convert KG to MT (÷ 1000). Otherwise totals use the DN unit and
+            variance is shown only when units match.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[900px]">
@@ -159,21 +158,17 @@ export function DnInvoiceInsightPanel({ dn }: { dn: DnInvoiceInsightSource }) {
                   })}
                   <th className="px-3 py-2 text-right align-bottom">
                     Total Delivered
-                    {qtyLabel(comparison[0]?.comparison_unit)}
                   </th>
-                  <th className="px-3 py-2 text-right align-bottom">
-                    Variance
-                    {qtyLabel(comparison[0]?.comparison_unit)}
-                  </th>
+                  <th className="px-3 py-2 text-right align-bottom">Variance</th>
                 </tr>
               </thead>
               <tbody>
                 {comparison.map((row, idx) => {
                   const variance = row.variance;
                   const varianceClass =
-                    variance > 0
+                    variance != null && variance > 0
                       ? "text-amber-600"
-                      : variance < 0
+                      : variance != null && variance < 0
                         ? "text-red-600"
                         : "text-muted-foreground";
                   const perDnMap = Object.fromEntries(
@@ -217,11 +212,21 @@ export function DnInvoiceInsightPanel({ dn }: { dn: DnInvoiceInsightSource }) {
                       <td
                         className={`px-3 py-2 text-right font-semibold ${varianceClass}`}
                       >
-                        {variance > 0
-                          ? `+${formatQuantityDisplay(variance)}`
-                          : variance < 0
-                            ? `−${formatQuantityDisplay(Math.abs(variance))}`
-                            : formatQuantityDisplay(0)}
+                        {variance == null
+                          ? "—"
+                          : variance > 0
+                            ? `+${formatQuantityDisplay(variance)}${
+                                row.comparison_unit
+                                  ? ` ${row.comparison_unit}`
+                                  : ""
+                              }`
+                            : variance < 0
+                              ? `−${formatQuantityDisplay(Math.abs(variance))}${
+                                  row.comparison_unit
+                                    ? ` ${row.comparison_unit}`
+                                    : ""
+                                }`
+                              : formatQuantityDisplay(0)}
                       </td>
                     </tr>
                   );
