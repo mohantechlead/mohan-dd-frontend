@@ -26,6 +26,13 @@ interface OverUnderItem {
   unit?: string | null;
 }
 
+interface NegativeStockItem {
+  item_name: string;
+  internal_code?: string | null;
+  quantity: number;
+  package: number;
+}
+
 interface InvoiceItem {
   item_name: string;
   quantity: number;
@@ -71,6 +78,7 @@ interface DnDetail {
   delivery_comparison?: DeliveryComparisonRow[];
   over_items?: OverUnderItem[];
   under_items?: OverUnderItem[];
+  negative_items?: NegativeStockItem[];
 }
 
 const DN_API_URL = "/api/inventory/dn";
@@ -431,6 +439,44 @@ export default function DnDetailPage() {
                       </td>
                       <td className="px-4 py-2 text-right font-semibold text-red-600">
                         −{formatQuantityDisplay(item.variance)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {(dn.negative_items?.length ?? 0) > 0 && (
+            <div className="border rounded-md overflow-hidden bg-white border-red-300">
+              <h2 className="px-4 py-2 font-semibold bg-red-100 border-b text-red-900">
+                Negative Stock Alert
+              </h2>
+              <p className="px-4 py-2 text-sm text-red-800 border-b bg-red-50">
+                Items on this delivery note have negative stock after this
+                movement. Other items in inventory are not shown here.
+              </p>
+              <table className="w-full text-sm">
+                <thead className="bg-red-50/60">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Item</th>
+                    <th className="px-4 py-2 text-left">Code</th>
+                    <th className="px-4 py-2 text-right">Quantity</th>
+                    <th className="px-4 py-2 text-right">Package</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dn.negative_items?.map((item, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="px-4 py-2">{item.item_name}</td>
+                      <td className="px-4 py-2">
+                        {item.internal_code?.trim() || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right font-semibold text-red-600">
+                        {formatQuantityDisplay(item.quantity)}
+                      </td>
+                      <td className="px-4 py-2 text-right font-semibold text-red-600">
+                        {formatQuantityDisplay(item.package)}
                       </td>
                     </tr>
                   ))}
