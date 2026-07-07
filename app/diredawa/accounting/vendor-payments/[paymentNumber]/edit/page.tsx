@@ -5,12 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatMoney } from "@/lib/utils";
+import { vendorPaymentGrandTotal } from "@/lib/receivedPaymentsBalance";
 
 interface VendorPayment {
   payment_number: string;
   payment_date: string;
   payment_type: string;
   amount: number;
+  insurance?: number;
   remaining_amount: number;
   remark?: string | null;
 }
@@ -26,6 +28,7 @@ export default function EditVendorPaymentPage() {
     payment_date: "",
     payment_type: "partial",
     amount: "",
+    insurance: "",
     remark: "",
   });
 
@@ -43,6 +46,7 @@ export default function EditVendorPaymentPage() {
           payment_date: data.payment_date,
           payment_type: data.payment_type,
           amount: String(data.amount),
+          insurance: String(data.insurance ?? 0),
           remark: data.remark ?? "",
         });
       } catch {
@@ -60,6 +64,11 @@ export default function EditVendorPaymentPage() {
     }
   }, [form.payment_type, remainingAmount]);
 
+  const grandTotal = vendorPaymentGrandTotal({
+    amount: form.amount,
+    insurance: form.insurance,
+  });
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(form.amount);
@@ -69,6 +78,11 @@ export default function EditVendorPaymentPage() {
     }
     if (form.payment_type === "partial" && amountNum > remainingAmount) {
       showToast({ title: "Invalid amount", description: "Partial payment cannot exceed remaining amount.", variant: "error" });
+      return;
+    }
+    const insuranceNum = Number(form.insurance || 0);
+    if (!Number.isFinite(insuranceNum) || insuranceNum < 0) {
+      showToast({ title: "Invalid insurance", description: "Insurance cannot be negative.", variant: "error" });
       return;
     }
     try {
@@ -81,6 +95,7 @@ export default function EditVendorPaymentPage() {
           payment_date: form.payment_date,
           payment_type: form.payment_type,
           amount: amountNum,
+          insurance: insuranceNum,
           remark: form.remark.trim() || null,
         }),
       });
@@ -128,6 +143,26 @@ export default function EditVendorPaymentPage() {
             <label className="block font-medium mb-1">Amount *</label>
             <input type="number" min="0" step="0.01" className="w-full border rounded-md px-3 py-2" value={form.amount} readOnly={form.payment_type === "full"} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} required />
             <p className="text-xs text-muted-foreground mt-1">Remaining: {formatMoney(remainingAmount)}</p>
+          </div>
+          <div>
+            <label className="block font-medium mb-1">Insurance</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className="w-full border rounded-md px-3 py-2"
+              value={form.insurance}
+              onChange={(e) => setForm((p) => ({ ...p, insurance: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block font-medium mb-1">Grand Total</label>
+            <input
+              className="w-full border rounded-md px-3 py-2 bg-muted/40 font-medium"
+              value={formatMoney(grandTotal)}
+              readOnly
+            />
+            <p className="text-xs text-muted-foreground mt-1">Amount + Insurance</p>
           </div>
           <div>
             <label className="block font-medium mb-1">Remark</label>

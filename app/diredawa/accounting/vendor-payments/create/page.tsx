@@ -9,6 +9,7 @@ import {
   resolvePurchaseTotalFromPayments,
   sortReceivedPaymentsChronologically,
   sumPaymentsTowardRemaining,
+  vendorPaymentGrandTotal,
 } from "@/lib/receivedPaymentsBalance";
 
 interface PurchaseOption {
@@ -45,6 +46,7 @@ export default function CreateVendorPaymentPage() {
     supplier_name: "",
     payment_type: "partial",
     amount: "",
+    insurance: "",
     remark: "",
   });
 
@@ -126,6 +128,15 @@ export default function CreateVendorPaymentPage() {
     }
   }, [form.payment_type, remainingAmount]);
 
+  const grandTotal = useMemo(
+    () =>
+      vendorPaymentGrandTotal({
+        amount: form.amount,
+        insurance: form.insurance,
+      }),
+    [form.amount, form.insurance],
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.purchase_number) {
@@ -139,6 +150,11 @@ export default function CreateVendorPaymentPage() {
     const amountNum = Number(form.amount);
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
       showToast({ title: "Invalid amount", description: "Amount must be greater than 0.", variant: "error" });
+      return;
+    }
+    const insuranceNum = Number(form.insurance || 0);
+    if (!Number.isFinite(insuranceNum) || insuranceNum < 0) {
+      showToast({ title: "Invalid insurance", description: "Insurance cannot be negative.", variant: "error" });
       return;
     }
     if (form.payment_type === "partial" && amountNum > remainingAmount) {
@@ -157,6 +173,7 @@ export default function CreateVendorPaymentPage() {
           purchase_number: form.purchase_number,
           payment_type: form.payment_type,
           amount: amountNum,
+          insurance: insuranceNum,
           remark: form.remark.trim() || null,
         }),
       });
@@ -222,6 +239,26 @@ export default function CreateVendorPaymentPage() {
                 required
               />
               <p className="text-xs text-muted-foreground mt-1">Remaining: {formatMoney(remainingAmount)}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Insurance</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full border rounded-md px-3 py-2"
+                value={form.insurance}
+                onChange={(e) => setForm((p) => ({ ...p, insurance: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Grand Total</label>
+              <input
+                className="w-full border rounded-md px-3 py-2 bg-muted/40 font-medium"
+                value={formatMoney(grandTotal)}
+                readOnly
+              />
+              <p className="text-xs text-muted-foreground mt-1">Amount + Insurance</p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">Remark</label>

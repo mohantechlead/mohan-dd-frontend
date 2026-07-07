@@ -13,6 +13,8 @@ interface VendorPayment {
   supplier_name: string;
   payment_type: string;
   amount: number;
+  insurance?: number;
+  grand_total?: number;
   purchase_total: number;
   total_paid: number;
   remaining_amount: number;
@@ -65,6 +67,8 @@ export default function VendorPaymentDetailPage() {
           <div><span className="font-medium">Supplier Name:</span> {item.supplier_name}</div>
           <div><span className="font-medium">Payment Type:</span> <span className="capitalize">{item.payment_type}</span></div>
           <div><span className="font-medium">Amount:</span> {formatMoney(item.amount)}</div>
+          <div><span className="font-medium">Insurance:</span> {formatMoney(item.insurance ?? 0)}</div>
+          <div><span className="font-medium">Grand Total:</span> {formatMoney(item.grand_total ?? item.amount + (item.insurance ?? 0))}</div>
           <div><span className="font-medium">Purchase Total:</span> {formatMoney(item.purchase_total)}</div>
           <div><span className="font-medium">Total Paid:</span> {formatMoney(item.total_paid)}</div>
           <div><span className="font-medium">Remaining Amount:</span> {formatMoney(item.remaining_amount)}</div>

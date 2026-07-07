@@ -61,3 +61,11 @@ export function resolvePurchaseTotalFromPayments<T extends { purchase_total?: nu
   }
   return 0;
 }
+
+/** Vendor payment payout total: amount + insurance. */
+export function vendorPaymentGrandTotal(p: {
+  amount?: unknown;
+  insurance?: unknown;
+}): number {
+  return Number(p.amount ?? 0) + Number(p.insurance ?? 0);
+}

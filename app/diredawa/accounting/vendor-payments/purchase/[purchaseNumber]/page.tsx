@@ -20,6 +20,8 @@ interface VendorPayment {
   supplier_name: string;
   payment_type: string;
   amount: number;
+  insurance?: number;
+  grand_total?: number;
   status: string;
   purchase_total?: number;
   remaining_amount: number;
@@ -123,6 +125,8 @@ export default function VendorPaymentPurchaseSummaryPage() {
                   <th className="px-4 py-2 text-left">Date</th>
                   <th className="px-4 py-2 text-left">Type</th>
                   <th className="px-4 py-2 text-right">Amount</th>
+                  <th className="px-4 py-2 text-right">Insurance</th>
+                  <th className="px-4 py-2 text-right">Grand Total</th>
                   <th className="px-4 py-2 text-left">Status</th>
                 </tr>
               </thead>
@@ -133,6 +137,10 @@ export default function VendorPaymentPurchaseSummaryPage() {
                     <td className="px-4 py-2">{new Date(x.payment_date).toLocaleDateString()}</td>
                     <td className="px-4 py-2 capitalize">{x.payment_type}</td>
                     <td className="px-4 py-2 text-right">{formatMoney(x.amount)}</td>
+                    <td className="px-4 py-2 text-right">{formatMoney(x.insurance ?? 0)}</td>
+                    <td className="px-4 py-2 text-right font-medium">
+                      {formatMoney(x.grand_total ?? x.amount + (x.insurance ?? 0))}
+                    </td>
                     <td className="px-4 py-2 capitalize">{x.status}</td>
                   </tr>
                 ))}
