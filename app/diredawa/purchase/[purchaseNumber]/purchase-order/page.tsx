@@ -5,7 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { amountInWords, formatExactNumber, formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
+import {
+  amountInWords,
+  formatExactNumber,
+  formatAggregatedTotal,
+  formatMultipliedTotal,
+  formatUnitPrice,
+} from "@/lib/utils";
 
 interface PurchaseItem {
   purchase_number: string;
@@ -53,13 +59,15 @@ export default function PurchaseOrderPage() {
   const purchaseNumber = params.purchaseNumber;
   const [purchase, setPurchase] = useState<PurchaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [itemOptions, setItemOptions] = useState<{ item_name: string; hscode: string }[]>([]);
+  const [itemOptions, setItemOptions] = useState<
+    { item_name: string; hscode: string }[]
+  >([]);
 
   useEffect(() => {
     const fetchPurchase = async () => {
       try {
         const res = await fetch(
-          `/api/purchases/${encodeURIComponent(purchaseNumber)}`
+          `/api/purchases/${encodeURIComponent(purchaseNumber)}`,
         );
         const data: unknown = await res.json();
         if (!res.ok) {
@@ -91,7 +99,7 @@ export default function PurchaseOrderPage() {
           (data as { item_name: string; hscode: string }[]).map((i) => ({
             item_name: i.item_name,
             hscode: i.hscode || "",
-          }))
+          })),
         );
       } catch {
         // ignore
@@ -130,10 +138,8 @@ export default function PurchaseOrderPage() {
 
   const totalPrice = useMemo(
     () =>
-      purchase
-        ? purchase.items.reduce((s, i) => s + i.total_price, 0)
-        : 0,
-    [purchase]
+      purchase ? purchase.items.reduce((s, i) => s + i.total_price, 0) : 0,
+    [purchase],
   );
 
   const parseCharge = (value: unknown): number => {
@@ -150,28 +156,26 @@ export default function PurchaseOrderPage() {
       purchase?.freight_price != null
         ? Number(purchase.freight_price) || 0
         : parseCharge(purchase?.freight),
-    [purchase?.freight_price, purchase?.freight]
+    [purchase?.freight_price, purchase?.freight],
   );
   const insuranceCharge = useMemo(
     () => parseCharge(purchase?.insurance_chargers),
-    [purchase?.insurance_chargers]
+    [purchase?.insurance_chargers],
   );
   const totalCif = useMemo(
     () => totalPrice + freightCharge + insuranceCharge,
-    [totalPrice, freightCharge, insuranceCharge]
+    [totalPrice, freightCharge, insuranceCharge],
   );
 
-  const shipmentTypeLabel = (purchase?.shipment_type?.trim() || "FOB");
+  const shipmentTypeLabel = purchase?.shipment_type?.trim() || "FOB";
 
   const getHsCode = (itemName: string) =>
     itemOptions.find(
-      (o) => o.item_name.toLowerCase() === itemName.toLowerCase()
+      (o) => o.item_name.toLowerCase() === itemName.toLowerCase(),
     )?.hscode ?? "";
 
   return (
-    <div
-      className="max-w-5xl mx-auto py-8 space-y-8 bg-white font-poppins"
-    >
+    <div className="max-w-5xl mx-auto py-8 space-y-8 bg-white font-poppins">
       <style jsx global>{`
         @media print {
           html:has(#purchase-order-print-content),
@@ -236,9 +240,7 @@ export default function PurchaseOrderPage() {
       </div>
 
       {loading ? (
-        <p className="text-center text-sm text-muted-foreground">
-          Loading...
-        </p>
+        <p className="text-center text-sm text-muted-foreground">Loading...</p>
       ) : !purchase ? (
         <p className="text-center text-sm text-muted-foreground">
           Purchase not found.
@@ -254,9 +256,7 @@ export default function PurchaseOrderPage() {
               height={80}
               className="mx-auto mb-3"
             />
-            <h1 className="text-2xl font-semibold tracking-wide">
-              Mohan PLC
-            </h1>
+            <h1 className="text-2xl font-semibold tracking-wide">Mohan PLC</h1>
             <p className="text-xs text-muted-foreground">
               Dire Dawa Free Trade Zone Branch
             </p>
@@ -278,9 +278,13 @@ export default function PurchaseOrderPage() {
             {/* Row 1 */}
             <div className="space-y-1">
               <p className="font-semibold">Seller Details</p>
-              <p className="uppercase text-muted-foreground">{purchase.shipper}</p>
+              <p className="uppercase text-muted-foreground">
+                {purchase.shipper}
+              </p>
               {purchase.shipper_address && (
-                <p className="text-muted-foreground">{purchase.shipper_address}</p>
+                <p className="text-muted-foreground">
+                  {purchase.shipper_address}
+                </p>
               )}
               <p className="text-muted-foreground">
                 {purchase.add_consignee ?? "—"}
@@ -288,7 +292,9 @@ export default function PurchaseOrderPage() {
             </div>
             <div className="space-y-1">
               <p className="font-semibold">Purchase No:</p>
-              <p className="text-muted-foreground">{purchase.purchase_number}</p>
+              <p className="text-muted-foreground">
+                {purchase.purchase_number}
+              </p>
               <p className="font-semibold mt-2">Invoice Date:</p>
               <p className="text-muted-foreground">
                 {new Date(purchase.order_date).toLocaleDateString(undefined, {
@@ -300,7 +306,9 @@ export default function PurchaseOrderPage() {
             </div>
             <div className="space-y-1">
               <p className="font-semibold">PFI No:</p>
-              <p className="text-muted-foreground">{purchase.proforma_ref_no}</p>
+              <p className="text-muted-foreground">
+                {purchase.proforma_ref_no}
+              </p>
             </div>
           </div>
 
@@ -313,31 +321,45 @@ export default function PurchaseOrderPage() {
               <p className="text-muted-foreground">
                 MOHAN PLC, DIRE DAWA FREE TRADE ZONE
               </p>
-              <p className="text-muted-foreground">
-                DIRE DAWA FREE TRADE ZONE
-              </p>
+              <p className="text-muted-foreground">DIRE DAWA FREE TRADE ZONE</p>
             </div>
             <div className="space-y-1">
               <p className="font-semibold">Port of Loading</p>
-              <p className="text-muted-foreground">{purchase.port_of_loading ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.port_of_loading ?? "—"}
+              </p>
               <p className="font-semibold mt-2">Port Of Discharge</p>
-              <p className="text-muted-foreground">{purchase.port_of_discharge ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.port_of_discharge ?? "—"}
+              </p>
               <p className="font-semibold mt-2">Means of Transport</p>
-              <p className="text-muted-foreground">{purchase.mode_of_transport ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.mode_of_transport ?? "—"}
+              </p>
             </div>
             <div className="space-y-1">
               <p className="font-semibold">Country of Origin</p>
-              <p className="text-muted-foreground">{purchase.country_of_origin ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.country_of_origin ?? "—"}
+              </p>
               <p className="font-semibold mt-2">Final Destination</p>
-              <p className="text-muted-foreground">{purchase.final_destination ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.final_destination ?? "—"}
+              </p>
               <p className="font-semibold mt-2">Payment Type</p>
-              <p className="text-muted-foreground">{purchase.payment_type ?? purchase.payment_terms ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.payment_type ?? purchase.payment_terms ?? "—"}
+              </p>
               <p className="font-semibold mt-2">Shipment Terms</p>
-              <p className="text-muted-foreground">{purchase.shipment_type ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.shipment_type ?? "—"}
+              </p>
               <p className="font-semibold mt-2">Freight</p>
               <p className="text-muted-foreground">{purchase.freight ?? "—"}</p>
               <p className="font-semibold mt-2">Shipment Type</p>
-              <p className="text-muted-foreground">{purchase.shipment_type ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {purchase.shipment_type ?? "—"}
+              </p>
             </div>
           </div>
 
@@ -354,7 +376,9 @@ export default function PurchaseOrderPage() {
                   <th className="px-2 py-2 text-right w-28">Price in USD</th>
                   <th className="px-2 py-2 text-right w-20">Quantity</th>
                   <th className="px-2 py-2 text-right w-20">Remaining</th>
-                  <th className="px-2 py-2 text-left w-24">Unit of Measurement</th>
+                  <th className="px-2 py-2 text-left w-24">
+                    Unit of Measurement
+                  </th>
                   <th className="px-2 py-2 text-right w-28">Total</th>
                   <th className="px-2 py-2 text-right w-28">Before VAT</th>
                 </tr>
@@ -386,11 +410,10 @@ export default function PurchaseOrderPage() {
                       <td className="px-2 py-2 text-right">
                         {formatExactNumber(item.remaining ?? item.quantity)}
                       </td>
-                      <td className="px-2 py-2">
-                        {item.measurement || "—"}
-                      </td>
+                      <td className="px-2 py-2">{item.measurement || "—"}</td>
                       <td className="px-2 py-2 text-right">
-                        ${formatMultipliedTotal(
+                        $
+                        {formatMultipliedTotal(
                           item.total_price,
                           item.price,
                           item.quantity,
@@ -420,6 +443,7 @@ export default function PurchaseOrderPage() {
                 </tr>
               </tbody>
             </table>
+            {/* Temporarily hidden: TOTAL / Freight / Insurance / Grand Total
             <div className="mt-2 flex justify-end">
               <table className="text-xs border border-black min-w-[340px]">
                 <tbody>
@@ -432,9 +456,7 @@ export default function PurchaseOrderPage() {
                     </td>
                   </tr>
                   <tr className="border-b">
-                    <td className="px-3 py-1.5 font-medium">
-                      Freight US $
-                    </td>
+                    <td className="px-3 py-1.5 font-medium">Freight US $</td>
                     <td className="px-3 py-1.5 text-right font-medium">
                       {formatUnitPrice(freightCharge)}
                     </td>
@@ -456,6 +478,7 @@ export default function PurchaseOrderPage() {
                 </tbody>
               </table>
             </div>
+            */}
           </div>
         </div>
       )}
