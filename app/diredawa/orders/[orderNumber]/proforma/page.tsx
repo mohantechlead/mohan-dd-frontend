@@ -5,7 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
-import { amountInWords, formatExactNumber, formatAggregatedTotal, formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
+import {
+  amountInWords,
+  formatExactNumber,
+  formatAggregatedTotal,
+  formatMultipliedTotal,
+  formatUnitPrice,
+} from "@/lib/utils";
 
 interface OrderItem {
   item_name: string;
@@ -155,11 +161,9 @@ export default function ProformaInvoicePage() {
               Dire Dawa Free Trade Zone Branch
             </p>
             <p className="text-xs text-muted-foreground">
-              Email: harsh@mohanint.com 
+              Email: harsh@mohanint.com
             </p>
-            <p className="text-xs text-muted-foreground">
-              TEL:+251-11-6621849
-            </p>
+            <p className="text-xs text-muted-foreground">TEL:+251-11-6621849</p>
           </div>
 
           <h1 className="text-2xl font-semibold text-center tracking-wide">
@@ -222,7 +226,9 @@ export default function ProformaInvoicePage() {
               <p className="uppercase">{order.buyer}</p>
               <div>
                 <p className="text-[11px] text-muted-foreground">
-                  {order.buyer_address?.trim() || order.add_consignee?.trim() || "—"}
+                  {order.buyer_address?.trim() ||
+                    order.add_consignee?.trim() ||
+                    "—"}
                 </p>
               </div>
             </div>
@@ -274,7 +280,9 @@ export default function ProformaInvoicePage() {
 
           {/* Order summary table */}
           <div className="mt-4">
-            <p className="text-xs font-semibold mb-2 tracking-wide">Order Summary</p>
+            <p className="text-xs font-semibold mb-2 tracking-wide">
+              Order Summary
+            </p>
             <table className="w-full text-xs border-b">
               <thead>
                 <tr className="border-b text-left">
@@ -321,9 +329,12 @@ export default function ProformaInvoicePage() {
                     <td className="px-2 py-2 text-right">
                       {formatExactNumber(item.quantity)}
                     </td>
-                    <td className="px-2 py-2">{item.measurement || order.measurement_type || "-"}</td>
+                    <td className="px-2 py-2">
+                      {item.measurement || order.measurement_type || "-"}
+                    </td>
                     <td className="px-2 py-2 text-right">
-                      ${formatMultipliedTotal(
+                      $
+                      {formatMultipliedTotal(
                         item.total_price,
                         item.price,
                         item.quantity,
@@ -360,6 +371,10 @@ export default function ProformaInvoicePage() {
                   laws and regulations of the Federal Democratic Republic of
                   Ethiopia.
                 </li>
+                <li>
+                  This proforma invoice is valid for 10 days from the date of
+                  issue.
+                </li>
               </ol>
             </div>
 
@@ -377,4 +392,3 @@ export default function ProformaInvoicePage() {
     </div>
   );
 }
-
