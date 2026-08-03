@@ -47,6 +47,7 @@ export default function CreateVendorPaymentPage() {
     payment_type: "partial",
     amount: "",
     insurance: "",
+    freight: "",
     remark: "",
   });
 
@@ -133,8 +134,9 @@ export default function CreateVendorPaymentPage() {
       vendorPaymentGrandTotal({
         amount: form.amount,
         insurance: form.insurance,
+        freight: form.freight,
       }),
-    [form.amount, form.insurance],
+    [form.amount, form.insurance, form.freight],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,6 +159,11 @@ export default function CreateVendorPaymentPage() {
       showToast({ title: "Invalid insurance", description: "Insurance cannot be negative.", variant: "error" });
       return;
     }
+    const freightNum = Number(form.freight || 0);
+    if (!Number.isFinite(freightNum) || freightNum < 0) {
+      showToast({ title: "Invalid freight", description: "Freight cannot be negative.", variant: "error" });
+      return;
+    }
     if (form.payment_type === "partial" && amountNum > remainingAmount) {
       showToast({ title: "Invalid partial amount", description: "Partial payment cannot exceed remaining amount.", variant: "error" });
       return;
@@ -174,6 +181,7 @@ export default function CreateVendorPaymentPage() {
           payment_type: form.payment_type,
           amount: amountNum,
           insurance: insuranceNum,
+          freight: freightNum,
           remark: form.remark.trim() || null,
         }),
       });
@@ -252,13 +260,24 @@ export default function CreateVendorPaymentPage() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium mb-1">Freight</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full border rounded-md px-3 py-2"
+                value={form.freight}
+                onChange={(e) => setForm((p) => ({ ...p, freight: e.target.value }))}
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">Grand Total</label>
               <input
                 className="w-full border rounded-md px-3 py-2 bg-muted/40 font-medium"
                 value={formatMoney(grandTotal)}
                 readOnly
               />
-              <p className="text-xs text-muted-foreground mt-1">Amount + Insurance</p>
+              <p className="text-xs text-muted-foreground mt-1">Amount + Insurance + Freight</p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">Remark</label>
