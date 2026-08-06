@@ -43,7 +43,6 @@ interface Purchase {
 const PURCHASES_API_URL = "/api/purchases";
 const BANNER_DISMISSED_KEY = "marine-insurance-banner-dismissed-date";
 
-/** Returns true if today is within the last N days of the current month. */
 function isNearEndOfMonth(daysThreshold = 5): boolean {
   const now = new Date();
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -66,31 +65,27 @@ export default function DisplayPurchasesPage() {
 
   // Marine insurance banner
   const [missingMarineInsurance, setMissingMarineInsurance] = useState<Purchase[]>([]);
-  const [bannerDismissed, setBannerDismissed] = useState(true); // start hidden, reveal after check
+  const [bannerDismissed, setBannerDismissed] = useState(true);
   const nearEndOfMonth = isNearEndOfMonth(5);
 
   const dismissBanner = () => {
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const today = new Date().toISOString().slice(0, 10);
     localStorage.setItem(BANNER_DISMISSED_KEY, today);
     setBannerDismissed(true);
   };
 
   const checkMissingMarineInsurance = useCallback(async (approvedPurchases: Purchase[]) => {
-    // Check if user already dismissed banner today
     const dismissedDate = localStorage.getItem(BANNER_DISMISSED_KEY);
     const today = new Date().toISOString().slice(0, 10);
     if (dismissedDate === today) {
       setBannerDismissed(true);
       return;
     }
-
     if (approvedPurchases.length === 0) {
       setBannerDismissed(true);
       return;
     }
-
     try {
-      // Try dedicated endpoint first
       const res = await fetch("/api/purchases/missing-marine-insurance", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
@@ -102,8 +97,6 @@ export default function DisplayPurchasesPage() {
     } catch {
       // fall through to individual checks
     }
-
-    // Fallback: check each approved purchase individually
     const missing: Purchase[] = [];
     await Promise.all(
       approvedPurchases.map(async (p) => {
@@ -119,7 +112,6 @@ export default function DisplayPurchasesPage() {
       })
     );
     setMissingMarineInsurance(missing);
-    // Show banner if any missing AND (near end of month OR any missing at all)
     setBannerDismissed(missing.length === 0);
   }, []);
 
@@ -184,8 +176,7 @@ export default function DisplayPurchasesPage() {
       });
       setPurchases(sorted);
 
-      // Trigger marine insurance check after purchases load
-      const approved = (sorted as Purchase[]).filter((p) => p.status === "approved");
+      const approved = sorted.filter((p) => p.status === "approved");
       checkMissingMarineInsurance(approved);
     } catch {
       showToast({
@@ -200,7 +191,7 @@ export default function DisplayPurchasesPage() {
 
   useEffect(() => {
     fetchPurchases();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openDelete = (purchase: Purchase) => {
@@ -308,10 +299,7 @@ export default function DisplayPurchasesPage() {
                 {pagedPurchases.map((purchase) => {
                   const beforeVat =
                     purchase.before_vat ??
-                    purchase.items.reduce(
-                      (sum, item) => sum + item.total_price,
-                      0
-                    );
+                    purchase.items.reduce((sum, item) => sum + item.total_price, 0);
                   const isMissingMarine = missingMarineInsurance.some(
                     (m) => m.purchase_number === purchase.purchase_number
                   );
@@ -322,9 +310,7 @@ export default function DisplayPurchasesPage() {
                           type="button"
                           className="text-blue-600 hover:underline inline-flex items-center gap-1"
                           onClick={() =>
-                            router.push(
-                              `/diredawa/purchase/${purchase.purchase_number}`
-                            )
+                            router.push(`/diredawa/purchase/${purchase.purchase_number}`)
                           }
                         >
                           {purchase.purchase_number}
@@ -334,15 +320,14 @@ export default function DisplayPurchasesPage() {
                         </button>
                       </td>
                       <td className="px-4 py-2">
-                        {new Date(purchase.order_date).toLocaleDateString(
-                          undefined,
-                          { year: "numeric", month: "short", day: "numeric" }
-                        )}
+                        {new Date(purchase.order_date).toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </td>
                       <td className="px-4 py-2 text-right">
-                        {beforeVat.toLocaleString(undefined, {
-                          maximumFractionDigits: 1,
-                        })}
+                        {beforeVat.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                       </td>
                       <td className="px-4 py-2">
                         {purchase.shipper?.trim() || purchase.buyer || "—"}
@@ -357,9 +342,7 @@ export default function DisplayPurchasesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                router.push(
-                                  `/diredawa/purchase/${purchase.purchase_number}/edit`
-                                )
+                                router.push(`/diredawa/purchase/${purchase.purchase_number}/edit`)
                               }
                             >
                               <Pencil className="w-4 h-4" />
@@ -417,308 +400,3 @@ export default function DisplayPurchasesPage() {
     </div>
   );
 }
-
-
-interface PurchaseItem {
-  purchase_number: string;
-  item_name: string;
-  price: number;
-  quantity: number;
-  remaining: number;
-  total_price: number;
-  before_vat?: number;
-  hscode?: string | null;
-  measurement: string;
-}
-
-interface Purchase {
-  id: string;
-  purchase_number: string;
-  order_date: string;
-  shipper?: string | null;
-  buyer?: string | null;
-  proforma_ref_no: string;
-  status?: string | null;
-  /** Sum of line totals (same as summed item total_price); from API */
-  before_vat?: number;
-  items: PurchaseItem[];
-}
-
-const PURCHASES_API_URL = "/api/purchases";
-
-export default function DisplayPurchasesPage() {
-  const router = useRouter();
-  const { showToast } = useToast();
-  const auth = useAuth();
-  const canManageRecords = auth?.canManageRecords ?? false;
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const filteredPurchases = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    if (!q) return purchases;
-    return purchases.filter((p) => {
-      const items = Array.isArray(p.items) ? p.items : [];
-      return (
-        (p.purchase_number ?? "").toLowerCase().includes(q) ||
-        (p.shipper ?? p.buyer ?? "").toLowerCase().includes(q) ||
-        (p.proforma_ref_no ?? "").toLowerCase().includes(q) ||
-        (p.status ?? "").toLowerCase().includes(q) ||
-        items.some((i) => (i?.item_name ?? "").toLowerCase().includes(q))
-      );
-    });
-  }, [purchases, search]);
-
-  useEffect(() => {
-    setPageIndex(0);
-  }, [search]);
-
-  const pagedPurchases = useMemo(
-    () => slicePage(filteredPurchases, pageIndex, pageSize),
-    [filteredPurchases, pageIndex, pageSize]
-  );
-
-  const fetchPurchases = async () => {
-    try {
-      const res = await fetch(PURCHASES_API_URL, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      const data: unknown = await res.json();
-
-      if (!res.ok) {
-        showToast({
-          title: "Failed to load purchases",
-          description:
-            (data as { detail?: string; message?: string })?.detail ||
-            (data as { detail?: string; message?: string })?.message ||
-            "Please try again.",
-          variant: "error",
-        });
-        return;
-      }
-
-      // Ensure newest/highest purchase numbers show first.
-      // Purchase numbers look like "M####", so compare by the numeric portion.
-      const extractPurchaseNumber = (value?: string) => {
-        const matches = (value ?? "").match(/\d+/g);
-        if (!matches || matches.length === 0) return -Infinity;
-        const last = matches[matches.length - 1];
-        const n = Number(last);
-        return Number.isFinite(n) ? n : -Infinity;
-      };
-
-      const sorted = [...(data as Purchase[])].sort((a, b) => {
-        const aNum = extractPurchaseNumber(a.purchase_number);
-        const bNum = extractPurchaseNumber(b.purchase_number);
-        if (bNum !== aNum) return bNum - aNum;
-        return (b.purchase_number ?? "").localeCompare(a.purchase_number ?? "");
-      });
-      setPurchases(sorted);
-    } catch {
-      showToast({
-        title: "Failed to load purchases",
-        description: "Something went wrong. Please try again.",
-        variant: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPurchases();
-  }, [showToast]);
-
-  const openDelete = (purchase: Purchase) => {
-    setPurchaseToDelete(purchase);
-    setDeleteOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!purchaseToDelete) return;
-    setDeleting(true);
-    try {
-      const res = await fetch(
-        `${PURCHASES_API_URL}/${encodeURIComponent(purchaseToDelete.purchase_number)}`,
-        { method: "DELETE", credentials: "include" }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        showToast({
-          title: "Failed to delete purchase",
-          description: (data as { detail?: string })?.detail || "Please try again.",
-          variant: "error",
-        });
-        return;
-      }
-      showToast({ title: "Purchase deleted", variant: "success" });
-      setDeleteOpen(false);
-      setPurchaseToDelete(null);
-      fetchPurchases();
-    } catch {
-      showToast({
-        title: "Failed to delete purchase",
-        description: "Something went wrong.",
-        variant: "error",
-      });
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <div className="max-w-5xl mx-auto mt-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <Button onClick={() => router.push("/diredawa/purchase/create")}>
-          Create Purchase
-        </Button>
-        <h1 className="text-2xl font-bold text-center flex-1">
-          Purchase Orders
-        </h1>
-      </div>
-
-      {loading ? (
-        <p>Loading purchases...</p>
-      ) : purchases.length === 0 ? (
-        <p className="text-center text-sm text-muted-foreground">
-          No purchases found.
-        </p>
-      ) : (
-        <>
-          <div className="flex justify-end mb-4">
-          <TableSearch value={search} onChange={setSearch} placeholder="Search purchases, supplier, items..." />
-        </div>
-          <div className="border rounded-md overflow-hidden bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/60">
-              <tr>
-                <th className="text-left px-4 py-2">Purchase Number</th>
-                <th className="text-left px-4 py-2">Date</th>
-                <th className="text-right px-4 py-2">Before VAT</th>
-                <th className="text-left px-4 py-2">Supplier Name</th>
-                <th className="text-left px-4 py-2">Status</th>
-                {canManageRecords && (
-                  <th className="text-right px-4 py-2">Actions</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {pagedPurchases.map((purchase) => {
-                const beforeVat =
-                  purchase.before_vat ??
-                  purchase.items.reduce(
-                    (sum, item) => sum + item.total_price,
-                    0
-                  );
-                return (
-                  <tr key={purchase.id} className="border-t">
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        className="text-blue-600 hover:underline"
-                        onClick={() =>
-                          router.push(
-                            `/diredawa/purchase/${purchase.purchase_number}`
-                          )
-                        }
-                      >
-                        {purchase.purchase_number}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2">
-                      {new Date(purchase.order_date).toLocaleDateString(
-                        undefined,
-                        {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        }
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {beforeVat.toLocaleString(undefined, {
-                        maximumFractionDigits: 1,
-                      })}
-                    </td>
-                    <td className="px-4 py-2">
-                      {purchase.shipper?.trim() || purchase.buyer || "—"}
-                    </td>
-                    <td className="px-4 py-2 capitalize">
-                      {purchase.status?.trim() ? purchase.status : "pending"}
-                    </td>
-                    {canManageRecords && (
-                      <td className="px-4 py-2 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              router.push(
-                                `/diredawa/purchase/${purchase.purchase_number}/edit`
-                              )
-                            }
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDelete(purchase)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="border border-border border-t-0 rounded-b-md overflow-hidden bg-white">
-          <TablePagination
-            pageIndex={pageIndex}
-            pageSize={pageSize}
-            totalItems={filteredPurchases.length}
-            onPageIndexChange={setPageIndex}
-            onPageSizeChange={(next) => {
-              setPageSize(next);
-              setPageIndex(0);
-            }}
-          />
-        </div>
-        </>
-      )}
-
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Purchase</DialogTitle>
-          </DialogHeader>
-          <p>
-            Are you sure you want to delete purchase &quot;{purchaseToDelete?.purchase_number}&quot;? This action cannot be undone.
-          </p>
-          <DialogFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-

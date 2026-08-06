@@ -103,7 +103,7 @@ const baseNavMain = [
     icon: ShoppingBag,
     items: [
       { title: "Create Purchase", url: "/diredawa/purchase/create" },
-      { title: "Display Purchase", url: "/diredawa/purchase/display" },
+      { title: "Display Purchase", url: "/diredawa/purchase/display", accountingVisible: true },
       { title: "Rejected Purchases", url: "/diredawa/purchase/rejected" },
       { title: "Completed Purchases", url: "/diredawa/purchase/completed" },
     ],
@@ -268,7 +268,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ),
         })) as typeof baseNavMain;
     } else if (isAccounting && !isAdmin) {
-      items = items.filter((section) => section.title === "Accounting") as typeof baseNavMain;
+      items = items
+        .filter((section) => {
+          if (section.title === "Accounting") return true;
+          const sectionItems = ((section as { items?: { accountingVisible?: boolean }[] }).items ?? []);
+          return sectionItems.some((sub) => Boolean((sub as { accountingVisible?: boolean }).accountingVisible));
+        })
+        .map((section) => ({
+          ...section,
+          items: ((section as { items?: { accountingVisible?: boolean; title: string; url: string }[] }).items ?? []).filter(
+            (sub) => Boolean((sub as { accountingVisible?: boolean }).accountingVisible)
+          ),
+        })) as typeof baseNavMain;
     } else {
       // Admin and logistics: hide items with adminLogisticsHidden
       items = items.map((section) => ({

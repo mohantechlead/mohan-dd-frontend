@@ -378,7 +378,7 @@ export default function PurchaseDetailPage() {
           </div>
 
           {/* ── Marine Insurance (approved only) ── */}
-          {purchase.status === "pending" && (
+          {purchase.status === "approved" && (
             <div className="border rounded-md overflow-hidden bg-white">
               <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
                 <h2 className="text-sm font-semibold">Marine Insurance</h2>
