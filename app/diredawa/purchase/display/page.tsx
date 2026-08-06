@@ -315,7 +315,9 @@ export default function DisplayPurchasesPage() {
                         >
                           {purchase.purchase_number}
                           {isMissingMarine && (
-                            <ShieldAlert className="h-3.5 w-3.5 text-amber-500" title="Marine insurance missing" />
+                            <span title="Marine insurance missing" className="inline-flex">
+                              <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
+                            </span>
                           )}
                         </button>
                       </td>
