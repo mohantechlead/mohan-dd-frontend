@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/authProvider";
 import useSWR from "swr";
@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Users,
   BarChart3,
+  ShieldAlert,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -95,10 +96,60 @@ export default function AdminDashboardPage() {
     { revalidateOnFocus: false }
   );
 
+  // Marine insurance: check approved purchases missing a record
+  const [missingMarineInsurance, setMissingMarineInsurance] = useState<Purchase[]>([]);
+  const [marineCheckDone, setMarineCheckDone] = useState(false);
+
+  const checkMissingMarineInsurance = useCallback(async (approvedPurchases: Purchase[]) => {
+    if (approvedPurchases.length === 0) {
+      setMissingMarineInsurance([]);
+      setMarineCheckDone(true);
+      return;
+    }
+    try {
+      // Try the dedicated endpoint first; fall back to individual checks
+      const res = await fetch("/api/purchases/missing-marine-insurance", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setMissingMarineInsurance(Array.isArray(data) ? data : []);
+        setMarineCheckDone(true);
+        return;
+      }
+    } catch {
+      // endpoint not yet available — fall through to individual checks
+    }
+    // Fallback: check each approved purchase individually
+    const missing: Purchase[] = [];
+    await Promise.all(
+      approvedPurchases.map(async (p) => {
+        try {
+          const r = await fetch(
+            `/api/purchases/${encodeURIComponent(p.purchase_number)}/marine-insurance`,
+            { credentials: "include" }
+          );
+          if (r.status === 404) missing.push(p);
+        } catch {
+          // treat as missing on error
+          missing.push(p);
+        }
+      })
+    );
+    setMissingMarineInsurance(missing);
+    setMarineCheckDone(true);
+  }, []);
+
+  const purchasesApproved = purchases.filter((p) => p.status === "approved");
+
+  useEffect(() => {
+    if (mounted && purchasesApproved.length > 0 && !marineCheckDone) {
+      checkMissingMarineInsurance(purchasesApproved);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, purchases, marineCheckDone]);
+
   const ordersPending = orders.filter((o) => o.status === "pending");
   const ordersApproved = orders.filter((o) => o.status === "approved");
   const purchasesPending = purchases.filter((p) => p.status === "pending");
-  const purchasesApproved = purchases.filter((p) => p.status === "approved");
   const negativeStock = stock.filter(
     (s) => (s.quantity ?? 0) < 0 || (s.package ?? 0) < 0
   );
@@ -518,6 +569,50 @@ export default function AdminDashboardPage() {
                 onClick={() => router.push("/diredawa/inventory/stock")}
               >
                 View Stock
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Marine Insurance Missing Alert */}
+        {marineCheckDone && missingMarineInsurance.length > 0 && (
+          <Card className="border-2 border-amber-500/60 bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-xl text-amber-800 dark:text-amber-200">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/20">
+                  <ShieldAlert className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                Marine Insurance Missing
+              </CardTitle>
+              <CardDescription className="text-base text-amber-700/80 dark:text-amber-300/80">
+                {missingMarineInsurance.length} approved purchase{missingMarineInsurance.length > 1 ? "s have" : " has"} no marine insurance record. Please enter the details before end of month.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                {missingMarineInsurance.slice(0, 5).map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between rounded-lg bg-white/50 dark:bg-black/20 px-3 py-2 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                    onClick={() => router.push(`/diredawa/purchase/${p.purchase_number}`)}
+                  >
+                    <span className="font-medium">{p.purchase_number}</span>
+                    <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">Add Marine Insurance →</span>
+                  </li>
+                ))}
+                {missingMarineInsurance.length > 5 && (
+                  <li className="text-muted-foreground px-3 py-2">
+                    +{missingMarineInsurance.length - 5} more
+                  </li>
+                )}
+              </ul>
+              <Button
+                variant="outline"
+                size="lg"
+                className="mt-4 border-amber-300 bg-white/50 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-950/50"
+                onClick={() => router.push("/diredawa/purchase/display")}
+              >
+                View All Purchases
               </Button>
             </CardContent>
           </Card>

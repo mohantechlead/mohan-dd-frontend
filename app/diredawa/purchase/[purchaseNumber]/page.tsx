@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -30,6 +30,17 @@ interface PurchaseDetail {
   remaining?: number;
   items: PurchaseItem[];
 }
+
+interface MarineInsurance {
+  id?: string;
+  insurance_number: string;
+  insurance_date: string;
+}
+
+const BLANK_MARINE: MarineInsurance = {
+  insurance_number: "",
+  insurance_date: "",
+};
 
 /** Coerce GET purchase JSON into `items` + numeric fields (handles alternate API keys). */
 function parsePurchaseDetailFromApi(data: unknown): PurchaseDetail | null {
@@ -83,6 +94,13 @@ export default function PurchaseDetailPage() {
   const [purchase, setPurchase] = useState<PurchaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Marine insurance state
+  const [marineInsurance, setMarineInsurance] = useState<MarineInsurance | null>(null);
+  const [marineLoading, setMarineLoading] = useState(false);
+  const [marineForm, setMarineForm] = useState<MarineInsurance>(BLANK_MARINE);
+  const [marineSubmitting, setMarineSubmitting] = useState(false);
+  const [showMarineForm, setShowMarineForm] = useState(false);
+
   useEffect(() => {
     const fetchPurchase = async () => {
       try {
@@ -124,6 +142,90 @@ export default function PurchaseDetailPage() {
     }
   }, [purchaseNumber, showToast]);
 
+  const fetchMarineInsurance = useCallback(async () => {
+    setMarineLoading(true);
+    try {
+      const res = await fetch(
+        `/api/purchases/${encodeURIComponent(purchaseNumber)}/marine-insurance`,
+        { method: "GET", credentials: "include" }
+      );
+      if (res.status === 404) {
+        setMarineInsurance(null);
+        return;
+      }
+      const data = await res.json();
+      if (res.ok) {
+        setMarineInsurance(data as MarineInsurance);
+        setMarineForm({
+          insurance_number: data.insurance_number ?? "",
+          insurance_date: data.insurance_date ?? "",
+        });
+      }
+    } catch {
+      // not yet recorded — that's fine
+    } finally {
+      setMarineLoading(false);
+    }
+  }, [purchaseNumber]);
+
+  // Load marine insurance once the purchase is known to be approved
+  useEffect(() => {
+    if (purchase?.status === "approved") {
+      fetchMarineInsurance();
+    }
+  }, [purchase?.status, fetchMarineInsurance]);
+
+  const handleMarineSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!marineForm.insurance_number.trim()) {
+      showToast({ title: "Insurance number required", variant: "error" });
+      return;
+    }
+    if (!marineForm.insurance_date) {
+      showToast({ title: "Insurance date required", variant: "error" });
+      return;
+    }
+
+    const isEdit = Boolean(marineInsurance?.id);
+    const method = isEdit ? "PUT" : "POST";
+
+    try {
+      setMarineSubmitting(true);
+      const res = await fetch(
+        `/api/purchases/${encodeURIComponent(purchaseNumber)}/marine-insurance`,
+        {
+          method,
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            insurance_number: marineForm.insurance_number.trim(),
+            insurance_date: marineForm.insurance_date,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: isEdit ? "Failed to update marine insurance" : "Failed to save marine insurance",
+          description: data?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({
+        title: isEdit ? "Marine insurance updated" : "Marine insurance saved",
+        variant: "success",
+      });
+      setShowMarineForm(false);
+      await fetchMarineInsurance();
+    } catch {
+      showToast({ title: "Something went wrong", variant: "error" });
+    } finally {
+      setMarineSubmitting(false);
+    }
+  };
+
   const totalPrice = useMemo(() => {
     if (!purchase) return 0;
     if (typeof purchase.before_vat === "number") return purchase.before_vat;
@@ -160,6 +262,7 @@ export default function PurchaseDetailPage() {
         </p>
       ) : (
         <>
+          {/* ── Header summary ── */}
           <div className="border rounded-md overflow-hidden bg-white">
             <table className="w-full text-sm">
               <thead className="bg-muted/60">
@@ -179,11 +282,7 @@ export default function PurchaseDetailPage() {
                   <td className="px-4 py-2">
                     {new Date(purchase.order_date).toLocaleDateString(
                       undefined,
-                      {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      }
+                      { year: "numeric", month: "short", day: "numeric" }
                     )}
                   </td>
                   <td className="px-4 py-2">
@@ -212,6 +311,7 @@ export default function PurchaseDetailPage() {
             </div>
           </div>
 
+          {/* ── Line items ── */}
           <div className="border rounded-md overflow-hidden bg-white">
             <h2 className="text-sm font-semibold px-4 py-2 bg-muted/40 border-b">
               Line items
@@ -277,6 +377,114 @@ export default function PurchaseDetailPage() {
             </table>
           </div>
 
+          {/* ── Marine Insurance (approved only) ── */}
+          {purchase.status === "approved" && (
+            <div className="border rounded-md overflow-hidden bg-white">
+              <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
+                <h2 className="text-sm font-semibold">Marine Insurance</h2>
+                {!showMarineForm && (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowMarineForm(true)}
+                    className="bg-white border border-primary text-primary hover:bg-primary/5 font-extrabold px-4"
+                  >
+                    {marineInsurance ? "Edit" : "Add Marine Insurance"}
+                  </Button>
+                )}
+              </div>
+
+              {/* Saved record display */}
+              {!showMarineForm && (
+                <div className="p-4 text-sm">
+                  {marineLoading ? (
+                    <p className="text-muted-foreground">Loading...</p>
+                  ) : marineInsurance ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                      <div>
+                        <span className="font-medium">Insurance Number:</span>{" "}
+                        {marineInsurance.insurance_number}
+                      </div>
+                      <div>
+                        <span className="font-medium">Insurance Date:</span>{" "}
+                        {new Date(marineInsurance.insurance_date).toLocaleDateString(undefined, {
+                          year: "numeric", month: "short", day: "numeric",
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No marine insurance recorded yet.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Entry / edit form */}
+              {showMarineForm && (
+                <form onSubmit={handleMarineSubmit} className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Insurance Number *
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full border rounded-md px-3 py-2 text-sm"
+                        value={marineForm.insurance_number}
+                        onChange={(e) =>
+                          setMarineForm((p) => ({ ...p, insurance_number: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Insurance Date *
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full border rounded-md px-3 py-2 text-sm"
+                        value={marineForm.insurance_date}
+                        onChange={(e) =>
+                          setMarineForm((p) => ({ ...p, insurance_date: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowMarineForm(false);
+                        // reset form back to saved state if editing
+                        if (marineInsurance) {
+                          setMarineForm({
+                            insurance_number: marineInsurance.insurance_number,
+                            insurance_date: marineInsurance.insurance_date,
+                          });
+                        } else {
+                          setMarineForm(BLANK_MARINE);
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={marineSubmitting}>
+                      {marineSubmitting
+                        ? "Saving..."
+                        : marineInsurance
+                          ? "Update"
+                          : "Save"}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* ── Action buttons ── */}
           <div className="flex flex-wrap gap-3">
             <Button
               onClick={() =>

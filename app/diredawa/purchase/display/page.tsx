@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, ShieldAlert, Trash2, X } from "lucide-react";
 import { TableSearch } from "@/components/table-search";
 
 interface PurchaseItem {
@@ -36,12 +36,18 @@ interface Purchase {
   buyer?: string | null;
   proforma_ref_no: string;
   status?: string | null;
-  /** Sum of line totals (same as summed item total_price); from API */
   before_vat?: number;
   items: PurchaseItem[];
 }
 
 const PURCHASES_API_URL = "/api/purchases";
+const BANNER_DISMISSED_KEY = "marine-insurance-banner-dismissed-date";
+
+function isNearEndOfMonth(daysThreshold = 5): boolean {
+  const now = new Date();
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return now.getDate() >= lastDay - daysThreshold + 1;
+}
 
 export default function DisplayPurchasesPage() {
   const router = useRouter();
@@ -56,6 +62,58 @@ export default function DisplayPurchasesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Marine insurance banner
+  const [missingMarineInsurance, setMissingMarineInsurance] = useState<Purchase[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(true);
+  const nearEndOfMonth = isNearEndOfMonth(5);
+
+  const dismissBanner = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    localStorage.setItem(BANNER_DISMISSED_KEY, today);
+    setBannerDismissed(true);
+  };
+
+  const checkMissingMarineInsurance = useCallback(async (approvedPurchases: Purchase[]) => {
+    const dismissedDate = localStorage.getItem(BANNER_DISMISSED_KEY);
+    const today = new Date().toISOString().slice(0, 10);
+    if (dismissedDate === today) {
+      setBannerDismissed(true);
+      return;
+    }
+    if (approvedPurchases.length === 0) {
+      setBannerDismissed(true);
+      return;
+    }
+    try {
+      const res = await fetch("/api/purchases/missing-marine-insurance", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const missing = Array.isArray(data) ? data : [];
+        setMissingMarineInsurance(missing);
+        setBannerDismissed(missing.length === 0);
+        return;
+      }
+    } catch {
+      // fall through to individual checks
+    }
+    const missing: Purchase[] = [];
+    await Promise.all(
+      approvedPurchases.map(async (p) => {
+        try {
+          const r = await fetch(
+            `/api/purchases/${encodeURIComponent(p.purchase_number)}/marine-insurance`,
+            { credentials: "include" }
+          );
+          if (r.status === 404) missing.push(p);
+        } catch {
+          missing.push(p);
+        }
+      })
+    );
+    setMissingMarineInsurance(missing);
+    setBannerDismissed(missing.length === 0);
+  }, []);
 
   const filteredPurchases = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -102,8 +160,6 @@ export default function DisplayPurchasesPage() {
         return;
       }
 
-      // Ensure newest/highest purchase numbers show first.
-      // Purchase numbers look like "M####", so compare by the numeric portion.
       const extractPurchaseNumber = (value?: string) => {
         const matches = (value ?? "").match(/\d+/g);
         if (!matches || matches.length === 0) return -Infinity;
@@ -119,6 +175,9 @@ export default function DisplayPurchasesPage() {
         return (b.purchase_number ?? "").localeCompare(a.purchase_number ?? "");
       });
       setPurchases(sorted);
+
+      const approved = sorted.filter((p) => p.status === "approved");
+      checkMissingMarineInsurance(approved);
     } catch {
       showToast({
         title: "Failed to load purchases",
@@ -132,7 +191,8 @@ export default function DisplayPurchasesPage() {
 
   useEffect(() => {
     fetchPurchases();
-  }, [showToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openDelete = (purchase: Purchase) => {
     setPurchaseToDelete(purchase);
@@ -171,6 +231,8 @@ export default function DisplayPurchasesPage() {
     }
   };
 
+  const showBanner = !bannerDismissed && missingMarineInsurance.length > 0;
+
   return (
     <div className="max-w-5xl mx-auto mt-4 space-y-6">
       <div className="flex justify-between items-center">
@@ -182,6 +244,32 @@ export default function DisplayPurchasesPage() {
         </h1>
       </div>
 
+      {/* Marine Insurance Missing Banner */}
+      {showBanner && (
+        <div className="flex items-start gap-3 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+          <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold">
+              Marine insurance missing on {missingMarineInsurance.length} approved purchase{missingMarineInsurance.length > 1 ? "s" : ""}
+              {nearEndOfMonth && " — end of month is approaching!"}
+            </p>
+            <p className="mt-0.5 text-amber-800">
+              {missingMarineInsurance.slice(0, 5).map((p) => p.purchase_number).join(", ")}
+              {missingMarineInsurance.length > 5 && ` +${missingMarineInsurance.length - 5} more`}
+              {" — click a purchase number below to add the details."}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={dismissBanner}
+            className="flex-shrink-0 rounded p-0.5 hover:bg-amber-200 transition-colors"
+          >
+            <X className="h-4 w-4 text-amber-700" />
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <p>Loading purchases...</p>
       ) : purchases.length === 0 ? (
@@ -191,109 +279,103 @@ export default function DisplayPurchasesPage() {
       ) : (
         <>
           <div className="flex justify-end mb-4">
-          <TableSearch value={search} onChange={setSearch} placeholder="Search purchases, supplier, items..." />
-        </div>
+            <TableSearch value={search} onChange={setSearch} placeholder="Search purchases, supplier, items..." />
+          </div>
           <div className="border rounded-md overflow-hidden bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/60">
-              <tr>
-                <th className="text-left px-4 py-2">Purchase Number</th>
-                <th className="text-left px-4 py-2">Date</th>
-                <th className="text-right px-4 py-2">Before VAT</th>
-                <th className="text-left px-4 py-2">Supplier Name</th>
-                <th className="text-left px-4 py-2">Status</th>
-                {canManageRecords && (
-                  <th className="text-right px-4 py-2">Actions</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {pagedPurchases.map((purchase) => {
-                const beforeVat =
-                  purchase.before_vat ??
-                  purchase.items.reduce(
-                    (sum, item) => sum + item.total_price,
-                    0
+            <table className="w-full text-sm">
+              <thead className="bg-muted/60">
+                <tr>
+                  <th className="text-left px-4 py-2">Purchase Number</th>
+                  <th className="text-left px-4 py-2">Date</th>
+                  <th className="text-right px-4 py-2">Before VAT</th>
+                  <th className="text-left px-4 py-2">Supplier Name</th>
+                  <th className="text-left px-4 py-2">Status</th>
+                  {canManageRecords && (
+                    <th className="text-right px-4 py-2">Actions</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {pagedPurchases.map((purchase) => {
+                  const beforeVat =
+                    purchase.before_vat ??
+                    purchase.items.reduce((sum, item) => sum + item.total_price, 0);
+                  const isMissingMarine = missingMarineInsurance.some(
+                    (m) => m.purchase_number === purchase.purchase_number
                   );
-                return (
-                  <tr key={purchase.id} className="border-t">
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        className="text-blue-600 hover:underline"
-                        onClick={() =>
-                          router.push(
-                            `/diredawa/purchase/${purchase.purchase_number}`
-                          )
-                        }
-                      >
-                        {purchase.purchase_number}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2">
-                      {new Date(purchase.order_date).toLocaleDateString(
-                        undefined,
-                        {
+                  return (
+                    <tr key={purchase.id} className={`border-t ${isMissingMarine ? "bg-amber-50/60" : ""}`}>
+                      <td className="px-4 py-2">
+                        <button
+                          type="button"
+                          className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                          onClick={() =>
+                            router.push(`/diredawa/purchase/${purchase.purchase_number}`)
+                          }
+                        >
+                          {purchase.purchase_number}
+                          {isMissingMarine && (
+                            <ShieldAlert className="h-3.5 w-3.5 text-amber-500" title="Marine insurance missing" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-4 py-2">
+                        {new Date(purchase.order_date).toLocaleDateString(undefined, {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
-                        }
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {beforeVat.toLocaleString(undefined, {
-                        maximumFractionDigits: 1,
-                      })}
-                    </td>
-                    <td className="px-4 py-2">
-                      {purchase.shipper?.trim() || purchase.buyer || "—"}
-                    </td>
-                    <td className="px-4 py-2 capitalize">
-                      {purchase.status?.trim() ? purchase.status : "pending"}
-                    </td>
-                    {canManageRecords && (
-                      <td className="px-4 py-2 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              router.push(
-                                `/diredawa/purchase/${purchase.purchase_number}/edit`
-                              )
-                            }
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDelete(purchase)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        })}
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      <td className="px-4 py-2 text-right">
+                        {beforeVat.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                      </td>
+                      <td className="px-4 py-2">
+                        {purchase.shipper?.trim() || purchase.buyer || "—"}
+                      </td>
+                      <td className="px-4 py-2 capitalize">
+                        {purchase.status?.trim() ? purchase.status : "pending"}
+                      </td>
+                      {canManageRecords && (
+                        <td className="px-4 py-2 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/diredawa/purchase/${purchase.purchase_number}/edit`)
+                              }
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDelete(purchase)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-        <div className="border border-border border-t-0 rounded-b-md overflow-hidden bg-white">
-          <TablePagination
-            pageIndex={pageIndex}
-            pageSize={pageSize}
-            totalItems={filteredPurchases.length}
-            onPageIndexChange={setPageIndex}
-            onPageSizeChange={(next) => {
-              setPageSize(next);
-              setPageIndex(0);
-            }}
-          />
-        </div>
+          <div className="border border-border border-t-0 rounded-b-md overflow-hidden bg-white">
+            <TablePagination
+              pageIndex={pageIndex}
+              pageSize={pageSize}
+              totalItems={filteredPurchases.length}
+              onPageIndexChange={setPageIndex}
+              onPageSizeChange={(next) => {
+                setPageSize(next);
+                setPageIndex(0);
+              }}
+            />
+          </div>
         </>
       )}
 
@@ -318,4 +400,3 @@ export default function DisplayPurchasesPage() {
     </div>
   );
 }
-
