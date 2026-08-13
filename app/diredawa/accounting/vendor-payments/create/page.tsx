@@ -9,7 +9,7 @@ import {
   resolvePurchaseTotalFromPayments,
   sortReceivedPaymentsChronologically,
   sumPaymentsTowardRemaining,
-  vendorPaymentGrandTotal,
+  // vendorPaymentGrandTotal, // removed (we compute grandTotal locally to include inland_transport)
 } from "@/lib/receivedPaymentsBalance";
 
 interface PurchaseOption {
@@ -48,6 +48,7 @@ export default function CreateVendorPaymentPage() {
     amount: "",
     insurance: "",
     freight: "",
+    inland_transport: "",
     remark: "",
   });
 
@@ -129,15 +130,13 @@ export default function CreateVendorPaymentPage() {
     }
   }, [form.payment_type, remainingAmount]);
 
-  const grandTotal = useMemo(
-    () =>
-      vendorPaymentGrandTotal({
-        amount: form.amount,
-        insurance: form.insurance,
-        freight: form.freight,
-      }),
-    [form.amount, form.insurance, form.freight],
-  );
+  const grandTotal = useMemo(() => {
+    const amountNum = Number(form.amount || 0);
+    const insuranceNum = Number(form.insurance || 0);
+    const freightNum = Number(form.freight || 0);
+    const inlandTransportNum = Number(form.inland_transport || 0);
+    return amountNum + insuranceNum + freightNum + inlandTransportNum;
+  }, [form.amount, form.insurance, form.freight, form.inland_transport]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,6 +163,11 @@ export default function CreateVendorPaymentPage() {
       showToast({ title: "Invalid freight", description: "Freight cannot be negative.", variant: "error" });
       return;
     }
+    const inlandTransportNum = Number(form.inland_transport || 0);
+    if (!Number.isFinite(inlandTransportNum) || inlandTransportNum < 0) {
+      showToast({ title: "Invalid In Land Transport", description: "In Land Transport cannot be negative.", variant: "error" });
+      return;
+    }
     if (form.payment_type === "partial" && amountNum > remainingAmount) {
       showToast({ title: "Invalid partial amount", description: "Partial payment cannot exceed remaining amount.", variant: "error" });
       return;
@@ -182,6 +186,7 @@ export default function CreateVendorPaymentPage() {
           amount: amountNum,
           insurance: insuranceNum,
           freight: freightNum,
+          inland_transport: inlandTransportNum,
           remark: form.remark.trim() || null,
         }),
       });
@@ -271,13 +276,24 @@ export default function CreateVendorPaymentPage() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium mb-1">In Land Transport</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full border rounded-md px-3 py-2"
+                value={form.inland_transport}
+                onChange={(e) => setForm((p) => ({ ...p, inland_transport: e.target.value }))}
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">Grand Total</label>
               <input
                 className="w-full border rounded-md px-3 py-2 bg-muted/40 font-medium"
                 value={formatMoney(grandTotal)}
                 readOnly
               />
-              <p className="text-xs text-muted-foreground mt-1">Amount + Insurance + Freight</p>
+              <p className="text-xs text-muted-foreground mt-1">Amount + Insurance + Freight + In Land Transport</p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">Remark</label>
