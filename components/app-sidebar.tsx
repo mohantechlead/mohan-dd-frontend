@@ -103,7 +103,7 @@ const baseNavMain = [
     icon: ShoppingBag,
     items: [
       { title: "Create Purchase", url: "/diredawa/purchase/create" },
-      { title: "Display Purchase", url: "/diredawa/purchase/display", accountingVisible: true },
+      { title: "Display Purchase", url: "/diredawa/purchase/display" },
       { title: "Rejected Purchases", url: "/diredawa/purchase/rejected" },
       { title: "Completed Purchases", url: "/diredawa/purchase/completed" },
     ],
