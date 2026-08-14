@@ -21,6 +21,8 @@ interface VendorPayment {
   payment_type: string;
   amount: number;
   insurance?: number;
+  freight?: number;
+  inland_transport?: number;
   grand_total?: number;
   status: string;
   purchase_total?: number;
@@ -66,6 +68,8 @@ export default function VendorPaymentPurchaseSummaryPage() {
         approved_paid: 0,
         recorded_incl_pending: 0,
         remaining_amount: 0,
+        freight_total: 0,
+        inland_transport_total: 0,
       };
     }
     const latest = sortedRows[sortedRows.length - 1];
@@ -77,6 +81,8 @@ export default function VendorPaymentPurchaseSummaryPage() {
       })
       .reduce((sum, x) => sum + Number(x.amount ?? 0), 0);
     const recordedInclPending = sumPaymentsTowardRemaining(sortedRows);
+    const freightTotal = sortedRows.reduce((sum, x) => sum + Number(x.freight ?? 0), 0);
+    const inlandTransportTotal = sortedRows.reduce((sum, x) => sum + Number(x.inland_transport ?? 0), 0);
     const remaining =
       purchaseTotal > 0
         ? Math.max(0, purchaseTotal - recordedInclPending)
@@ -87,6 +93,8 @@ export default function VendorPaymentPurchaseSummaryPage() {
       approved_paid: approvedPaid,
       recorded_incl_pending: recordedInclPending,
       remaining_amount: remaining,
+      freight_total: freightTotal,
+      inland_transport_total: inlandTransportTotal,
     };
   }, [sortedRows]);
 
@@ -114,6 +122,8 @@ export default function VendorPaymentPurchaseSummaryPage() {
             <div><span className="font-medium">Purchase Total:</span> {formatMoney(summary.purchase_total)}</div>
             <div><span className="font-medium">Approved Paid:</span> {formatMoney(summary.approved_paid)}</div>
             <div><span className="font-medium">Recorded (incl. pending):</span> {formatMoney(summary.recorded_incl_pending)}</div>
+            <div><span className="font-medium">Freight:</span> {formatMoney(summary.freight_total)}</div>
+            <div><span className="font-medium">Inland Transport:</span> {formatMoney(summary.inland_transport_total)}</div>
             <div><span className="font-medium">Remaining:</span> {formatMoney(summary.remaining_amount)}</div>
           </div>
 
@@ -126,6 +136,8 @@ export default function VendorPaymentPurchaseSummaryPage() {
                   <th className="px-4 py-2 text-left">Type</th>
                   <th className="px-4 py-2 text-right">Amount</th>
                   <th className="px-4 py-2 text-right">Insurance</th>
+                  <th className="px-4 py-2 text-right">Freight</th>
+                  <th className="px-4 py-2 text-right">Inland Transport</th>
                   <th className="px-4 py-2 text-right">Grand Total</th>
                   <th className="px-4 py-2 text-left">Status</th>
                 </tr>
@@ -138,8 +150,10 @@ export default function VendorPaymentPurchaseSummaryPage() {
                     <td className="px-4 py-2 capitalize">{x.payment_type}</td>
                     <td className="px-4 py-2 text-right">{formatMoney(x.amount)}</td>
                     <td className="px-4 py-2 text-right">{formatMoney(x.insurance ?? 0)}</td>
+                    <td className="px-4 py-2 text-right">{formatMoney(x.freight ?? 0)}</td>
+                    <td className="px-4 py-2 text-right">{formatMoney(x.inland_transport ?? 0)}</td>
                     <td className="px-4 py-2 text-right font-medium">
-                      {formatMoney(x.grand_total ?? x.amount + (x.insurance ?? 0))}
+                      {formatMoney(x.grand_total ?? x.amount + (x.insurance ?? 0) + (x.freight ?? 0) + (x.inland_transport ?? 0))}
                     </td>
                     <td className="px-4 py-2 capitalize">{x.status}</td>
                   </tr>
