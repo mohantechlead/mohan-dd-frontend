@@ -330,7 +330,7 @@ export default function TruckWaybillPage() {
           {/* Row 2: Buyer details / Ports & means / Country & destination */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
             <div className="space-y-1">
-              <p className="font-semibold">Buyer Details</p>
+              <p className="font-semibold">NOTIFY PARTY</p>
               <p className="uppercase">{order.buyer}</p>
               {order.buyer_address && (
                 <p className="text-[11px] text-muted-foreground">
