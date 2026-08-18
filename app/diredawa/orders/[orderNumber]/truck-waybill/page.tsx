@@ -270,11 +270,11 @@ export default function TruckWaybillPage() {
                 </p>
               )}
               <p className="font-semibold">Consignee</p>
-              {order.add_consignee && (
+              {invoice.bank?.trim() ? (
                 <p className="uppercase">
-                  To The order of {order.add_consignee},Addis Ababa, Ethiopia
+                  To The order of {invoice.bank},Addis Ababa, Ethiopia
                 </p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-1">
