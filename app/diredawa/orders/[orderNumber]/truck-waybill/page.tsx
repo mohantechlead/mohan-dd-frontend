@@ -269,9 +269,10 @@ export default function TruckWaybillPage() {
                   {order.shipper_address}
                 </p>
               )}
+              <p className="font-semibold">Consignee</p>
               {order.add_consignee && (
-                <p className="text-[11px] text-muted-foreground">
-                  {order.add_consignee}
+                <p className="uppercase">
+                  To The order of {invoice.bank},Addis Ababa, Ethiopia
                 </p>
               )}
             </div>
