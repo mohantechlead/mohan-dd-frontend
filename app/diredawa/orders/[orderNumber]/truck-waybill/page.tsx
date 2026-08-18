@@ -269,11 +269,13 @@ export default function TruckWaybillPage() {
                   {order.shipper_address}
                 </p>
               )}
-              <p className="font-semibold">Consignee</p>
               {invoice.bank?.trim() ? (
-                <p className="uppercase">
-                  To The order of {invoice.bank},Addis Ababa, Ethiopia
-                </p>
+                <div className="mt-6 pt-4">
+                  <p className="font-semibold">Consignee</p>
+                  <p className="uppercase">
+                    To The order of {invoice.bank}, Addis Ababa, Ethiopia
+                  </p>
+                </div>
               ) : null}
             </div>
 
@@ -314,14 +316,6 @@ export default function TruckWaybillPage() {
                 <p className="font-semibold">Freight</p>
                 <p>{order.freight}</p>
               </div>
-              {invoice.bank?.trim() ? (
-                <div>
-                  <p className="font-semibold">Bank</p>
-                  <p className="whitespace-pre-wrap text-[11px]">
-                    {invoice.bank}
-                  </p>
-                </div>
-              ) : null}
             </div>
           </div>
 
