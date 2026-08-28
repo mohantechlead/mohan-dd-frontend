@@ -31,9 +31,11 @@ interface Field<T extends FieldValues> {
   label: string;
   /** Show a required asterisk next to the label */
   required?: boolean;
-  type?: "text" | "email" | "password" | "number" | "textarea" | "checkbox" | string;
+  type?: "text" | "email" | "password" | "number" | "textarea" | "checkbox" | "select" | string;
   description?: string;
   placeholder?: string;
+  /** For type === "select": the list of option values shown in a native dropdown */
+  selectOptions?: string[];
   dropdownConfig?: DropdownConfig;
   dependentDropdownConfig?: DependentDropdownConfig;
   // Optional blur hook (e.g. uniqueness check with toasts)
@@ -201,21 +203,34 @@ function FormField<T extends FieldValues>({
   return (
     <div className="flex flex-col gap-1">
       <FieldLabel label={field.label} required={field.required} />
-      {(() => {
-        const reg = methods.register(field.name);
-        return (
-          <Input
-            type={field.type || "text"}
-            placeholder={field.placeholder}
-            {...reg}
-            onBlur={(e) => {
-              reg.onBlur?.(e);
-              const nextValue = (e.target as HTMLInputElement).value;
-              void field.onBlur?.(nextValue);
-            }}
-          />
-        );
-      })()}
+      {field.type === "select" ? (
+        <select
+          className="w-full h-9 rounded-md border border-input px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+          {...methods.register(field.name)}
+          onBlur={(e) => {
+            void field.onBlur?.(e.target.value);
+          }}
+        >
+          <option value="">{field.placeholder || "Select..."}</option>
+          {(field.selectOptions ?? []).map((opt) => (
+            <option key={opt} value={opt}>
+              {opt.charAt(0).toUpperCase() + opt.slice(1)}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <Input
+          type={field.type || "text"}
+          placeholder={field.placeholder}
+          {...methods.register(field.name)}
+          onBlur={(e) => {
+            const reg = methods.register(field.name);
+            reg.onBlur?.(e);
+            const nextValue = (e.target as HTMLInputElement).value;
+            void field.onBlur?.(nextValue);
+          }}
+        />
+      )}
     </div>
   );
 }

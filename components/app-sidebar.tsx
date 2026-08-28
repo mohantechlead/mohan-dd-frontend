@@ -165,6 +165,30 @@ const baseNavMain = [
     ],
   },
   {
+    title: "In-Warehouse",
+    url: "#",
+    icon: Package,
+    items: [
+      {
+        title: "Storage Notes",
+        url: "#",
+        items: [
+          { title: "New Storage Note", url: "/diredawa/inventory/warehouse-storage-notes/create" },
+          { title: "Display Storage Notes", url: "/diredawa/inventory/warehouse-storage-notes/display" },
+        ],
+      },
+      {
+        title: "Release Notes",
+        url: "#",
+        items: [
+          { title: "New Release Note", url: "/diredawa/inventory/warehouse-release-notes/create" },
+          { title: "Display Release Notes", url: "/diredawa/inventory/warehouse-release-notes/display" },
+        ],
+      },
+      { title: "Expired / Expiring", url: "/diredawa/inventory/warehouse-expiry" },
+    ],
+  },
+  {
     title: "Approvals",
     url: "#",
     icon: CheckSquare,
