@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Form } from "@/components/form";
 import { ItemsForm } from "@/components/itemsform";
 import { ExpirationFeeTiersForm } from "@/components/expiration-fee-tiers-form";
@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
-import { WSN_API_URL, PERIOD_UNITS } from "@/lib/warehouse";
+import { WSN_API_URL, PERIOD_UNITS, WSN_NEXT_NUMBER_URL } from "@/lib/warehouse";
 
 interface WSNFormValues {
   wsn_no: string;
@@ -19,7 +19,6 @@ interface WSNFormValues {
   remark?: string;
   storage_period_value: number;
   storage_period_unit: string;
-  storage_price: number;
   grace_period_value: number;
   grace_period_unit: string;
   items: {
@@ -43,6 +42,18 @@ export default function CreateWarehouseStorageNotePage() {
   const router = useRouter();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [nextNumber, setNextNumber] = useState("");
+
+  useEffect(() => {
+    fetch(WSN_NEXT_NUMBER_URL, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.next_number === "string") {
+          setNextNumber(data.next_number);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (values: WSNFormValues) => {
     const items = values.items ?? [];
@@ -84,14 +95,13 @@ export default function CreateWarehouseStorageNotePage() {
       );
 
     const payload = {
-      wsn_no: String(values.wsn_no ?? "").trim(),
+      wsn_no: String(values.wsn_no ?? "").trim() || String(nextNumber || "").trim(),
       customer_name: String(values.customer_name ?? "").trim(),
       date: values.date || null,
       ECD_no: String(values.ECD_no ?? "").trim() || null,
       remark: String(values.remark ?? "").trim() || null,
       storage_period_value: Number(values.storage_period_value),
       storage_period_unit: String(values.storage_period_unit ?? "months").trim(),
-      storage_price: Number(values.storage_price),
       grace_period_value: Number(values.grace_period_value ?? 0),
       grace_period_unit:
         String(values.grace_period_unit ?? "days").trim() || "days",
@@ -104,7 +114,7 @@ export default function CreateWarehouseStorageNotePage() {
         return {
           ...(line.item_id ? { item_id: line.item_id } : {}),
           item_name: String(line.item_name ?? "").trim(),
-          code: String(line.code ?? "").trim(),
+          code: String(line.internal_code ?? "").trim() || null,
           quantity: parseDecimalQuantity(line.quantity),
           unit_measurement: String(line.unit_measurement ?? "").trim(),
           bags:
@@ -185,6 +195,15 @@ export default function CreateWarehouseStorageNotePage() {
         fee tiers to bill after expiry.
       </p>
 
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <span className="text-sm text-muted-foreground">
+          Storage Note No (auto-generated):
+        </span>
+        <span className="text-sm font-semibold text-primary">
+          {nextNumber || "Loading..."}
+        </span>
+      </div>
+
       <Form<WSNFormValues>
         defaultValues={{
           items: [],
@@ -195,12 +214,6 @@ export default function CreateWarehouseStorageNotePage() {
         }}
         fields={[
           { name: "date", label: "Date", type: "date", required: true },
-          {
-            name: "wsn_no",
-            label: "Storage Note No",
-            required: true,
-            placeholder: "e.g. WSN-001",
-          },
           {
             name: "customer_name",
             label: "Customer Name",
@@ -223,13 +236,6 @@ export default function CreateWarehouseStorageNotePage() {
             type: "select",
             selectOptions: [...PERIOD_UNITS],
             placeholder: "Select period unit",
-          },
-          {
-            name: "storage_price",
-            label: "Storage Price",
-            required: true,
-            type: "number",
-            placeholder: "e.g. 100",
           },
           {
             name: "grace_period_value",
@@ -260,7 +266,7 @@ export default function CreateWarehouseStorageNotePage() {
         <p className="text-xs text-center text-muted-foreground mb-2">
           Add at least one item line received into storage.
         </p>
-        <ItemsForm />
+        <ItemsForm hideCode />
         <ExpirationFeeTiersForm />
       </Form>
     </div>

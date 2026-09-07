@@ -12,6 +12,7 @@ import { parseDecimalQuantity, formatQuantityDisplay } from "@/lib/inventoryQuan
 import {
   WSN_API_URL,
   WRN_API_URL,
+  WRN_NEXT_NUMBER_URL,
   type WarehouseStorageNote,
 } from "@/lib/warehouse";
 
@@ -25,7 +26,6 @@ interface ReleaseLine {
   bags?: number | null;
   remaining_quantity: number;
   quantity: number | string;
-  released: boolean;
 }
 
 export default function CreateReleaseNotePage() {
@@ -68,6 +68,17 @@ export default function CreateReleaseNotePage() {
     loadNotes();
   }, []);
 
+  useEffect(() => {
+    fetch(WRN_NEXT_NUMBER_URL, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.next_number === "string") {
+          setForm((p) => ({ ...p, wrn_no: data.next_number }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const selectStorageNote = async (id: string) => {
     setForm((p) => ({ ...p, storage_note_id: id }));
     const opt = storageOptions.find((o) => o.value === id);
@@ -101,7 +112,6 @@ export default function CreateReleaseNotePage() {
             bags: it.bags ?? null,
             remaining_quantity: it.remaining_quantity ?? it.quantity,
             quantity: "",
-            released: false,
           })),
       );
     } catch {
@@ -117,21 +127,6 @@ export default function CreateReleaseNotePage() {
 
   const setLineQty = (idx: number, value: string) => {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, quantity: value } : l)));
-  };
-
-  const setLineReleased = (idx: number, released: boolean) => {
-    if (released) {
-      // When marking released, default the quantity to the remaining amount
-      setLines((prev) =>
-        prev.map((l, i) =>
-          i === idx ? { ...l, released: true, quantity: String(l.remaining_quantity) } : l,
-        ),
-      );
-    } else {
-      setLines((prev) =>
-        prev.map((l, i) => (i === idx ? { ...l, released: false } : l)),
-      );
-    }
   };
 
   const totalReleased = useMemo(
@@ -287,14 +282,13 @@ export default function CreateReleaseNotePage() {
               </p>
             </div>
             <div>
-              <Label>
-                Release Note No <span className="text-destructive">*</span>
-              </Label>
+              <Label>Release Note No (auto-generated)</Label>
               <Input
                 value={form.wrn_no}
                 onChange={(e) => setForm((p) => ({ ...p, wrn_no: e.target.value }))}
-                placeholder="e.g. WRN-001"
-                required
+                placeholder="Loading..."
+                readOnly
+                className="bg-muted/40 cursor-default"
               />
             </div>
             <div>
@@ -358,21 +352,21 @@ export default function CreateReleaseNotePage() {
                   key={`${line.storage_item_id}-${idx}`}
                   className="grid grid-cols-12 gap-2 items-center bg-muted/20 rounded-lg p-3"
                 >
-                  <div className="col-span-3">
+                  <div className="col-span-4">
                     <div className="text-sm font-medium">{line.item_name}</div>
                     <div className="text-xs text-muted-foreground">
                       {line.code || line.internal_code || "—"} /{" "}
                       {line.unit_measurement || "—"}
                     </div>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-4">
                     <Label className="text-xs">Remaining</Label>
                     <div className="text-sm font-semibold">
                       {formatQuantityDisplay(line.remaining_quantity)}
                       {line.bags != null ? ` (${formatQuantityDisplay(line.bags)} bags)` : ""}
                     </div>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-4">
                     <Label className="text-xs">Release Qty</Label>
                     <Input
                       type="number"
@@ -383,23 +377,6 @@ export default function CreateReleaseNotePage() {
                       value={line.quantity}
                       onChange={(e) => setLineQty(idx, e.target.value)}
                     />
-                  </div>
-                  <div className="col-span-3 flex items-center gap-2">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border border-input"
-                        checked={line.released}
-                        onChange={(e) => setLineReleased(idx, e.target.checked)}
-                      />
-                      <span
-                        className={
-                          line.released ? "font-medium text-green-700" : "text-muted-foreground"
-                        }
-                      >
-                        Released
-                      </span>
-                    </label>
                   </div>
                 </div>
               ))}

@@ -17,7 +17,7 @@ type ItemDropdownOption = DropdownOption & {
   itemId?: string;
 };
 
-export function ItemsForm() {
+export function ItemsForm({ hideCode = false }: { hideCode?: boolean }) {
   const { control, register, setValue, watch } = useFormContext();
   const [itemOptions, setItemOptions] = useState<ItemDropdownOption[]>([]);
 
@@ -151,10 +151,12 @@ export function ItemsForm() {
           </div>
 
           <div className="flex gap-4 md:col-span-2">
-            <div className="flex-1">
-              <Label>Code</Label>
-              <Input type="text" {...register(`items.${index}.code` as const)} />
-            </div>
+            {!hideCode && (
+              <div className="flex-1">
+                <Label>Code</Label>
+                <Input type="text" {...register(`items.${index}.code` as const)} />
+              </div>
+            )}
             <div className="flex-1">
               <Label>Internal Code</Label>
             <Controller

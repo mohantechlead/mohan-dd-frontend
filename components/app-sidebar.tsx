@@ -145,6 +145,14 @@ const baseNavMain = [
         ],
       },
       {
+        title: "Warehouse Payments",
+        url: "#",
+        items: [
+          { title: "Create Warehouse Payment", url: "/diredawa/accounting/warehouse-payments/create" },
+          { title: "Display Warehouse Payments", url: "/diredawa/accounting/warehouse-payments/display" },
+        ],
+      },
+      {
         title: "Ledger",
         url: "/diredawa/accounting/ledger",
       },
@@ -186,6 +194,7 @@ const baseNavMain = [
         ],
       },
       { title: "Expired / Expiring", url: "/diredawa/inventory/warehouse-expiry" },
+      { title: "Item Inventory", url: "/diredawa/inventory/warehouse-item-inventory" },
     ],
   },
   {

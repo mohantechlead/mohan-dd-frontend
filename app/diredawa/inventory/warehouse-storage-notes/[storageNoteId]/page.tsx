@@ -355,6 +355,108 @@ export default function WarehouseStorageNoteDetailPage() {
         </div>
       )}
 
+      {/* Delivery Entries */}
+      <div className="border rounded-md overflow-hidden bg-white">
+        <div className="px-4 py-2 font-semibold bg-muted/60 border-b flex items-center justify-between">
+          <span>Delivery Entries ({note.entries?.length ?? 0})</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              router.push(`/diredawa/inventory/warehouse-storage-notes/${id}/entries/create`)
+            }
+          >
+            + Record Entry
+          </Button>
+        </div>
+        {(note.entries?.length ?? 0) === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            No entries recorded yet. Items arrive in batches — record each delivery here.
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40">
+              <tr>
+                <th className="px-4 py-2 text-left">Date</th>
+                <th className="px-4 py-2 text-left">Item</th>
+                <th className="px-4 py-2 text-left">Code</th>
+                <th className="px-4 py-2 text-right">Quantity</th>
+                <th className="px-4 py-2 text-right">Bags</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(note.entries ?? []).flatMap((entry) =>
+                (entry.items ?? []).map((ei, idx) => (
+                  <tr key={`${entry.id}-${idx}`} className="border-t">
+                    <td className="px-4 py-2">{formatDate(entry.entry_date)}</td>
+                    <td className="px-4 py-2">{ei.item_name}</td>
+                    <td className="px-4 py-2">{ei.code || "—"}</td>
+                    <td className="px-4 py-2 text-right">{ei.quantity}</td>
+                    <td className="px-4 py-2 text-right">{ei.bags ?? "—"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
+        {(note.total_entry_quantity ?? 0) > 0 && (
+          <div className="px-4 py-2 border-t bg-muted/30 text-sm text-right">
+            Total Entered: <strong>{note.total_entry_quantity}</strong>
+          </div>
+        )}
+      </div>
+
+      {/* Price & Payment Summary */}
+      <div className="border rounded-md overflow-hidden bg-white">
+        <h2 className="px-4 py-2 font-semibold bg-muted/60 border-b">
+          Price & Payment
+        </h2>
+        <table className="w-full text-sm">
+          <tbody>
+            <tr>
+              <td className="px-4 py-2 text-muted-foreground w-52">Storage Price</td>
+              <td className="px-4 py-2">{money(note.storage_price)}</td>
+            </tr>
+            {note.price_entered_by && (
+              <tr className="border-t">
+                <td className="px-4 py-2 text-muted-foreground">Price Set By</td>
+                <td className="px-4 py-2">
+                  {note.price_entered_by} {note.price_entered_at ? `on ${formatDate(note.price_entered_at)}` : ""}
+                </td>
+              </tr>
+            )}
+            <tr className="border-t">
+              <td className="px-4 py-2 text-muted-foreground">Total Paid</td>
+              <td className="px-4 py-2">{money(note.total_paid)}</td>
+            </tr>
+            <tr className="border-t">
+              <td className="px-4 py-2 text-muted-foreground">Remaining</td>
+              <td className="px-4 py-2">{money(note.payment_remaining)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="px-4 py-2 border-t flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              router.push(`/diredawa/accounting/warehouse-payments/create?wsn_no=${note.wsn_no}`)
+            }
+          >
+            + Record Payment
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              router.push(`/diredawa/inventory/warehouse-storage-notes/${id}/flow`)
+            }
+          >
+            View Full Flow
+          </Button>
+        </div>
+      </div>
+
       <div className="flex gap-2">
         <Button onClick={openTopUp} disabled={isExpired} variant="outline">
           Top Up / Extend Period
