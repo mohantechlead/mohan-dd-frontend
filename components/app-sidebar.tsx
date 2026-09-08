@@ -153,6 +153,14 @@ const baseNavMain = [
         ],
       },
       {
+        title: "Storage Prices",
+        url: "/diredawa/accounting/warehouse-storage-prices",
+      },
+      {
+        title: "Expiration Fee Tiers",
+        url: "/diredawa/accounting/warehouse-expiration-tiers",
+      },
+      {
         title: "Ledger",
         url: "/diredawa/accounting/ledger",
       },

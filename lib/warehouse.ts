@@ -204,6 +204,7 @@ export const WRN_NEXT_NUMBER_URL = `${WRN_API_URL}/next-number`;
 export const WSN_ENTRIES_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/entries`;
 export const WSN_ENTRY_URL = (noteId: string, entryId: string) => `${WSN_API_URL}/${noteId}/entries/${entryId}`;
 export const WSN_PRICE_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/price`;
+export const WSN_TIERS_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/expiration-fee-tiers`;
 export const WSN_FLOW_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/flow`;
 export const WSN_ITEM_INVENTORY_URL = `${WSN_API_URL.replace("/warehouse-storage-notes", "")}/warehouse-item-inventory`;
 export const WSP_API_URL = "/api/accounting/warehouse-storage-payments";

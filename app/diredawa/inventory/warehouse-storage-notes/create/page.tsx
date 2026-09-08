@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Form } from "@/components/form";
 import { ItemsForm } from "@/components/itemsform";
-import { ExpirationFeeTiersForm } from "@/components/expiration-fee-tiers-form";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
@@ -29,12 +28,6 @@ interface WSNFormValues {
     unit_measurement: string;
     bags: number | string;
     internal_code: string;
-  }[];
-  expiration_fee_tiers: {
-    tier_index: number;
-    period_value: number;
-    period_unit: string;
-    fee_amount: number;
   }[];
 }
 
@@ -80,20 +73,6 @@ export default function CreateWarehouseStorageNotePage() {
       return;
     }
 
-    const tiers = (values.expiration_fee_tiers ?? [])
-      .map((t) => ({
-        tier_index: Number(t.tier_index),
-        period_value: Number(t.period_value),
-        period_unit: String(t.period_unit ?? "months").trim(),
-        fee_amount: Number(t.fee_amount),
-      }))
-      .filter(
-        (t) =>
-          Number.isFinite(t.tier_index) &&
-          Number.isFinite(t.period_value) &&
-          Number.isFinite(t.fee_amount),
-      );
-
     const payload = {
       wsn_no: String(values.wsn_no ?? "").trim() || String(nextNumber || "").trim(),
       customer_name: String(values.customer_name ?? "").trim(),
@@ -124,7 +103,6 @@ export default function CreateWarehouseStorageNotePage() {
           internal_code: String(line.internal_code ?? "").trim() || null,
         };
       }),
-      expiration_fee_tiers: tiers,
     };
 
     if (submitting) return;
@@ -207,7 +185,6 @@ export default function CreateWarehouseStorageNotePage() {
       <Form<WSNFormValues>
         defaultValues={{
           items: [],
-          expiration_fee_tiers: [],
           storage_period_unit: "months",
           grace_period_unit: "days",
           grace_period_value: 0,
@@ -267,7 +244,6 @@ export default function CreateWarehouseStorageNotePage() {
           Add at least one item line received into storage.
         </p>
         <ItemsForm hideCode />
-        <ExpirationFeeTiersForm />
       </Form>
     </div>
   );
