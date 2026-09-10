@@ -106,13 +106,30 @@ export default function DemoPage() {
 
   const columns = getStockColumns(openLedgerPage);
 
+  const exportToExcel = async () => {
+    if (!data || data.length === 0) return;
+    const XLSX = await import("xlsx");
+    const rows = data.map((row) => ({
+      "Item Name": row.item_name,
+      Code: row.code || "",
+      "Stock Quantity": row.quantity,
+      "Stock Bags": row.package,
+      "GRN Nos": row.grn_nos?.join(", ") || "",
+      "DN Nos": row.dn_nos?.join(", ") || "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stock");
+    XLSX.writeFile(wb, `stock_list_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {JSON.stringify(error.info || error)}</div>;
 
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-2xl text-center my-2 font-bold">Stocks List</h1>
-      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-7">
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-6">
         <input
           className="h-10 rounded-md border px-3 text-sm"
           placeholder="Filter by code"
@@ -155,22 +172,29 @@ export default function DemoPage() {
           value={dnNo}
           onChange={(e) => setDnNo(e.target.value)}
         />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={applyFilters}
-            className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            Apply Filters
-          </button>
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="h-10 rounded-md border px-4 text-sm font-medium"
-          >
-            Reset
-          </button>
-        </div>
+      </div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={applyFilters}
+          className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+        >
+          Apply Filters
+        </button>
+        <button
+          type="button"
+          onClick={resetFilters}
+          className="h-10 rounded-md border px-4 text-sm font-medium"
+        >
+          Reset
+        </button>
+        <button
+          type="button"
+          onClick={exportToExcel}
+          className="h-10 rounded-md border px-4 text-sm font-medium"
+        >
+          Export to Excel
+        </button>
       </div>
       {appliedFilters.as_of_date && (
         <p className="mb-2 text-xs text-muted-foreground">
