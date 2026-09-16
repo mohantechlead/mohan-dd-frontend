@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import ApiProxy from "../../../proxy";
 
-const BACKEND = process.env.BACKEND_URL || "http://localhost:8000";
+const DJANGO_API_ENDPOINT = process.env.DJANGO_API_ENDPOINT || "http://localhost:8000/api";
 
 export async function POST(
   req: NextRequest,
@@ -8,19 +9,9 @@ export async function POST(
 ) {
   try {
     const body = await req.json();
-    const res = await fetch(
-      `${BACKEND}/api/accounting/warehouse-storage-payments/${params.paymentNumber}/approve`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: req.headers.get("authorization") || "",
-        },
-        body: JSON.stringify(body),
-      }
-    );
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    const url = `${DJANGO_API_ENDPOINT}/accounting/warehouse-storage-payments/${params.paymentNumber}/approve`;
+    const { data, status } = await ApiProxy.post(url, body, true);
+    return NextResponse.json(data, { status });
   } catch {
     return NextResponse.json(
       { detail: "Failed to approve payment" },
