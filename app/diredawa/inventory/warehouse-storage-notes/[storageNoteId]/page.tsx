@@ -539,7 +539,6 @@ export default function WarehouseStorageNoteDetailPage() {
       {note.payment_remaining > 0 && (
         <PaymentPlanSuggestion wsnNo={note.wsn_no} remaining={note.payment_remaining} />
       )}
-      </div>
 
       <div className="flex gap-2">
         <Button onClick={openTopUp} disabled={isExpired} variant="outline">
