@@ -103,7 +103,7 @@ export default function CreateReleaseNotePage() {
         (data.items ?? [])
           .filter((it) => (it.remaining_quantity ?? it.quantity) > 0)
           .map((it) => ({
-            storage_item_id: it.item_id ?? it.code ?? "",
+            storage_item_id: it.id ?? 0,
             item_id: it.item_id,
             item_name: it.item_name,
             code: it.code ?? "",

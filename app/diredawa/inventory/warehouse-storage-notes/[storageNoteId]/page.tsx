@@ -28,19 +28,90 @@ import { cn } from "@/lib/utils";
 const PERIOD_UNIT_LABEL = (u: string) =>
   u.charAt(0).toUpperCase() + u.slice(1);
 
-function StatusBadge({ status }: { status: string }) {
+function PaymentPlanSuggestion({ wsnNo, remaining }: { wsnNo: string; remaining: number }) {
+  const [plan, setPlan] = useState<{ installment: number; amount: number; cumulative: number }[] | null>(null);
+  const [installments, setInstallments] = useState(3);
+  const [loading, setLoading] = useState(false);
+
+  const fetchPlan = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/accounting/warehouse-storage-payments/plan?wsn_no=${encodeURIComponent(wsnNo)}&installments=${installments}`,
+        { credentials: "include" }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setPlan(data.plan);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="border rounded-md overflow-hidden bg-white">
+      <h2 className="px-4 py-2 font-semibold bg-muted/60 border-b">
+        Suggested Payment Plan
+      </h2>
+      <div className="p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Label className="text-sm">Installments:</Label>
+          <select
+            className="h-8 rounded-md border border-input px-2 text-sm"
+            value={installments}
+            onChange={(e) => setInstallments(Number(e.target.value))}
+          >
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+          <Button size="sm" variant="outline" onClick={fetchPlan} disabled={loading}>
+            {loading ? "Calculating..." : "Show Plan"}
+          </Button>
+        </div>
+        {plan && (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/30">
+                <th className="px-3 py-1 text-left">Installment</th>
+                <th className="px-3 py-1 text-right">Amount</th>
+                <th className="px-3 py-1 text-right">Cumulative</th>
+              </tr>
+            </thead>
+            <tbody>
+              {plan.map((p) => (
+                <tr key={p.installment} className="border-b last:border-0">
+                  <td className="px-3 py-1">#{p.installment}</td>
+                  <td className="px-3 py-1 text-right">{money(p.amount)}</td>
+                  <td className="px-3 py-1 text-right">{money(p.cumulative)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status, expired }: { status: string; expired?: boolean }) {
   const s = String(status ?? "").toLowerCase();
   const cls =
     s === "expired"
       ? "bg-red-100 text-red-800"
       : s === "released"
-        ? "bg-muted text-muted-foreground"
-        : "bg-green-100 text-green-800";
+        ? "bg-blue-100 text-blue-800"
+        : expired
+          ? "bg-orange-100 text-orange-800"
+          : "bg-green-100 text-green-800";
   return (
     <span
       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${cls}`}
     >
-      {s}
+      {expired && s === "active" ? "expiring" : s}
     </span>
   );
 }
@@ -173,11 +244,18 @@ export default function WarehouseStorageNoteDetailPage() {
         >
           Back to Storage Notes
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => window.print()}
+          className="print:hidden"
+        >
+          Print / Export PDF
+        </Button>
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold">Storage Note Detail</h1>
           <div className="flex items-center justify-center gap-2 mt-1">
             <span className="text-sm text-muted-foreground">{note.wsn_no}</span>
-            <StatusBadge status={note.status} />
+            <StatusBadge status={note.status} expired={note.expired} />
           </div>
         </div>
         <div className="w-[150px]" />
@@ -457,6 +535,12 @@ export default function WarehouseStorageNoteDetailPage() {
         </div>
       </div>
 
+      {/* Suggested Payment Plan */}
+      {note.payment_remaining > 0 && (
+        <PaymentPlanSuggestion wsnNo={note.wsn_no} remaining={note.payment_remaining} />
+      )}
+      </div>
+
       <div className="flex gap-2">
         <Button onClick={openTopUp} disabled={isExpired} variant="outline">
           Top Up / Extend Period
@@ -545,6 +629,17 @@ export default function WarehouseStorageNoteDetailPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Print-friendly styles */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .max-w-4xl, .max-w-4xl * { visibility: visible; }
+          .max-w-4xl { position: absolute; left: 0; top: 0; width: 100%; }
+          .print\\:hidden { display: none !important; }
+          nav, sidebar, header, footer { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

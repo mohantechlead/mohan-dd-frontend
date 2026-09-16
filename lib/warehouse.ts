@@ -1,4 +1,5 @@
 export interface WSNItem {
+  id?: number;
   item_id?: string;
   item_name: string;
   code?: string;
@@ -209,6 +210,26 @@ export const WSN_FLOW_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/flow`;
 export const WSN_ITEM_INVENTORY_URL = `${WSN_API_URL.replace("/warehouse-storage-notes", "")}/warehouse-item-inventory`;
 export const WSP_API_URL = "/api/accounting/warehouse-storage-payments";
 export const WSP_NEXT_NUMBER_URL = `${WSP_API_URL}/next-number`;
+export const WAREHOUSE_DASHBOARD_URL = `${WSN_API_URL.replace("/warehouse-storage-notes", "")}/warehouse-dashboard`;
+
+// ============================================================
+// Warehouse Dashboard
+// ============================================================
+
+export interface WarehouseDashboard {
+  total_wsns: number;
+  active_wsns: number;
+  expired_wsns: number;
+  released_wsns: number;
+  total_storage_value: number;
+  total_paid: number;
+  payment_remaining: number;
+  total_items_stored: number;
+  total_items_released: number;
+  total_items_remaining: number;
+  expiring_soon_count: number;
+  recent_wsns: WarehouseStorageNote[];
+}
 
 export function periodLabel(
   value: number | null | undefined,

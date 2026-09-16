@@ -22,6 +22,7 @@ interface EntryItemForm {
   quantity: string;
   bags: string;
   max_quantity: number;
+  already_entered: number;
 }
 
 export default function CreateStorageEntryPage() {
@@ -56,15 +57,22 @@ export default function CreateStorageEntryPage() {
         }
         const n = data as WarehouseStorageNote;
         setNote(n);
-        // Initialize item forms with total agreed quantity as max
+        // Compute already-entered quantities per item from existing entries
+        const enteredMap: Record<number, number> = {};
+        for (const entry of n.entries || []) {
+          for (const ei of entry.items || []) {
+            enteredMap[ei.storage_item_id] = (enteredMap[ei.storage_item_id] || 0) + ei.quantity;
+          }
+        }
         setItems(
           n.items.map((item) => ({
-            storage_item_id: 0, // Will be set from item index
+            storage_item_id: item.id ?? 0,
             item_name: item.item_name,
             code: item.code || null,
             quantity: "",
             bags: item.bags?.toString() || "",
             max_quantity: item.quantity,
+            already_entered: enteredMap[item.id ?? 0] || 0,
           }))
         );
       } catch {
@@ -95,8 +103,8 @@ export default function CreateStorageEntryPage() {
 
     const entryItems = items
       .filter((item) => item.quantity && Number(item.quantity) > 0)
-      .map((item, idx) => ({
-        storage_item_id: note.items[idx]?.item_id ? idx : idx,
+      .map((item) => ({
+        storage_item_id: item.storage_item_id,
         quantity: Number(item.quantity),
         bags: item.bags ? Number(item.bags) : null,
       }));
@@ -119,15 +127,7 @@ export default function CreateStorageEntryPage() {
         body: JSON.stringify({
           entry_date: entryDate,
           remark: remark.trim() || null,
-          items: entryItems.map((ei, idx) => {
-            // Find the original item to get its storage_item_id
-            const originalItem = note.items[items.findIndex((fi) => fi.quantity && Number(fi.quantity) > 0)];
-            return {
-              storage_item_id: originalItem ? note.items.indexOf(originalItem) : idx,
-              quantity: ei.quantity,
-              bags: ei.bags,
-            };
-          }),
+          items: entryItems,
         }),
       });
       const data = await res.json();
@@ -185,6 +185,49 @@ export default function CreateStorageEntryPage() {
         create multiple entries for this storage note with different dates.
       </div>
 
+      {/* CSV Upload */}
+      <div className="rounded-md bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">
+        <strong>Bulk Upload:</strong> Upload a CSV file with columns: <code>item_name</code>, <code>quantity</code>, <code>bags</code> (optional).
+        <div className="mt-2">
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                const text = ev.target?.result as string;
+                const lines = text.split("\n").filter((l) => l.trim());
+                const header = lines[0].toLowerCase().split(",").map((h) => h.trim());
+                const nameIdx = header.indexOf("item_name");
+                const qtyIdx = header.indexOf("quantity");
+                const bagsIdx = header.indexOf("bags");
+                if (nameIdx === -1 || qtyIdx === -1) {
+                  showToast({ title: "Invalid CSV", description: "Must have item_name and quantity columns.", variant: "error" });
+                  return;
+                }
+                const updated = [...items];
+                for (let i = 1; i < lines.length; i++) {
+                  const cols = lines[i].split(",").map((c) => c.trim());
+                  const csvName = cols[nameIdx];
+                  const csvQty = parseFloat(cols[qtyIdx]);
+                  if (!csvName || isNaN(csvQty)) continue;
+                  const idx = updated.findIndex((u) => u.item_name.toLowerCase() === csvName.toLowerCase());
+                  if (idx !== -1) {
+                    updated[idx] = { ...updated[idx], quantity: String(csvQty), bags: bagsIdx !== -1 ? cols[bagsIdx] || "" : updated[idx].bags };
+                  }
+                }
+                setItems(updated);
+                showToast({ title: "CSV imported", description: "Quantities updated from CSV.", variant: "success" });
+              };
+              reader.readAsText(file);
+            }}
+            className="text-sm"
+          />
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="border rounded-md overflow-hidden bg-white">
           <h2 className="px-4 py-2 font-semibold bg-muted/60 border-b">
@@ -223,16 +266,15 @@ export default function CreateStorageEntryPage() {
                 <th className="px-4 py-2 text-left">Item Name</th>
                 <th className="px-4 py-2 text-left">Code</th>
                 <th className="px-4 py-2 text-right">Total Agreed</th>
+                <th className="px-4 py-2 text-right">Already Entered</th>
+                <th className="px-4 py-2 text-right">Can Enter</th>
                 <th className="px-4 py-2 text-right">Enter Quantity *</th>
                 <th className="px-4 py-2 text-right">Bags</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => {
-                const entered = note.items[idx]
-                  ? item.max_quantity -
-                    (item.max_quantity - 0) // TODO: compute from existing entries
-                  : 0;
+                const canEnter = item.max_quantity - item.already_entered;
                 return (
                   <tr key={idx} className="border-b last:border-0">
                     <td className="px-4 py-2">{item.item_name}</td>
@@ -240,10 +282,17 @@ export default function CreateStorageEntryPage() {
                     <td className="px-4 py-2 text-right">
                       {item.max_quantity}
                     </td>
+                    <td className="px-4 py-2 text-right text-muted-foreground">
+                      {item.already_entered}
+                    </td>
+                    <td className={`px-4 py-2 text-right font-medium ${canEnter <= 0 ? "text-green-600" : ""}`}>
+                      {canEnter}
+                    </td>
                     <td className="px-4 py-2 text-right">
                       <Input
                         type="number"
                         min="0"
+                        max={canEnter}
                         step="any"
                         value={item.quantity}
                         onChange={(e) =>
@@ -251,6 +300,7 @@ export default function CreateStorageEntryPage() {
                         }
                         className="w-24 text-right"
                         placeholder="0"
+                        disabled={canEnter <= 0}
                       />
                     </td>
                     <td className="px-4 py-2 text-right">

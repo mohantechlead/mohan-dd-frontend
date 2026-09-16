@@ -25,6 +25,7 @@ import {
   getStorageNoteColumns,
   ExpiryBanner,
 } from "./columns";
+import { WarehouseDashboardCards } from "@/components/warehouse/dashboard-cards";
 import {
   Dialog,
   DialogContent,
@@ -410,6 +411,7 @@ export default function WarehouseStorageNotesDisplayPage() {
         </Button>
       </div>
       <h1 className="text-2xl text-center my-2 font-bold">Storage Notes List</h1>
+      <WarehouseDashboardCards />
       <div className="flex justify-end mb-4">
         <TableSearch
           value={search}

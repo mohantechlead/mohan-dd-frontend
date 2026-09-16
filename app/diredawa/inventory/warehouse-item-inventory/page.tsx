@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -13,6 +13,7 @@ import {
   money,
   type WarehouseItemInventory,
 } from "@/lib/warehouse";
+import { WarehouseItemSummaryCards } from "@/components/warehouse/dashboard-cards";
 
 export default function WarehouseItemInventoryPage() {
   const router = useRouter();
@@ -22,6 +23,37 @@ export default function WarehouseItemInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [searchName, setSearchName] = useState("");
   const [searchCode, setSearchCode] = useState("");
+  const [groupByName, setGroupByName] = useState(false);
+  const [showInStockOnly, setShowInStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "remaining" | "stored">("name");
+
+  const displayItems = useMemo(() => {
+    let result = items;
+    if (groupByName) {
+      const map = new Map<string, WarehouseItemInventory>();
+      for (const item of result) {
+        const key = item.item_name.toLowerCase();
+        if (map.has(key)) {
+          const existing = map.get(key)!;
+          existing.total_stored += item.total_stored;
+          existing.total_released += item.total_released;
+          existing.remaining += item.remaining;
+          existing.storage_notes.push(...item.storage_notes);
+        } else {
+          map.set(key, { ...item, storage_notes: [...item.storage_notes] });
+        }
+      }
+      result = Array.from(map.values());
+    }
+    if (showInStockOnly) {
+      result = result.filter((i) => i.remaining > 0);
+    }
+    return [...result].sort((a, b) => {
+      if (sortBy === "remaining") return b.remaining - a.remaining;
+      if (sortBy === "stored") return b.total_stored - a.total_stored;
+      return a.item_name.localeCompare(b.item_name);
+    });
+  }, [items, groupByName, showInStockOnly, sortBy]);
 
   const load = async (nameFilter?: string, codeFilter?: string) => {
     try {
@@ -90,6 +122,8 @@ export default function WarehouseItemInventoryPage() {
         <div className="w-[150px]" />
       </div>
 
+      <WarehouseItemSummaryCards />
+
       {/* Search */}
       <form onSubmit={handleSearch} className="border rounded-md bg-white p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -126,16 +160,50 @@ export default function WarehouseItemInventoryPage() {
         </div>
       </form>
 
+      {/* Group by name toggle and filters */}
+      <div className="flex flex-wrap items-center gap-4 mt-4">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={groupByName}
+            onChange={(e) => setGroupByName(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Group by item name
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showInStockOnly}
+            onChange={(e) => setShowInStockOnly(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          In stock only
+        </label>
+        <div className="flex items-center gap-2 text-sm">
+          <Label>Sort by:</Label>
+          <select
+            className="h-8 rounded-md border border-input px-2 text-sm"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          >
+            <option value="name">Name (A-Z)</option>
+            <option value="remaining">Remaining (highest)</option>
+            <option value="stored">Stored (highest)</option>
+          </select>
+        </div>
+      </div>
+
       {/* Results */}
       {loading ? (
         <div className="p-10 text-center">Loading...</div>
-      ) : items.length === 0 ? (
+      ) : displayItems.length === 0 ? (
         <div className="p-10 text-center text-muted-foreground">
           No items found.
         </div>
       ) : (
         <div className="space-y-4">
-          {items.map((item, idx) => (
+          {displayItems.map((item, idx) => (
             <div key={idx} className="border rounded-md overflow-hidden bg-white">
               <div className="px-4 py-3 bg-muted/60 border-b flex items-center justify-between">
                 <div>

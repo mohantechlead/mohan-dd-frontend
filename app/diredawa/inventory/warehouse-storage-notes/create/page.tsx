@@ -6,6 +6,7 @@ import { ItemsForm } from "@/components/itemsform";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import { parseDecimalQuantity } from "@/lib/inventoryQuantity";
 import { WSN_API_URL, PERIOD_UNITS, WSN_NEXT_NUMBER_URL } from "@/lib/warehouse";
@@ -34,8 +35,21 @@ interface WSNFormValues {
 export default function CreateWarehouseStorageNotePage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const auth = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [nextNumber, setNextNumber] = useState("");
+
+  // Accounting-only users should not create WSNs
+  useEffect(() => {
+    if (auth && !auth.isAdmin && auth.role !== "logistics") {
+      showToast({
+        title: "Access denied",
+        description: "Only admin and logistics users can create storage notes.",
+        variant: "error",
+      });
+      router.push("/diredawa/inventory/warehouse-storage-notes/display");
+    }
+  }, [auth, router, showToast]);
 
   useEffect(() => {
     fetch(WSN_NEXT_NUMBER_URL, { credentials: "include" })
