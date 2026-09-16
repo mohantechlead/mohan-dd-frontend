@@ -222,6 +222,7 @@ const baseNavMain = [
           { title: "Received Payment Approval", url: "/diredawa/approvals/received-payments" },
           { title: "Vendor Payment Approval", url: "/diredawa/approvals/vendor-payments" },
           { title: "Expense Payment Approval", url: "/diredawa/approvals/expense-payments" },
+          { title: "Warehouse Payment Approval", url: "/diredawa/approvals/warehouse-payments" },
         ],
       },
     ],

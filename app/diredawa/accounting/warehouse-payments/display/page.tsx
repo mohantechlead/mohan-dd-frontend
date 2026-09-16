@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { useAuth } from "@/components/authProvider";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import { WSP_API_URL, money, formatDate, type WarehouseStoragePayment } from "@/lib/warehouse";
 
@@ -27,7 +26,6 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function WarehousePaymentsDisplayPage() {
   const router = useRouter();
-  const auth = useAuth();
   const { showToast } = useToast();
   const [payments, setPayments] = useState<WarehouseStoragePayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,30 +49,6 @@ export default function WarehousePaymentsDisplayPage() {
   useEffect(() => {
     load();
   }, []);
-
-  const handleApprove = async (paymentNumber: string) => {
-    if (!auth?.userId) {
-      showToast({ title: "Error", description: "User ID not found.", variant: "error" });
-      return;
-    }
-    try {
-      const res = await fetch(`${WSP_API_URL}/${encodeURIComponent(paymentNumber)}/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ approved_by_id: auth.userId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        showToast({ title: "Failed to approve", description: formatApiErrorMessage(data), variant: "error" });
-        return;
-      }
-      showToast({ title: "Payment approved", variant: "success" });
-      load();
-    } catch {
-      showToast({ title: "Failed to approve", description: "Something went wrong.", variant: "error" });
-    }
-  };
 
   return (
     <div className="max-w-6xl mx-auto mt-6 space-y-6">
@@ -107,7 +81,6 @@ export default function WarehousePaymentsDisplayPage() {
                 <th className="px-4 py-2 text-left">Type</th>
                 <th className="px-4 py-2 text-left">Status</th>
                 <th className="px-4 py-2 text-right">Remaining</th>
-                <th className="px-4 py-2 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -121,17 +94,6 @@ export default function WarehousePaymentsDisplayPage() {
                   <td className="px-4 py-2 capitalize">{p.payment_type}</td>
                   <td className="px-4 py-2"><StatusBadge status={p.status} /></td>
                   <td className="px-4 py-2 text-right">{money(p.remaining_amount)}</td>
-                  <td className="px-4 py-2 text-center">
-                    {String(p.status).toLowerCase() === "pending" && auth?.isAdmin && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleApprove(p.payment_number)}
-                      >
-                        Approve
-                      </Button>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
