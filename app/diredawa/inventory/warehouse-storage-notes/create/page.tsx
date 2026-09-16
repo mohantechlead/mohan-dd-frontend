@@ -215,8 +215,7 @@ export default function CreateWarehouseStorageNotePage() {
             name: "customer_name",
             label: "Customer Name",
             required: true,
-            placeholder: "Search customer...",
-            dropdownConfig: { url: "/api/partners/customers", displayKey: "name" },
+            placeholder: "Enter customer name",
           },
           { name: "ECD_no", label: "ECD No", placeholder: "Enter ECD No" },
           {
