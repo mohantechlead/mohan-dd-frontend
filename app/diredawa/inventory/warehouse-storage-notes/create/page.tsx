@@ -38,6 +38,7 @@ export default function CreateWarehouseStorageNotePage() {
   const auth = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [nextNumber, setNextNumber] = useState("");
+  const [wsnNo, setWsnNo] = useState("");
 
   // Accounting-only users should not create WSNs
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function CreateWarehouseStorageNotePage() {
       .then((data) => {
         if (data && typeof data.next_number === "string") {
           setNextNumber(data.next_number);
+          setWsnNo(data.next_number);
         }
       })
       .catch(() => {});
@@ -88,7 +90,7 @@ export default function CreateWarehouseStorageNotePage() {
     }
 
     const payload = {
-      wsn_no: String(values.wsn_no ?? "").trim() || String(nextNumber || "").trim(),
+      wsn_no: String(values.wsn_no ?? wsnNo ?? "").trim() || null,
       customer_name: String(values.customer_name ?? "").trim(),
       date: values.date || null,
       ECD_no: String(values.ECD_no ?? "").trim() || null,
@@ -189,11 +191,15 @@ export default function CreateWarehouseStorageNotePage() {
 
       <div className="flex items-center justify-center gap-2 mb-4">
         <span className="text-sm text-muted-foreground">
-          Storage Note No (auto-generated):
+          Storage Note No:
         </span>
-        <span className="text-sm font-semibold text-primary">
-          {nextNumber || "Loading..."}
-        </span>
+        <input
+          type="text"
+          value={wsnNo}
+          onChange={(e) => setWsnNo(e.target.value)}
+          className="text-sm font-semibold text-primary border-b border-input bg-transparent px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring w-40"
+          placeholder="e.g. WSN-001"
+        />
       </div>
 
       <Form<WSNFormValues>

@@ -282,13 +282,11 @@ export default function CreateReleaseNotePage() {
               </p>
             </div>
             <div>
-              <Label>Release Note No (auto-generated)</Label>
+              <Label>Release Note No</Label>
               <Input
                 value={form.wrn_no}
                 onChange={(e) => setForm((p) => ({ ...p, wrn_no: e.target.value }))}
-                placeholder="Loading..."
-                readOnly
-                className="bg-muted/40 cursor-default"
+                placeholder="e.g. WRN-001"
               />
             </div>
             <div>

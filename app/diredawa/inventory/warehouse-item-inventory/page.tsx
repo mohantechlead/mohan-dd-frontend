@@ -29,22 +29,6 @@ export default function WarehouseItemInventoryPage() {
 
   const displayItems = useMemo(() => {
     let result = items;
-    if (groupByName) {
-      const map = new Map<string, WarehouseItemInventory>();
-      for (const item of result) {
-        const key = item.item_name.toLowerCase();
-        if (map.has(key)) {
-          const existing = map.get(key)!;
-          existing.total_stored += item.total_stored;
-          existing.total_released += item.total_released;
-          existing.remaining += item.remaining;
-          existing.storage_notes.push(...item.storage_notes);
-        } else {
-          map.set(key, { ...item, storage_notes: [...item.storage_notes] });
-        }
-      }
-      result = Array.from(map.values());
-    }
     if (showInStockOnly) {
       result = result.filter((i) => i.remaining > 0);
     }
@@ -53,15 +37,17 @@ export default function WarehouseItemInventoryPage() {
       if (sortBy === "stored") return b.total_stored - a.total_stored;
       return a.item_name.localeCompare(b.item_name);
     });
-  }, [items, groupByName, showInStockOnly, sortBy]);
+  }, [items, showInStockOnly, sortBy]);
 
-  const load = async (nameFilter?: string, codeFilter?: string) => {
+  const load = async (nameFilter?: string, codeFilter?: string, groupByNameFilter?: boolean) => {
     try {
       const params = new URLSearchParams();
       const name = nameFilter ?? searchName;
       const code = codeFilter ?? searchCode;
+      const groupBy = groupByNameFilter ?? groupByName;
       if (name.trim()) params.set("item_name", name.trim());
       if (code.trim()) params.set("code", code.trim());
+      if (groupBy) params.set("group_by_name", "true");
 
       const url = `/api/inventory/warehouse-item-inventory${params.toString() ? `?${params}` : ""}`;
       const res = await fetch(url, { credentials: "include" });
@@ -166,7 +152,11 @@ export default function WarehouseItemInventoryPage() {
           <input
             type="checkbox"
             checked={groupByName}
-            onChange={(e) => setGroupByName(e.target.checked)}
+            onChange={(e) => {
+              const val = e.target.checked;
+              setGroupByName(val);
+              load(undefined, undefined, val);
+            }}
             className="rounded border-gray-300"
           />
           Group by item name

@@ -32,6 +32,7 @@ export default function CreateWarehousePaymentPage() {
   const [existingPayments, setExistingPayments] = useState<ExistingPayment[]>([]);
 
   const [form, setForm] = useState({
+    payment_number: "",
     payment_date: "",
     wsn_no: searchParams.get("wsn_no") || "",
     payment_type: "partial",
@@ -92,6 +93,7 @@ export default function CreateWarehousePaymentPage() {
     setSubmitting(true);
     try {
       const body: Record<string, unknown> = {
+        payment_number: form.payment_number.trim() || null,
         payment_date: form.payment_date,
         wsn_no: form.wsn_no,
         payment_type: form.payment_type,
@@ -133,6 +135,15 @@ export default function CreateWarehousePaymentPage() {
 
       <form onSubmit={handleSubmit} className="border rounded-md bg-white p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="payment_number">Payment Number (optional)</Label>
+            <Input
+              id="payment_number"
+              value={form.payment_number}
+              onChange={(e) => updateForm("payment_number", e.target.value)}
+              placeholder="e.g. WSP-001 (auto-generated if empty)"
+            />
+          </div>
           <div>
             <Label htmlFor="wsn_no">Storage Note (WSN) *</Label>
             <select
