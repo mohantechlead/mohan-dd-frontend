@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import ApiProxy from "../../../proxy";
-
-const DJANGO_API_ENDPOINT = process.env.DJANGO_API_ENDPOINT || "http://localhost:8000/api";
+import { DJANGO_API_ENDPOINT } from "@/config/defaults";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { paymentNumber: string } }
+  { params }: { params: Promise<{ paymentNumber: string }> }
 ) {
   try {
+    const { paymentNumber } = await params;
     const body = await req.json();
-    const url = `${DJANGO_API_ENDPOINT}/accounting/warehouse-storage-payments/${params.paymentNumber}/approve`;
+    const url = `${DJANGO_API_ENDPOINT}/accounting/warehouse-storage-payments/${paymentNumber}/approve`;
     const { data, status } = await ApiProxy.post(url, body, true);
     return NextResponse.json(data, { status });
   } catch {
