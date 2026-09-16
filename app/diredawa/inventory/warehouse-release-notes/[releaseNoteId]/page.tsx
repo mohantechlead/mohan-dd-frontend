@@ -65,7 +65,13 @@ export default function ReleaseNoteDetailPage() {
           <h1 className="text-2xl font-bold">Release Note Detail</h1>
           <p className="text-sm text-muted-foreground mt-1">{note.wrn_no}</p>
         </div>
-        <div className="w-[150px]" />
+        <Button
+          variant="outline"
+          onClick={() => window.print()}
+          className="print:hidden"
+        >
+          Print / Export PDF
+        </Button>
       </div>
 
       <div className="border rounded-md overflow-hidden bg-white">
@@ -149,6 +155,16 @@ export default function ReleaseNoteDetailPage() {
           </tbody>
         </table>
       </div>
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .max-w-5xl, .max-w-5xl * { visibility: visible; }
+          .max-w-5xl { position: absolute; left: 0; top: 0; width: 100%; }
+          .print\\:hidden, button { display: none !important; }
+          nav, sidebar, header, footer { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

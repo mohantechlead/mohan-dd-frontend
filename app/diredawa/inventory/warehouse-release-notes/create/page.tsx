@@ -397,7 +397,7 @@ export default function CreateReleaseNotePage() {
           body * { visibility: hidden; }
           .max-w-4xl, .max-w-4xl * { visibility: visible; }
           .max-w-4xl { position: absolute; left: 0; top: 0; width: 100%; }
-          .print\\:hidden { display: none !important; }
+          .print\\:hidden, button { display: none !important; }
           nav, sidebar, header, footer { display: none !important; }
         }
       `}</style>

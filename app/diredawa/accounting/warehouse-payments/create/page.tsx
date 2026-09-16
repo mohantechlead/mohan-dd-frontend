@@ -66,7 +66,7 @@ export default function CreateWarehousePaymentPage() {
   const remainingAmount = useMemo(() => {
     if (!form.wsn_no || !selectedWSN) return 0;
     const paid = existingPayments
-      .filter((p) => p.wsn_no === form.wsn_no && (p.status === "approved" || p.status === "completed"))
+      .filter((p) => p.wsn_no === form.wsn_no && (p.status === "pending" || p.status === "approved" || p.status === "completed"))
       .reduce((sum, p) => sum + Number(p.amount || 0), 0);
     return Math.max(0, Number(selectedWSN.storage_price || 0) - paid);
   }, [form.wsn_no, selectedWSN, existingPayments]);

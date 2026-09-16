@@ -564,7 +564,7 @@ export default function WarehouseStorageNoteDetailPage() {
           body * { visibility: hidden; }
           .max-w-6xl, .max-w-6xl * { visibility: visible; }
           .max-w-6xl { position: absolute; left: 0; top: 0; width: 100%; }
-          .print\\:hidden { display: none !important; }
+          .print\\:hidden, button { display: none !important; }
           nav, sidebar, header, footer { display: none !important; }
         }
       `}</style>
