@@ -4,7 +4,7 @@ interface FetchError extends Error {
   }
   
   const fetcher = async (url: string): Promise<any> => {
-    const res = await fetch(url);
+    const res = await fetch(url, { credentials: "include" });
   
     if (!res.ok) {
       const error: FetchError = new Error(

@@ -240,13 +240,16 @@ export default function CreateReleaseNotePage() {
 
   return (
     <div className="max-w-4xl mx-auto mt-10">
-      <div className="flex justify-start mb-6">
+      <div className="flex justify-between mb-6">
         <Button
           onClick={() =>
             router.push("/diredawa/inventory/warehouse-release-notes/display")
           }
         >
           Display Release Notes
+        </Button>
+        <Button variant="outline" onClick={() => window.print()} className="print:hidden">
+          Print / Export PDF
         </Button>
       </div>
 
@@ -388,6 +391,16 @@ export default function CreateReleaseNotePage() {
           </Button>
         </div>
       </form>
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .max-w-4xl, .max-w-4xl * { visibility: visible; }
+          .max-w-4xl { position: absolute; left: 0; top: 0; width: 100%; }
+          .print\\:hidden { display: none !important; }
+          nav, sidebar, header, footer { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
