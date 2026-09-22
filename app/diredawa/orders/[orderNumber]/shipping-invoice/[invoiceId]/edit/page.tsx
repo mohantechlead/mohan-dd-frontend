@@ -58,6 +58,8 @@ interface ShippingInvoiceDetail {
   bill_of_lading_remark?: string | null;
   bank?: string | null;
   sr_no?: number;
+  destination_contact_name?: string | null;
+  destination_contact_number?: string | null;
   items: {
     item_id?: string | null;
     item_name: string;
@@ -111,6 +113,8 @@ export default function EditShippingInvoicePage() {
     bill_of_lading_remark: "",
     bank: "",
     sr_no: "",
+    destination_contact_name: "",
+    destination_contact_number: "",
   });
 
   const [shippingItems, setShippingItems] = useState<ShippingItemState[]>([]);
@@ -192,6 +196,8 @@ export default function EditShippingInvoicePage() {
             bill_of_lading_remark: invData.bill_of_lading_remark || "",
             bank: invData.bank || "",
             sr_no: invData.sr_no != null ? String(invData.sr_no) : "",
+            destination_contact_name: invData.destination_contact_name || "",
+            destination_contact_number: invData.destination_contact_number || "",
           });
           const items = invData.items.map((it) => ({
             item_id: it.item_id ?? "",
@@ -387,6 +393,8 @@ export default function EditShippingInvoicePage() {
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
       bank: shippingForm.bank.trim() || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
+      destination_contact_name: shippingForm.destination_contact_name.trim() || null,
+      destination_contact_number: shippingForm.destination_contact_number.trim() || null,
       items: shippingItems.map((it) => ({
         item_id: it.item_id || null,
         item_name: it.item_name,
@@ -774,6 +782,38 @@ export default function EditShippingInvoicePage() {
                       bank: e.target.value,
                     }))
                   }
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">
+                  Destination Contact Name
+                </label>
+                <input
+                  value={shippingForm.destination_contact_name}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      destination_contact_name: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter destination contact name"
+                  className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">
+                  Destination Contact Number
+                </label>
+                <input
+                  value={shippingForm.destination_contact_number}
+                  onChange={(e) =>
+                    setShippingForm((prev) => ({
+                      ...prev,
+                      destination_contact_number: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter destination contact number"
                   className="w-full border rounded-md px-3 py-2"
                 />
               </div>

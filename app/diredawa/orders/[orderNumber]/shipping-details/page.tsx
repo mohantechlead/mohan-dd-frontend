@@ -63,6 +63,8 @@ export default function ShippingDetailsPage() {
     bill_of_lading_remark: "",
     bank: "",
     sr_no: "",
+    destination_contact_name: "",
+    destination_contact_number: "",
   });
 
   const [shippingItem, setShippingItem] = useState<
@@ -265,6 +267,8 @@ export default function ShippingDetailsPage() {
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
       bank: shippingForm.bank.trim() || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
+      destination_contact_name: shippingForm.destination_contact_name.trim() || null,
+      destination_contact_number: shippingForm.destination_contact_number.trim() || null,
       items: shippingItems.map((it) => ({
         item_id: it.item_id || null,
         item_name: it.item_name,
@@ -669,6 +673,38 @@ export default function ShippingDetailsPage() {
                     bank: e.target.value,
                   }))
                 }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">
+                Destination Contact Name
+              </label>
+              <input
+                value={shippingForm.destination_contact_name}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    destination_contact_name: e.target.value,
+                  }))
+                }
+                placeholder="Enter destination contact name"
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">
+                Destination Contact Number
+              </label>
+              <input
+                value={shippingForm.destination_contact_number}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    destination_contact_number: e.target.value,
+                  }))
+                }
+                placeholder="Enter destination contact number"
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>

@@ -29,6 +29,7 @@ interface OrderDetail {
   buyer: string;
   buyer_address?: string | null;
   measurement_type?: string | null;
+  final_destination?: string | null;
   items: OrderItem[];
 }
 
@@ -43,6 +44,8 @@ interface ShippingInvoiceDetail {
   authorized_by?: string | null;
   authorized_at?: string | null;
   bank?: string | null;
+  destination_contact_name?: string | null;
+  destination_contact_number?: string | null;
   items: {
     item_name: string;
     price: number;
@@ -396,6 +399,10 @@ export default function LoadingInstructionPage() {
                 <span className="font-semibold">Invoice No: </span>
                 {invoice.invoice_number}
               </p>
+              <p>
+                <span className="font-semibold">Final Destination: </span>
+                {order.final_destination || "—"}
+              </p>
               {invoice.bank?.trim() ? (
                 <p>
                   <span className="font-semibold">Bank: </span>
@@ -412,6 +419,18 @@ export default function LoadingInstructionPage() {
                 <span className="font-semibold">Ecd. No: </span>
                 {invoice.ecd_no?.trim() || ""}
               </p>
+              {invoice.destination_contact_name?.trim() ? (
+                <p>
+                  <span className="font-semibold">Destination Contact Name: </span>
+                  {invoice.destination_contact_name}
+                </p>
+              ) : null}
+              {invoice.destination_contact_number?.trim() ? (
+                <p>
+                  <span className="font-semibold">Destination Contact Number: </span>
+                  {invoice.destination_contact_number}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -439,7 +458,7 @@ export default function LoadingInstructionPage() {
                     Weight/Package
                   </th>
                   <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
-                    No of Unit
+                    No of Packages
                   </th>
                   <th className="border border-black px-3 py-2 text-left w-24 print:py-5">
                     Remarks
