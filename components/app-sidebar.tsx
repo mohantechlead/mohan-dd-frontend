@@ -43,6 +43,7 @@ const baseNavMain = [
     items: [
       { title: "Admin Dashboard", url: "/diredawa/dashboard" },
       { title: "Analytics", url: "/diredawa/reports" },
+      { title: "AI Assistant", url: "/diredawa/ai-assistant" },
     ],
   },
   {

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "../../components/app-sidebar";
+import { AiChatWidget } from "../../components/ai-chat-widget";
 import {
   SidebarInset,
   SidebarProvider,
@@ -81,6 +82,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
+        {auth?.isStore ? null : <AiChatWidget />}
       </SidebarInset>
     </SidebarProvider>
   );
