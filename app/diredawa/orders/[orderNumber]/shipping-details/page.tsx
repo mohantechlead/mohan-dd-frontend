@@ -63,6 +63,7 @@ export default function ShippingDetailsPage() {
     bill_of_lading_remark: "",
     bank: "",
     sr_no: "",
+    specific_destination: "",
     destination_contact_name: "",
     destination_contact_number: "",
   });
@@ -267,6 +268,7 @@ export default function ShippingDetailsPage() {
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
       bank: shippingForm.bank.trim() || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
+      specific_destination: shippingForm.specific_destination.trim() || null,
       destination_contact_name: shippingForm.destination_contact_name.trim() || null,
       destination_contact_number: shippingForm.destination_contact_number.trim() || null,
       items: shippingItems.map((it) => ({
@@ -673,6 +675,22 @@ export default function ShippingDetailsPage() {
                     bank: e.target.value,
                   }))
                 }
+                className="w-full border rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">
+                Specific Destination
+              </label>
+              <input
+                value={shippingForm.specific_destination}
+                onChange={(e) =>
+                  setShippingForm((prev) => ({
+                    ...prev,
+                    specific_destination: e.target.value,
+                  }))
+                }
+                placeholder="Enter specific destination"
                 className="w-full border rounded-md px-3 py-2"
               />
             </div>
