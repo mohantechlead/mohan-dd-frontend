@@ -6,6 +6,7 @@ import {
   CheckSquare,
   ClipboardList,
   LayoutDashboard,
+  MessageCircle,
   Package,
   ShoppingBag,
   ShoppingCart,
@@ -43,6 +44,14 @@ const baseNavMain = [
     items: [
       { title: "Admin Dashboard", url: "/diredawa/dashboard" },
       { title: "Analytics", url: "/diredawa/reports" },
+    ],
+  },
+  {
+    title: "AI Assistant",
+    url: "/diredawa/ai-assistant",
+    icon: MessageCircle,
+    items: [
+      { title: "AI Assistant", url: "/diredawa/ai-assistant", storeVisible: true },
     ],
   },
   {
@@ -268,7 +277,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ),
         })) as typeof baseNavMain;
     } else if (isAccounting && !isAdmin) {
-      items = items.filter((section) => section.title === "Accounting") as typeof baseNavMain;
+      items = items.filter((section) => section.title === "Accounting" || section.title === "AI Assistant") as typeof baseNavMain;
       // items = items
       //   .filter((section) => {
       //     if (section.title === "Accounting") return true;

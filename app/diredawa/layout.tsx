@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "../../components/app-sidebar";
+import { AiChatWidget } from "../../components/ai-chat-widget";
 import {
   SidebarInset,
   SidebarProvider,
@@ -19,6 +20,7 @@ const STORE_ALLOWED_PATHS = [
   "/diredawa/inventory/dn/display",
   "/diredawa/inventory/dn", // allows /dn/[dnNo] detail
   "/diredawa/inventory/stock",
+  "/diredawa/ai-assistant",
 ];
 
 function isStorePathAllowed(pathname: string | null): boolean {
@@ -81,6 +83,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
+        <AiChatWidget />
       </SidebarInset>
     </SidebarProvider>
   );
