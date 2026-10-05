@@ -20,6 +20,7 @@ const STORE_ALLOWED_PATHS = [
   "/diredawa/inventory/dn/display",
   "/diredawa/inventory/dn", // allows /dn/[dnNo] detail
   "/diredawa/inventory/stock",
+  "/diredawa/ai-assistant",
 ];
 
 function isStorePathAllowed(pathname: string | null): boolean {
@@ -82,7 +83,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
-        {auth?.isStore ? null : <AiChatWidget />}
+        <AiChatWidget />
       </SidebarInset>
     </SidebarProvider>
   );
