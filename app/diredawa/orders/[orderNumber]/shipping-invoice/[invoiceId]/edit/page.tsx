@@ -58,7 +58,7 @@ interface ShippingInvoiceDetail {
   bill_of_lading_remark?: string | null;
   bank?: string | null;
   sr_no?: number;
-  specific_destination?: string | null;
+  destination?: string | null;
   destination_contact_name?: string | null;
   destination_contact_number?: string | null;
   items: {
@@ -114,7 +114,7 @@ export default function EditShippingInvoicePage() {
     bill_of_lading_remark: "",
     bank: "",
     sr_no: "",
-    specific_destination: "",
+    destination: "",
     destination_contact_name: "",
     destination_contact_number: "",
   });
@@ -198,7 +198,7 @@ export default function EditShippingInvoicePage() {
             bill_of_lading_remark: invData.bill_of_lading_remark || "",
             bank: invData.bank || "",
             sr_no: invData.sr_no != null ? String(invData.sr_no) : "",
-            specific_destination: invData.specific_destination || "",
+            destination: invData.destination || "",
             destination_contact_name: invData.destination_contact_name || "",
             destination_contact_number: invData.destination_contact_number || "",
           });
@@ -396,7 +396,7 @@ export default function EditShippingInvoicePage() {
       bill_of_lading_remark: shippingForm.bill_of_lading_remark || null,
       bank: shippingForm.bank.trim() || null,
       sr_no: shippingForm.sr_no !== "" ? Number(shippingForm.sr_no) : null,
-      specific_destination: shippingForm.specific_destination.trim() || null,
+      destination: shippingForm.destination.trim() || null,
       destination_contact_name: shippingForm.destination_contact_name.trim() || null,
       destination_contact_number: shippingForm.destination_contact_number.trim() || null,
       items: shippingItems.map((it) => ({
@@ -794,11 +794,11 @@ export default function EditShippingInvoicePage() {
                   Specific Destination
                 </label>
                 <input
-                  value={shippingForm.specific_destination}
+                  value={shippingForm.destination}
                   onChange={(e) =>
                     setShippingForm((prev) => ({
                       ...prev,
-                      specific_destination: e.target.value,
+                      destination: e.target.value,
                     }))
                   }
                   placeholder="Enter specific destination"
