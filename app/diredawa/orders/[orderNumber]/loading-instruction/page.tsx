@@ -44,6 +44,7 @@ interface ShippingInvoiceDetail {
   authorized_by?: string | null;
   authorized_at?: string | null;
   bank?: string | null;
+  specific_destination?: string | null;
   destination_contact_name?: string | null;
   destination_contact_number?: string | null;
   items: {
@@ -419,6 +420,12 @@ export default function LoadingInstructionPage() {
                 <span className="font-semibold">Ecd. No: </span>
                 {invoice.ecd_no?.trim() || ""}
               </p>
+              {invoice.specific_destination?.trim() ? (
+                <p>
+                  <span className="font-semibold">Specific Destination: </span>
+                  {invoice.specific_destination}
+                </p>
+              ) : null}
               {invoice.destination_contact_name?.trim() ? (
                 <p>
                   <span className="font-semibold">Destination Contact Name: </span>
