@@ -385,6 +385,10 @@ export default function ProformaInvoicePage() {
               <p>BANK NAME: COMMERCIAL BANK OF ETHIOPIA</p>
               <p>SWIFT: CBETETAA</p>
               <p>Account Number: 1000679266407</p>
+              <br/>
+              <p>BANK NAME: AWASH BANK</p>
+              <p>SWIFT: AWINETAA</p>
+              <p>Account Number: 021140174462400</p>
             </div>
           </div>
         </div>
