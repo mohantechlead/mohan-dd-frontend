@@ -383,13 +383,15 @@ export default function ProformaInvoicePage() {
               <p>Beneficiary: Mohan PLC</p>
               <p className="mt-2 font-semibold">Beneficiary Bank details:</p>
               <p className="mt-1 font-semibold">
-                Option 1 — BANK NAME: COMMERCIAL BANK OF ETHIOPIA
+                Option 1 — COMMERCIAL BANK OF ETHIOPIA
               </p>
+              <p>BANK NAME: COMMERCIAL BANK OF ETHIOPIA</p>
               <p>SWIFT: CBETETAA</p>
               <p>Account Number: 1000679266407</p>
               <p className="mt-2 font-semibold">
-                Option 2 — BANK NAME: AWASH BANK
+                Option 2 — AWASH BANK
               </p>
+              <p>BANK NAME: AWASH BANK</p>
               <p>SWIFT: AWINETAA</p>
               <p>Account Number: 021140174462400</p>
             </div>
