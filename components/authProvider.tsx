@@ -16,6 +16,8 @@ interface AuthContextType {
     isLogistics: boolean;
     isStore: boolean;
     isAccounting: boolean;
+    isSales: boolean;
+    isTransitor: boolean;
     canManageRecords: boolean;
 }
 
@@ -35,6 +37,8 @@ function getRoleDefaultRedirect(roleRaw: string | null | undefined): string {
     if (role === "store") return "/diredawa/inventory/grn/create";
     if (role === "logistics") return "/diredawa/orders/create";
     if (role === "accounting") return "/diredawa/accounting/expense-payments/create";
+    if (role === "sales") return "/diredawa/purchase/display";
+    if (role === "transitor") return "/diredawa/transit";
     return LOGIN_REDIRECT_URL;
 }
 
@@ -174,11 +178,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         router.replace(loginWithNextUrl);
     };
 
+    const normalizedRole = (role || "").toLowerCase();
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, logout, loginRequiredRedirect, username, role, userId, isAdmin: (role || "").toLowerCase() === "admin",
-        isLogistics: (role || "").toLowerCase() === "logistics",
-        isStore: (role || "").toLowerCase() === "store", isAccounting: (role || "").toLowerCase() === "accounting",
-        canManageRecords: ["admin", "logistics"].includes((role || "").toLowerCase()) }}>
+        <AuthContext.Provider value={{ isAuthenticated, login, logout, loginRequiredRedirect, username, role, userId, isAdmin: normalizedRole === "admin",
+        isLogistics: normalizedRole === "logistics",
+        isStore: normalizedRole === "store", isAccounting: normalizedRole === "accounting",
+        isSales: normalizedRole === "sales",
+        isTransitor: normalizedRole === "transitor",
+        canManageRecords: ["admin", "logistics"].includes(normalizedRole) }}>
             {children}
         </AuthContext.Provider>
     );

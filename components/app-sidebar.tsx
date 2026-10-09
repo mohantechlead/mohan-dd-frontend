@@ -10,6 +10,7 @@ import {
   Package,
   ShoppingBag,
   ShoppingCart,
+  Truck,
   Users,
   Users2,
 } from "lucide-react";
@@ -35,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Base nav data - Status and Approvals are admin-only
 // storeVisible: true = store role can see this item (Display Sales, Add GRN, Add DN, Loading Instruction)
 // adminLogisticsHidden: true = hide from admin and logistics (only store sees it)
+// transitorOnly: true = only the transitor role sees this section
 const baseNavMain = [
   {
     title: "Dashboard",
@@ -116,6 +118,13 @@ const baseNavMain = [
       { title: "Rejected Purchases", url: "/diredawa/purchase/rejected" },
       { title: "Completed Purchases", url: "/diredawa/purchase/completed" },
     ],
+  },
+  {
+    title: "Transit",
+    url: "/diredawa/transit",
+    icon: Truck,
+    transitorOnly: true,
+    items: [{ title: "My Checkpoints", url: "/diredawa/transit", transitorOnly: true }],
   },
   {
     title: "Accounting",
@@ -237,6 +246,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isAdmin = mounted ? (auth?.isAdmin ?? false) : false;
   const isStore = mounted ? (auth?.isStore ?? false) : false;
   const isAccounting = mounted ? (auth?.isAccounting ?? false) : false;
+  const isTransitor = mounted ? (auth?.isTransitor ?? false) : false;
 
   const navMain = React.useMemo(() => {
     const filterAccountingItems = (
@@ -261,10 +271,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     let items = baseNavMain.filter((item) => {
       const adminOnly = Boolean((item as { adminOnly?: boolean }).adminOnly);
+      const transitorOnly = Boolean((item as { transitorOnly?: boolean }).transitorOnly);
+      if (transitorOnly) return isTransitor;
       if (!adminOnly) return true;
       return isAdmin || isAccounting;
     });
-    if (isStore) {
+    if (isTransitor) {
+      // Transitor sees only the Transit section
+      items = items.filter((section) =>
+        Boolean((section as { transitorOnly?: boolean }).transitorOnly)
+      ) as typeof baseNavMain;
+    } else if (isStore) {
       items = items
         .filter((section) => {
           const sectionItems = (section as { items?: { storeVisible?: boolean }[] }).items ?? [];
@@ -300,7 +317,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       })) as typeof baseNavMain;
     }
     return items;
-  }, [isAdmin, isStore, isAccounting]);
+  }, [isAdmin, isStore, isAccounting, isTransitor]);
 
   return (
     <Sidebar collapsible="icon" {...props}>

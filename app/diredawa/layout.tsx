@@ -29,6 +29,13 @@ function isStorePathAllowed(pathname: string | null): boolean {
   return STORE_ALLOWED_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
+const TRANSITOR_ALLOWED_PATHS = ["/diredawa/transit"];
+
+function isTransitorPathAllowed(pathname: string | null): boolean {
+  if (!pathname) return true;
+  return TRANSITOR_ALLOWED_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -44,9 +51,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (auth?.isStore && !isStorePathAllowed(pathname)) {
       router.replace("/");
     }
-  }, [auth?.isStore, pathname, router]);
+    if (auth?.isTransitor && !isTransitorPathAllowed(pathname)) {
+      router.replace("/");
+    }
+  }, [auth?.isStore, auth?.isTransitor, pathname, router]);
 
   if (auth?.isStore && !isStorePathAllowed(pathname)) {
+    return null;
+  }
+
+  if (auth?.isTransitor && !isTransitorPathAllowed(pathname)) {
     return null;
   }
 

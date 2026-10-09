@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
+import { StagePill } from "@/components/stage-display";
 
 interface PurchaseItem {
   purchase_number: string;
@@ -25,6 +26,10 @@ interface PurchaseDetail {
   buyer: string;
   proforma_ref_no: string;
   status: string;
+  stage?: string | null;
+  stage_updated_at?: string | null;
+  stage_updated_by?: string | null;
+  assigned_transitor?: string | null;
   before_vat?: number;
   total_quantity?: number;
   remaining?: number;
@@ -272,6 +277,7 @@ export default function PurchaseDetailPage() {
                   <th className="px-4 py-2 text-left">Before VAT</th>
                   <th className="px-4 py-2 text-left">Vendor Name</th>
                   <th className="px-4 py-2 text-left">Status</th>
+                  <th className="px-4 py-2 text-left">Checkpoint</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,6 +298,9 @@ export default function PurchaseDetailPage() {
                   </td>
                   <td className="px-4 py-2">{purchase.buyer}</td>
                   <td className="px-4 py-2 capitalize">{purchase.status}</td>
+                  <td className="px-4 py-2">
+                    <StagePill stage={purchase.stage} />
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -308,6 +317,25 @@ export default function PurchaseDetailPage() {
                   {purchase.remaining ?? purchase.total_quantity ?? qtySum}
                 </span>
               </span>
+              {purchase.assigned_transitor?.trim() && (
+                <span>
+                  Transitor:{" "}
+                  <span className="font-medium text-foreground">
+                    {purchase.assigned_transitor}
+                  </span>
+                </span>
+              )}
+              {purchase.stage_updated_at && (
+                <span>
+                  Checkpoint updated:{" "}
+                  <span className="font-medium text-foreground">
+                    {new Date(purchase.stage_updated_at).toLocaleDateString()}
+                    {purchase.stage_updated_by
+                      ? ` by ${purchase.stage_updated_by}`
+                      : ""}
+                  </span>
+                </span>
+              )}
             </div>
           </div>
 

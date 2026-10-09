@@ -13,8 +13,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Pencil, ShieldAlert, Trash2, X } from "lucide-react";
+import { Pencil, ShieldAlert, Trash2, UserCog, X } from "lucide-react";
 import { TableSearch } from "@/components/table-search";
+import {
+  STAGE_OPTIONS,
+  StagePill,
+  stageLabel,
+} from "@/components/stage-display";
 
 interface PurchaseItem {
   purchase_number: string;
@@ -36,8 +41,18 @@ interface Purchase {
   buyer?: string | null;
   proforma_ref_no: string;
   status?: string | null;
+  stage?: string | null;
+  stage_updated_at?: string | null;
+  stage_updated_by?: string | null;
+  assigned_transitor_id?: number | null;
+  assigned_transitor?: string | null;
   before_vat?: number;
   items: PurchaseItem[];
+}
+
+interface TransitorOption {
+  id: number;
+  username: string;
 }
 
 const PURCHASES_API_URL = "/api/purchases";
@@ -54,6 +69,7 @@ export default function DisplayPurchasesPage() {
   const { showToast } = useToast();
   const auth = useAuth();
   const canManageRecords = auth?.canManageRecords ?? false;
+  const canManageCheckpoints = auth?.isAdmin === true || auth?.isSales === true;
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -62,6 +78,15 @@ export default function DisplayPurchasesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Checkpoint dialog (assign transitor / override stage)
+  const [checkpointOpen, setCheckpointOpen] = useState(false);
+  const [checkpointPurchase, setCheckpointPurchase] = useState<Purchase | null>(null);
+  const [transitors, setTransitors] = useState<TransitorOption[]>([]);
+  const [transitorsLoading, setTransitorsLoading] = useState(false);
+  const [selectedTransitor, setSelectedTransitor] = useState<string>("");
+  const [selectedStage, setSelectedStage] = useState<string>("");
+  const [savingCheckpoint, setSavingCheckpoint] = useState<"transitor" | "stage" | null>(null);
 
   // Marine insurance banner
   const [missingMarineInsurance, setMissingMarineInsurance] = useState<Purchase[]>([]);
@@ -125,6 +150,8 @@ export default function DisplayPurchasesPage() {
         (p.shipper ?? p.buyer ?? "").toLowerCase().includes(q) ||
         (p.proforma_ref_no ?? "").toLowerCase().includes(q) ||
         (p.status ?? "").toLowerCase().includes(q) ||
+        stageLabel(p.stage).toLowerCase().includes(q) ||
+        (p.assigned_transitor ?? "").toLowerCase().includes(q) ||
         items.some((i) => (i?.item_name ?? "").toLowerCase().includes(q))
       );
     });
@@ -233,6 +260,97 @@ export default function DisplayPurchasesPage() {
 
   const showBanner = !bannerDismissed && missingMarineInsurance.length > 0;
 
+  const fetchTransitors = async () => {
+    setTransitorsLoading(true);
+    try {
+      const res = await fetch("/api/users/transitors", { credentials: "include" });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        setTransitors(data as TransitorOption[]);
+      }
+    } catch {
+      // leave list empty; dialog still usable
+    } finally {
+      setTransitorsLoading(false);
+    }
+  };
+
+  const openCheckpoint = (purchase: Purchase) => {
+    setCheckpointPurchase(purchase);
+    setSelectedTransitor(
+      purchase.assigned_transitor_id != null ? String(purchase.assigned_transitor_id) : ""
+    );
+    setSelectedStage((purchase.stage ?? "").trim());
+    setCheckpointOpen(true);
+    if (transitors.length === 0 && !transitorsLoading) fetchTransitors();
+  };
+
+  const postCheckpoint = async (
+    path: "stage" | "assign-transitor",
+    body: Record<string, unknown>,
+    kind: "transitor" | "stage"
+  ) => {
+    if (!checkpointPurchase) return;
+    setSavingCheckpoint(kind);
+    try {
+      const res = await fetch(
+        `/api/purchases/${encodeURIComponent(checkpointPurchase.purchase_number)}/${path}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(body),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: kind === "transitor" ? "Failed to assign transitor" : "Failed to update checkpoint",
+          description: (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({
+        title: kind === "transitor" ? "Transitor assigned" : "Checkpoint stage updated",
+        variant: "success",
+      });
+      if (data && typeof data === "object" && "purchase_number" in data) {
+        setCheckpointPurchase((prev) =>
+          prev ? { ...prev, ...(data as Partial<Purchase>) } : prev
+        );
+      }
+      fetchPurchases();
+    } catch {
+      showToast({
+        title: "Something went wrong",
+        description: "Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setSavingCheckpoint(null);
+    }
+  };
+
+  const saveTransitorAssignment = () => {
+    postCheckpoint(
+      "assign-transitor",
+      {
+        transitor_id: selectedTransitor ? Number(selectedTransitor) : null,
+        user_id: auth?.userId ?? null,
+      },
+      "transitor"
+    );
+  };
+
+  const saveStageOverride = () => {
+    postCheckpoint(
+      "stage",
+      { stage: selectedStage || null, user_id: auth?.userId ?? null },
+      "stage"
+    );
+  };
+
   return (
     <div className="max-w-5xl mx-auto mt-4 space-y-6">
       <div className="flex justify-between items-center">
@@ -290,7 +408,8 @@ export default function DisplayPurchasesPage() {
                   <th className="text-right px-4 py-2">Before VAT</th>
                   <th className="text-left px-4 py-2">Supplier Name</th>
                   <th className="text-left px-4 py-2">Status</th>
-                  {canManageRecords && (
+                  <th className="text-left px-4 py-2">Checkpoint</th>
+                  {(canManageRecords || canManageCheckpoints) && (
                     <th className="text-right px-4 py-2">Actions</th>
                   )}
                 </tr>
@@ -337,25 +456,47 @@ export default function DisplayPurchasesPage() {
                       <td className="px-4 py-2 capitalize">
                         {purchase.status?.trim() ? purchase.status : "pending"}
                       </td>
-                      {canManageRecords && (
+                      <td className="px-4 py-2">
+                        <StagePill stage={purchase.stage} />
+                        {purchase.assigned_transitor?.trim() && (
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            Transitor: {purchase.assigned_transitor}
+                          </div>
+                        )}
+                      </td>
+                      {(canManageRecords || canManageCheckpoints) && (
                         <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                router.push(`/diredawa/purchase/${purchase.purchase_number}/edit`)
-                              }
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDelete(purchase)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {canManageCheckpoints && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Checkpoint: assign transitor / update stage"
+                                onClick={() => openCheckpoint(purchase)}
+                              >
+                                <UserCog className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {canManageRecords && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    router.push(`/diredawa/purchase/${purchase.purchase_number}/edit`)
+                                  }
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDelete(purchase)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </td>
                       )}
@@ -380,6 +521,100 @@ export default function DisplayPurchasesPage() {
           </div>
         </>
       )}
+
+      <Dialog open={checkpointOpen} onOpenChange={setCheckpointOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Checkpoint — {checkpointPurchase?.purchase_number}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Assign transitor */}
+          <div className="space-y-2 rounded-md border p-3">
+            <p className="text-sm font-semibold">Assign transitor</p>
+            <p className="text-xs text-muted-foreground">
+              Current:{" "}
+              {checkpointPurchase?.assigned_transitor?.trim() ||
+                "Not assigned"}
+            </p>
+            <select
+              value={selectedTransitor}
+              onChange={(e) => setSelectedTransitor(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1"
+              disabled={transitorsLoading}
+            >
+              <option value="">
+                {transitorsLoading
+                  ? "Loading transitors..."
+                  : "Not assigned"}
+              </option>
+              {transitors.map((t) => (
+                <option key={t.id} value={String(t.id)}>
+                  {t.username}
+                </option>
+              ))}
+            </select>
+            {!transitorsLoading && transitors.length === 0 && (
+              <p className="text-xs text-amber-600">
+                No transitor users found. Create a user with the “transitor”
+                role first.
+              </p>
+            )}
+            <Button
+              size="sm"
+              onClick={saveTransitorAssignment}
+              disabled={savingCheckpoint !== null || transitorsLoading}
+            >
+              {savingCheckpoint === "transitor" ? "Assigning..." : "Assign"}
+            </Button>
+          </div>
+
+          {/* Override stage */}
+          <div className="space-y-2 rounded-md border p-3">
+            <p className="text-sm font-semibold">Checkpoint stage</p>
+            <p className="text-xs text-muted-foreground">
+              Current: <StagePill stage={checkpointPurchase?.stage} />
+              {checkpointPurchase?.stage_updated_at && (
+                <span className="ml-1">
+                  · updated{" "}
+                  {new Date(
+                    checkpointPurchase.stage_updated_at
+                  ).toLocaleDateString()}
+                  {checkpointPurchase.stage_updated_by
+                    ? ` by ${checkpointPurchase.stage_updated_by}`
+                    : ""}
+                </span>
+              )}
+            </p>
+            <select
+              value={selectedStage}
+              onChange={(e) => setSelectedStage(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1"
+            >
+              <option value="">Not started</option>
+              {STAGE_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              onClick={saveStageOverride}
+              disabled={savingCheckpoint !== null}
+            >
+              {savingCheckpoint === "stage" ? "Saving..." : "Save stage"}
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCheckpointOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
