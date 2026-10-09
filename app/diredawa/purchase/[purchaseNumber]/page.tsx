@@ -30,6 +30,10 @@ interface PurchaseDetail {
   stage_updated_at?: string | null;
   stage_updated_by?: string | null;
   assigned_transitor?: string | null;
+  ecd_file_url?: string | null;
+  ecd_file_name?: string | null;
+  transit_permit_file_url?: string | null;
+  transit_permit_file_name?: string | null;
   before_vat?: number;
   total_quantity?: number;
   remaining?: number;
@@ -334,6 +338,32 @@ export default function PurchaseDetailPage() {
                       ? ` by ${purchase.stage_updated_by}`
                       : ""}
                   </span>
+                </span>
+              )}
+              {purchase.ecd_file_name && (
+                <span>
+                  ECD file:{" "}
+                  <a
+                    href={`/api/purchases/${encodeURIComponent(purchase.purchase_number)}/files/ecd`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    {purchase.ecd_file_name}
+                  </a>
+                </span>
+              )}
+              {purchase.transit_permit_file_name && (
+                <span>
+                  Transit permit file:{" "}
+                  <a
+                    href={`/api/purchases/${encodeURIComponent(purchase.purchase_number)}/files/transit_permit`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    {purchase.transit_permit_file_name}
+                  </a>
                 </span>
               )}
             </div>

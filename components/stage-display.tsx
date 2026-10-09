@@ -1,18 +1,25 @@
 import { Check } from "lucide-react";
 
-export type StageValue = "ecd_im8" | "transit_permit" | "closed" | "cancelled";
+export type StageValue =
+  | "ecd_im8"
+  | "transit_permit"
+  | "closure_guarantee"
+  | "done"
+  | "cancelled";
 
 export const STAGE_OPTIONS: { value: StageValue; label: string }[] = [
   { value: "ecd_im8", label: "ECD / IM8" },
   { value: "transit_permit", label: "Transit Permit" },
-  { value: "closed", label: "Closed" },
+  { value: "closure_guarantee", label: "Closure Guarantee" },
+  { value: "done", label: "Done" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
 const STAGE_LABELS: Record<string, string> = {
   ecd_im8: "ECD / IM8",
   transit_permit: "Transit Permit",
-  closed: "Closed",
+  closure_guarantee: "Closure Guarantee",
+  done: "Done",
   cancelled: "Cancelled",
 };
 
@@ -28,7 +35,9 @@ export function getStageClasses(stage?: string | null): string {
       return "bg-amber-100 text-amber-800 border-amber-300";
     case "transit_permit":
       return "bg-blue-100 text-blue-800 border-blue-300";
-    case "closed":
+    case "closure_guarantee":
+      return "bg-violet-100 text-violet-800 border-violet-300";
+    case "done":
       return "bg-emerald-100 text-emerald-800 border-emerald-300";
     case "cancelled":
       return "bg-rose-100 text-rose-800 border-rose-300";
@@ -47,12 +56,17 @@ export function StagePill({ stage, className = "" }: { stage?: string | null; cl
   );
 }
 
-/** Main forward sequence a transitor can walk through. */
-const MAIN_STEPS: StageValue[] = ["ecd_im8", "transit_permit", "closed"];
+/** Main forward sequence a transitor can walk through. Terminal "Done"/"Cancelled" are set by sales/admin. */
+const MAIN_STEPS: StageValue[] = [
+  "ecd_im8",
+  "transit_permit",
+  "closure_guarantee",
+  "done",
+];
 
 /**
  * Next stage a transitor may advance to.
- * `null` = terminal (transitor cannot move it further; sales/admin closes/cancels).
+ * `null` = terminal (transitor cannot move it further; sales/admin marks Done/Cancelled).
  */
 export function nextTransitorStage(stage?: string | null): StageValue | null {
   switch ((stage ?? "").trim()) {
@@ -60,6 +74,8 @@ export function nextTransitorStage(stage?: string | null): StageValue | null {
       return "ecd_im8";
     case "ecd_im8":
       return "transit_permit";
+    case "transit_permit":
+      return "closure_guarantee";
     default:
       return null;
   }
@@ -71,7 +87,7 @@ export function StageStepper({ stage }: { stage?: string | null }) {
   const currentIdx = cancelled ? -1 : MAIN_STEPS.indexOf(s as StageValue);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 flex-wrap">
       {MAIN_STEPS.map((step, idx) => {
         const isDone = !cancelled && currentIdx > idx;
         const isCurrent = !cancelled && currentIdx === idx;

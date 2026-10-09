@@ -33,6 +33,10 @@ interface TransitPurchase {
   stage_updated_at?: string | null;
   stage_updated_by?: string | null;
   assigned_transitor?: string | null;
+  ecd_file_url?: string | null;
+  ecd_file_name?: string | null;
+  transit_permit_file_url?: string | null;
+  transit_permit_file_name?: string | null;
   items?: Array<{ item_name?: string; total_price?: number }>;
 }
 
@@ -45,6 +49,7 @@ export default function TransitPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [confirmRow, setConfirmRow] = useState<TransitPurchase | null>(null);
+  const [advanceFile, setAdvanceFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -99,21 +104,37 @@ export default function TransitPage() {
   }, [rows, search]);
 
   const confirmRowNextStage = confirmRow ? nextTransitorStage(confirmRow.stage) : null;
+  const needsEcdUpload =
+    confirmRowNextStage === "ecd_im8" && !confirmRow?.ecd_file_name?.trim();
 
   const handleAdvance = async () => {
     if (!confirmRow || !confirmRowNextStage) return;
+    if (needsEcdUpload && !advanceFile) {
+      showToast({
+        title: "ECD file required",
+        description: "Please attach the ECD / IM8 document before advancing.",
+        variant: "error",
+      });
+      return;
+    }
     setSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("stage", confirmRowNextStage);
+      formData.append("user_id", String(auth?.userId ?? ""));
+      if (advanceFile) {
+        if (confirmRowNextStage === "ecd_im8") {
+          formData.append("ecd_file", advanceFile);
+        } else if (confirmRowNextStage === "transit_permit") {
+          formData.append("transit_permit_file", advanceFile);
+        }
+      }
       const res = await fetch(
         `/api/purchases/${encodeURIComponent(confirmRow.purchase_number)}/stage`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({
-            stage: confirmRowNextStage,
-            user_id: auth?.userId,
-          }),
+          body: formData,
         }
       );
       const data = await res.json();
@@ -130,6 +151,7 @@ export default function TransitPage() {
         variant: "success",
       });
       setConfirmRow(null);
+      setAdvanceFile(null);
       await fetchRows();
     } catch {
       showToast({
@@ -187,8 +209,8 @@ export default function TransitPage() {
           {filtered.map((row) => {
             const next = nextTransitorStage(row.stage);
             const stage = (row.stage ?? "").trim();
-            const isTerminal = stage === "closed" || stage === "cancelled";
-            const atTransitPermit = stage === "transit_permit";
+            const isTerminal = stage === "done" || stage === "cancelled";
+            const atClosureGuarantee = stage === "closure_guarantee";
             return (
               <div
                 key={row.id}
@@ -238,11 +260,11 @@ export default function TransitPage() {
                     </Button>
                   ) : isTerminal ? (
                     <span className="text-xs font-medium text-slate-500">
-                      {stage === "closed" ? "Completed" : "Cancelled"}
+                      {stage === "done" ? "Done" : "Cancelled"}
                     </span>
-                  ) : atTransitPermit ? (
+                  ) : atClosureGuarantee ? (
                     <span className="text-xs text-muted-foreground">
-                      Waiting for sales/admin to close
+                      Waiting for sales/admin to mark done
                     </span>
                   ) : null}
                 </div>
@@ -255,7 +277,10 @@ export default function TransitPage() {
       <Dialog
         open={confirmRow !== null}
         onOpenChange={(open) => {
-          if (!open) setConfirmRow(null);
+          if (!open) {
+            setConfirmRow(null);
+            setAdvanceFile(null);
+          }
         }}
       >
         <DialogContent>
@@ -266,16 +291,67 @@ export default function TransitPage() {
             Move purchase <strong>{confirmRow?.purchase_number}</strong> to{" "}
             <strong>{confirmRowNextStage ? stageLabel(confirmRowNextStage) : ""}</strong>?
           </p>
+
+          {confirmRowNextStage === "ecd_im8" && (
+            <div className="space-y-1 rounded-md border p-3">
+              <label className="text-sm font-medium">
+                ECD / IM8 file
+                {needsEcdUpload ? (
+                  <span className="text-red-500"> *</span>
+                ) : (
+                  <span className="font-normal text-muted-foreground"> (optional replace)</span>
+                )}
+              </label>
+              {!needsEcdUpload && confirmRow?.ecd_file_name && (
+                <p className="text-xs text-muted-foreground">
+                  Current: {confirmRow.ecd_file_name}
+                </p>
+              )}
+              <input
+                type="file"
+                onChange={(e) => setAdvanceFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1 file:text-sm file:font-medium hover:file:bg-accent"
+              />
+              {needsEcdUpload && (
+                <p className="text-xs text-muted-foreground">
+                  Required for the ECD / IM8 checkpoint.
+                </p>
+              )}
+            </div>
+          )}
+
+          {confirmRowNextStage === "transit_permit" && (
+            <div className="space-y-1 rounded-md border p-3">
+              <label className="text-sm font-medium">
+                Transit permit file
+                <span className="font-normal text-muted-foreground"> (optional)</span>
+              </label>
+              {confirmRow?.transit_permit_file_name && (
+                <p className="text-xs text-muted-foreground">
+                  Current: {confirmRow.transit_permit_file_name}
+                </p>
+              )}
+              <input
+                type="file"
+                onChange={(e) => setAdvanceFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:py-1 file:text-sm file:font-medium hover:file:bg-accent"
+              />
+            </div>
+          )}
+
           <DialogFooter className="mt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setConfirmRow(null)}
+              onClick={() => {
+                setConfirmRow(null);
+                setAdvanceFile(null);
+              }}
               disabled={submitting}
             >
               Cancel
             </Button>
-            <Button onClick={handleAdvance} disabled={submitting}>
+            <Button onClick={handleAdvance} disabled={submitting || (needsEcdUpload && !advanceFile)}>
               {submitting ? "Updating…" : "Advance"}
             </Button>
           </DialogFooter>
