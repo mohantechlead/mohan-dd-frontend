@@ -46,10 +46,6 @@ interface Purchase {
   stage_updated_by?: string | null;
   assigned_transitor_id?: number | null;
   assigned_transitor?: string | null;
-  ecd_file_url?: string | null;
-  ecd_file_name?: string | null;
-  transit_permit_file_url?: string | null;
-  transit_permit_file_name?: string | null;
   before_vat?: number;
   items: PurchaseItem[];
 }
@@ -90,8 +86,6 @@ export default function DisplayPurchasesPage() {
   const [transitorsLoading, setTransitorsLoading] = useState(false);
   const [selectedTransitor, setSelectedTransitor] = useState<string>("");
   const [selectedStage, setSelectedStage] = useState<string>("");
-  const [ecdFile, setEcdFile] = useState<File | null>(null);
-  const [permitFile, setPermitFile] = useState<File | null>(null);
   const [savingCheckpoint, setSavingCheckpoint] = useState<"transitor" | "stage" | null>(null);
 
   // Marine insurance banner
@@ -287,8 +281,6 @@ export default function DisplayPurchasesPage() {
       purchase.assigned_transitor_id != null ? String(purchase.assigned_transitor_id) : ""
     );
     setSelectedStage((purchase.stage ?? "").trim());
-    setEcdFile(null);
-    setPermitFile(null);
     setCheckpointOpen(true);
     if (transitors.length === 0 && !transitorsLoading) fetchTransitors();
   };
@@ -352,61 +344,11 @@ export default function DisplayPurchasesPage() {
   };
 
   const saveStageOverride = () => {
-    if (!checkpointPurchase) return;
-    const stage = selectedStage.trim() || null;
-    const hasEcdAlready = Boolean(checkpointPurchase.ecd_file_name?.trim());
-    if (stage && stage !== "cancelled" && !hasEcdAlready && !ecdFile) {
-      showToast({
-        title: "ECD file required",
-        description: "Please attach the ECD / IM8 document before setting this checkpoint.",
-        variant: "error",
-      });
-      return;
-    }
-    setSavingCheckpoint("stage");
-    const formData = new FormData();
-    formData.append("stage", stage ?? "");
-    formData.append("user_id", String(auth?.userId ?? ""));
-    if (ecdFile) formData.append("ecd_file", ecdFile);
-    if (permitFile) formData.append("transit_permit_file", permitFile);
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/purchases/${encodeURIComponent(checkpointPurchase.purchase_number)}/stage`,
-          {
-            method: "POST",
-            credentials: "include",
-            body: formData,
-          }
-        );
-        const data = await res.json();
-        if (!res.ok) {
-          showToast({
-            title: "Failed to update checkpoint",
-            description: (data as { detail?: string })?.detail || "Please try again.",
-            variant: "error",
-          });
-          return;
-        }
-        showToast({ title: "Checkpoint stage updated", variant: "success" });
-        if (data && typeof data === "object" && "purchase_number" in data) {
-          setCheckpointPurchase((prev) =>
-            prev ? { ...prev, ...(data as Partial<Purchase>) } : prev
-          );
-        }
-        setEcdFile(null);
-        setPermitFile(null);
-        fetchPurchases();
-      } catch {
-        showToast({
-          title: "Something went wrong",
-          description: "Please try again.",
-          variant: "error",
-        });
-      } finally {
-        setSavingCheckpoint(null);
-      }
-    })();
+    postCheckpoint(
+      "stage",
+      { stage: selectedStage || null, user_id: auth?.userId ?? null },
+      "stage"
+    );
   };
 
   return (
@@ -580,16 +522,7 @@ export default function DisplayPurchasesPage() {
         </>
       )}
 
-      <Dialog
-        open={checkpointOpen}
-        onOpenChange={(open) => {
-          setCheckpointOpen(open);
-          if (!open) {
-            setEcdFile(null);
-            setPermitFile(null);
-          }
-        }}
-      >
+      <Dialog open={checkpointOpen} onOpenChange={setCheckpointOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -666,57 +599,6 @@ export default function DisplayPurchasesPage() {
                 </option>
               ))}
             </select>
-
-            {/* Checkpoint documents */}
-            <div className="space-y-2 rounded-md border bg-slate-50 p-2">
-              <p className="text-xs font-semibold text-slate-600">Documents</p>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span>
-                    ECD / IM8 file
-                    {selectedStage && selectedStage !== "cancelled" && (
-                      <span className="text-red-500"> *</span>
-                    )}
-                  </span>
-                  {checkpointPurchase?.ecd_file_name && (
-                    <a
-                      href={`/api/purchases/${encodeURIComponent(checkpointPurchase.purchase_number)}/files/ecd`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="truncate text-blue-600 hover:underline"
-                    >
-                      {checkpointPurchase.ecd_file_name}
-                    </a>
-                  )}
-                </div>
-                <input
-                  type="file"
-                  onChange={(e) => setEcdFile(e.target.files?.[0] ?? null)}
-                  className="block w-full text-xs file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-2 file:py-1 file:text-xs file:font-medium hover:file:bg-accent"
-                />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span>Transit permit file (optional)</span>
-                  {checkpointPurchase?.transit_permit_file_name && (
-                    <a
-                      href={`/api/purchases/${encodeURIComponent(checkpointPurchase.purchase_number)}/files/transit_permit`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="truncate text-blue-600 hover:underline"
-                    >
-                      {checkpointPurchase.transit_permit_file_name}
-                    </a>
-                  )}
-                </div>
-                <input
-                  type="file"
-                  onChange={(e) => setPermitFile(e.target.files?.[0] ?? null)}
-                  className="block w-full text-xs file:mr-3 file:rounded-md file:border file:border-input file:bg-background file:px-2 file:py-1 file:text-xs file:font-medium hover:file:bg-accent"
-                />
-              </div>
-            </div>
-
             <Button
               size="sm"
               onClick={saveStageOverride}
