@@ -54,6 +54,7 @@ export interface WarehouseStorageNote {
   storage_period_value: number;
   storage_period_unit: string;
   storage_price: number;
+  currency?: string;
   price_entered_by?: string | null;
   price_entered_at?: string | null;
   grace_period_value: number;
@@ -72,6 +73,8 @@ export interface WarehouseStorageNote {
   total_entry_quantity: number;
   total_paid: number;
   payment_remaining: number;
+  pending_price_approval?: boolean;
+  pending_tiers_approval?: boolean;
 }
 
 export interface WRNItem {
@@ -109,6 +112,7 @@ export interface WarehouseStoragePayment {
   customer_name: string;
   payment_type: string;
   amount: number;
+  currency?: string;
   status: string;
   approved_by?: string | null;
   approval_date?: string | null;
@@ -160,6 +164,7 @@ export interface WarehouseItemFlow {
   customer_name: string;
   contract_date: string;
   storage_price: number;
+  currency?: string;
   total_agreed_quantity: number;
   total_entry_quantity: number;
   total_released_quantity: number;
@@ -176,6 +181,7 @@ export interface WarehouseItemFlow {
 // ============================================================
 
 export interface WarehouseItemInventoryNote {
+  id?: string;
   wsn_no: string;
   customer_name: string;
   contract_date: string;
@@ -197,6 +203,10 @@ export interface WarehouseItemInventory {
 
 export const PERIOD_UNITS = ["days", "weeks", "months"] as const;
 
+export const CURRENCIES = ["ETB", "USD", "EUR", "GBP"] as const;
+
+export const DEFAULT_CURRENCY = "ETB";
+
 export const WSN_API_URL = "/api/inventory/warehouse-storage-notes";
 export const WRN_API_URL = "/api/inventory/warehouse-release-notes";
 export const EXPIRY_CHECK_URL = "/api/inventory/warehouse-expiry-check";
@@ -207,10 +217,38 @@ export const WSN_ENTRY_URL = (noteId: string, entryId: string) => `${WSN_API_URL
 export const WSN_PRICE_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/price`;
 export const WSN_TIERS_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/expiration-fee-tiers`;
 export const WSN_FLOW_URL = (noteId: string) => `${WSN_API_URL}/${noteId}/flow`;
+export const WSN_SETTINGS_APPROVALS_URL = `${WSN_API_URL.replace("/warehouse-storage-notes", "")}/warehouse-settings-approvals`;
+export const WSN_SETTINGS_APPROVAL_APPROVE_URL = (approvalId: string) => `${WSN_SETTINGS_APPROVALS_URL}/${approvalId}/approve`;
+export const WSN_SETTINGS_APPROVAL_REJECT_URL = (approvalId: string) => `${WSN_SETTINGS_APPROVALS_URL}/${approvalId}/reject`;
 export const WSN_ITEM_INVENTORY_URL = `${WSN_API_URL.replace("/warehouse-storage-notes", "")}/warehouse-item-inventory`;
 export const WSP_API_URL = "/api/accounting/warehouse-storage-payments";
 export const WSP_NEXT_NUMBER_URL = `${WSP_API_URL}/next-number`;
+export const WSP_UPDATE_STATUS_URL = (paymentNumber: string) => `${WSP_API_URL}/${encodeURIComponent(paymentNumber)}/update-status`;
 export const WAREHOUSE_DASHBOARD_URL = `${WSN_API_URL.replace("/warehouse-storage-notes", "")}/warehouse-dashboard`;
+
+// ============================================================
+// Warehouse Settings Approvals (price / expiration tier proposals)
+// ============================================================
+
+export interface WarehouseSettingsApproval {
+  id: string;
+  storage_note_id: string;
+  wsn_no: string;
+  customer_name: string;
+  change_type: "price" | "tiers" | string;
+  payload: {
+    storage_price?: number;
+    currency?: string;
+    remark?: string | null;
+    expiration_fee_tiers?: ExpirationFeeTier[];
+  };
+  status: string;
+  proposed_by?: string | null;
+  proposed_at?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_remark?: string | null;
+}
 
 // ============================================================
 // Warehouse Dashboard
@@ -241,12 +279,14 @@ export function periodLabel(
   return `${v} ${u}`;
 }
 
-export function money(value: number | null | undefined): string {
+export function money(value: number | null | undefined, currency?: string | null): string {
   if (value === null || value === undefined || !Number.isFinite(value))
     return "—";
-  return `${Number(value).toLocaleString(undefined, {
+  const num = Number(value).toLocaleString(undefined, {
     maximumFractionDigits: 2,
-  })}`;
+  });
+  const c = (currency ?? "").trim().toUpperCase();
+  return c ? `${c} ${num}` : num;
 }
 
 export function formatDate(value: string | null | undefined): string {

@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import ApiProxy from "@/app/api/proxy";
+import { DJANGO_API_ENDPOINT } from "@/config/defaults";
 
-const BACKEND = process.env.BACKEND_URL || "http://localhost:8000";
+const URL = `${DJANGO_API_ENDPOINT}/inventory/warehouse-dashboard`;
 
-export async function GET(req: NextRequest) {
-  try {
-    const res = await fetch(`${BACKEND}/api/inventory/warehouse-dashboard`, {
-      headers: { Authorization: req.headers.get("authorization") || "" },
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch {
-    return NextResponse.json(
-      { detail: "Failed to fetch warehouse dashboard" },
-      { status: 502 }
-    );
-  }
+export async function GET(request: NextRequest) {
+  const { data, status } = await ApiProxy.get(URL, true);
+  return NextResponse.json(data, { status });
 }

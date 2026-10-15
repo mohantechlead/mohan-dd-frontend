@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import {
-  WSN_API_URL,
   WSN_TIERS_URL,
+  CURRENCIES,
   PERIOD_UNITS,
-  money,
-  type WarehouseStorageNote,
+  formatDate,
   type ExpirationFeeTier,
+  type WarehouseStorageNote,
 } from "@/lib/warehouse";
 import {
   Dialog,
@@ -21,20 +23,30 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+
+const PERIOD_UNIT_LABEL = (u: string) => u.charAt(0).toUpperCase() + u.slice(1);
 
 export default function WarehouseExpirationTiersPage() {
+  const router = useRouter();
+  const auth = useAuth();
   const { showToast } = useToast();
   const [notes, setNotes] = useState<WarehouseStorageNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [tiersOpen, setTiersOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<WarehouseStorageNote | null>(null);
   const [tiers, setTiers] = useState<ExpirationFeeTier[]>([]);
+  const [currencyValue, setCurrencyValue] = useState("ETB");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (auth && !(auth.isAdmin || auth.isAccounting)) router.replace("/");
+  }, [auth, router]);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(WSN_API_URL, { credentials: "include" });
+      const res = await fetch("/api/inventory/warehouse-storage-notes", {
+        credentials: "include",
+      });
       const data = await res.json();
       if (!res.ok) {
         showToast({ title: "Failed to load", description: formatApiErrorMessage(data), variant: "error" });
@@ -55,37 +67,40 @@ export default function WarehouseExpirationTiersPage() {
   const openTiersDialog = (note: WarehouseStorageNote) => {
     setSelectedNote(note);
     setTiers(
-      (note.expiration_fee_tiers ?? []).map((t) => ({ ...t }))
+      (note.expiration_fee_tiers ?? []).map((t) => ({
+        id: t.id,
+        tier_index: t.tier_index,
+        period_value: t.period_value,
+        period_unit: t.period_unit || "months",
+        fee_amount: t.fee_amount,
+      })),
     );
+    setCurrencyValue(note.currency || "ETB");
     setTiersOpen(true);
   };
 
-  const addTier = () => {
-    setTiers((prev) => [
-      ...prev,
-      {
-        tier_index: prev.length + 1,
-        period_value: 0,
-        period_unit: "months",
-        fee_amount: 0,
-      },
-    ]);
-  };
-
-  const updateTier = (index: number, field: string, value: string | number) => {
-    setTiers((prev) =>
-      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t))
-    );
-  };
-
-  const removeTier = (index: number) => {
-    setTiers((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSaveTiers = async () => {
+  const handleSetTiers = async () => {
     if (!selectedNote) return;
-    for (let i = 0; i < tiers.length; i++) {
-      tiers[i].tier_index = i + 1;
+    const normalized = tiers
+      .map((t) => ({
+        tier_index: Number(t.tier_index),
+        period_value: Number(t.period_value),
+        period_unit: String(t.period_unit || "months"),
+        fee_amount: Number(t.fee_amount),
+      }))
+      .filter(
+        (t) =>
+          Number.isFinite(t.tier_index) &&
+          Number.isFinite(t.period_value) &&
+          Number.isFinite(t.fee_amount),
+      );
+    if (normalized.length === 0) {
+      showToast({
+        title: "Invalid tiers",
+        description: "Add at least one complete tier.",
+        variant: "error",
+      });
+      return;
     }
     setSubmitting(true);
     try {
@@ -93,30 +108,22 @@ export default function WarehouseExpirationTiersPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          wsn_no: selectedNote.wsn_no,
-          customer_name: selectedNote.customer_name,
-          date: selectedNote.date,
-          storage_period_value: selectedNote.storage_period_value,
-          storage_period_unit: selectedNote.storage_period_unit,
-          expiration_fee_tiers: tiers.map((t) => ({
-            tier_index: t.tier_index,
-            period_value: Number(t.period_value),
-            period_unit: t.period_unit,
-            fee_amount: Number(t.fee_amount),
-          })),
-        }),
+        body: JSON.stringify({ expiration_fee_tiers: normalized, currency: currencyValue }),
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast({ title: "Failed to save tiers", description: formatApiErrorMessage(data), variant: "error" });
+        showToast({ title: "Failed to submit tiers", description: formatApiErrorMessage(data), variant: "error" });
         return;
       }
-      showToast({ title: "Tiers saved", description: `Updated ${tiers.length} expiration fee tier(s).`, variant: "success" });
+      showToast({
+        title: "Tiers submitted for approval",
+        description: "They will apply once approved under Approvals → Warehouse Settings Approval.",
+        variant: "success",
+      });
       setTiersOpen(false);
       await load();
     } catch {
-      showToast({ title: "Failed to save tiers", description: "Something went wrong.", variant: "error" });
+      showToast({ title: "Failed to submit tiers", description: "Something went wrong.", variant: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -126,9 +133,10 @@ export default function WarehouseExpirationTiersPage() {
 
   return (
     <div className="p-6 max-w-5xl space-y-4">
-      <h1 className="text-2xl font-bold">Set Expiration Fee Tiers</h1>
+      <h1 className="text-2xl font-bold">Warehouse Expiration Fee Tiers</h1>
       <p className="text-sm text-muted-foreground">
-        Define the tiered fee schedule for each storage note. Tiers apply after the storage period expires.
+        Propose expiration fee tiers per storage note. Changes take effect after
+        approval under Approvals → Warehouse Settings Approval.
       </p>
 
       <div className="border rounded-md overflow-hidden bg-white">
@@ -137,7 +145,8 @@ export default function WarehouseExpirationTiersPage() {
             <tr className="bg-muted/60 border-b">
               <th className="px-4 py-2 text-left">WSN No</th>
               <th className="px-4 py-2 text-left">Customer</th>
-              <th className="px-4 py-2 text-center">Tiers Defined</th>
+              <th className="px-4 py-2 text-left">Current Tiers</th>
+              <th className="px-4 py-2 text-center">Status</th>
               <th className="px-4 py-2 text-right">Action</th>
             </tr>
           </thead>
@@ -146,19 +155,35 @@ export default function WarehouseExpirationTiersPage() {
               <tr key={note.id} className="border-t hover:bg-muted/30">
                 <td className="px-4 py-2 font-medium">{note.wsn_no}</td>
                 <td className="px-4 py-2">{note.customer_name}</td>
+                <td className="px-4 py-2 text-muted-foreground">
+                  {(note.expiration_fee_tiers ?? []).length > 0
+                    ? (note.expiration_fee_tiers ?? [])
+                        .map(
+                          (t) =>
+                            `#${t.tier_index}: ${t.fee_amount} ${note.currency || "ETB"} per ${t.period_value} ${t.period_unit}`,
+                        )
+                        .join(" · ")
+                    : "—"}
+                </td>
                 <td className="px-4 py-2 text-center">
-                  {note.expiration_fee_tiers?.length ?? 0}
+                  {note.pending_tiers_approval ? (
+                    <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
+                      Pending Approval
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-right">
                   <Button size="sm" variant="outline" onClick={() => openTiersDialog(note)}>
-                    Manage Tiers
+                    {note.pending_tiers_approval ? "Update Proposal" : "Set Tiers"}
                   </Button>
                 </td>
               </tr>
             ))}
             {notes.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                   No storage notes found.
                 </td>
               </tr>
@@ -168,91 +193,127 @@ export default function WarehouseExpirationTiersPage() {
       </div>
 
       <Dialog open={tiersOpen} onOpenChange={setTiersOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              Expiration Fee Tiers — {selectedNote?.wsn_no}
-            </DialogTitle>
+            <DialogTitle>Propose Expiration Fee Tiers — {selectedNote?.wsn_no}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              Tier 1 applies for the 1st period after expiry, tier 2 for the next, and so on.
-            </p>
-            {tiers.length === 0 && (
-              <p className="text-sm text-muted-foreground">No tiers defined. Add at least one tier.</p>
-            )}
-            {tiers.map((tier, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted/20 rounded-lg p-4"
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Tiers</h3>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setTiers((prev) => [
+                    ...prev,
+                    {
+                      tier_index: prev.length + 1,
+                      period_value: 1,
+                      period_unit: "months",
+                      fee_amount: 0,
+                    },
+                  ])
+                }
               >
-                <div>
-                  <Label>Tier #</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={tier.tier_index}
-                    onChange={(e) => updateTier(index, "tier_index", Number(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <Label>Period Value</Label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    step="any"
-                    min={0}
-                    value={tier.period_value}
-                    onChange={(e) => updateTier(index, "period_value", Number(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <Label>Period Unit</Label>
-                  <select
-                    className="w-full h-9 rounded-md border border-input px-3 py-1 text-base shadow-sm md:text-sm"
-                    value={tier.period_unit}
-                    onChange={(e) => updateTier(index, "period_unit", e.target.value)}
-                  >
-                    {PERIOD_UNITS.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit.charAt(0).toUpperCase() + unit.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1">
-                    <Label>Fee Amount</Label>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      step="any"
-                      min={0}
-                      value={tier.fee_amount}
-                      onChange={(e) => updateTier(index, "fee_amount", Number(e.target.value))}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => removeTier(index)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
+                + Add Tier
+              </Button>
+            </div>
+            {tiers.map((tier, idx) => (
+              <div key={idx} className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={tier.tier_index}
+                  onChange={(e) =>
+                    setTiers((prev) =>
+                      prev.map((t, i) =>
+                        i === idx ? { ...t, tier_index: Number(e.target.value) } : t,
+                      ),
+                    )
+                  }
+                  placeholder="Tier #"
+                />
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={tier.period_value}
+                  onChange={(e) =>
+                    setTiers((prev) =>
+                      prev.map((t, i) =>
+                        i === idx ? { ...t, period_value: Number(e.target.value) } : t,
+                      ),
+                    )
+                  }
+                  placeholder="Period value"
+                />
+                <select
+                  className="w-full h-9 rounded-md border border-input px-3 py-1 text-base md:text-sm"
+                  value={tier.period_unit}
+                  onChange={(e) =>
+                    setTiers((prev) =>
+                      prev.map((t, i) =>
+                        i === idx ? { ...t, period_unit: e.target.value } : t,
+                      ),
+                    )
+                  }
+                >
+                  {PERIOD_UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {PERIOD_UNIT_LABEL(u)}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={tier.fee_amount}
+                  onChange={(e) =>
+                    setTiers((prev) =>
+                      prev.map((t, i) =>
+                        i === idx ? { ...t, fee_amount: Number(e.target.value) } : t,
+                      ),
+                    )
+                  }
+                  placeholder="Fee amount"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setTiers((prev) => prev.filter((_, i) => i !== idx))}
+                >
+                  Remove
+                </Button>
               </div>
             ))}
-            <Button type="button" variant="outline" onClick={addTier}>
-              + Add Tier
-            </Button>
+            <div>
+              <Label>Currency</Label>
+              <select
+                className="w-full h-9 rounded-md border border-input px-3 py-1 text-base md:text-sm"
+                value={currencyValue}
+                onChange={(e) => setCurrencyValue(e.target.value)}
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedNote?.price_entered_at && (
+              <p className="text-xs text-muted-foreground">
+                Last reviewed {formatDate(selectedNote.price_entered_at)}
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTiersOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveTiers} disabled={submitting}>
-              {submitting ? "Saving..." : "Save Tiers"}
+            <Button onClick={handleSetTiers} disabled={submitting}>
+              {submitting ? "Submitting..." : "Submit for Approval"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -8,9 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import {
-  WSN_API_URL,
   formatDate,
-  money,
   type WarehouseItemInventory,
 } from "@/lib/warehouse";
 import { WarehouseItemSummaryCards } from "@/components/warehouse/dashboard-cards";
@@ -95,9 +93,9 @@ export default function WarehouseItemInventoryPage() {
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
-          onClick={() => router.push("/diredawa/inventory")}
+          onClick={() => router.push("/diredawa/inventory/warehouse-storage-notes")}
         >
-          Back to Inventory
+          Back to Warehouse
         </Button>
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold">Warehouse Item Inventory</h1>
@@ -250,8 +248,9 @@ export default function WarehouseItemInventoryPage() {
                             variant="link"
                             size="sm"
                             onClick={() =>
+                              ns.id &&
                               router.push(
-                                `/diredawa/inventory/warehouse-storage-notes/${ns.wsn_no}`
+                                `/diredawa/inventory/warehouse-storage-notes/${ns.id}`
                               )
                             }
                           >

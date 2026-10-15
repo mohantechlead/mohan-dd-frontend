@@ -1,36 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
+import { Printer } from "lucide-react";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
-import { WSP_API_URL, money, formatDate, type WarehouseStoragePayment } from "@/lib/warehouse";
-
-function StatusBadge({ status }: { status: string }) {
-  const s = String(status ?? "").toLowerCase();
-  const cls =
-    s === "completed"
-      ? "bg-green-100 text-green-800"
-      : s === "approved"
-        ? "bg-blue-100 text-blue-800"
-        : s === "cancelled"
-          ? "bg-red-100 text-red-800"
-          : "bg-yellow-100 text-yellow-800";
-  return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${cls}`}>
-      {s}
-    </span>
-  );
-}
+import {
+  WSP_API_URL,
+  money,
+  formatDate,
+  type WarehouseStoragePayment,
+} from "@/lib/warehouse";
 
 export default function WarehousePaymentsDisplayPage() {
   const router = useRouter();
+  const auth = useAuth();
   const { showToast } = useToast();
   const [payments, setPayments] = useState<WarehouseStoragePayment[]>([]);
   const [loading, setLoading] = useState(true);
+  const canManageFinance = Boolean(auth?.isAdmin || auth?.isAccounting);
 
-  const load = async () => {
+  useEffect(() => {
+    if (auth && !canManageFinance) router.replace("/");
+  }, [auth, canManageFinance, router]);
+
+  const load = useCallback(async () => {
     try {
       const res = await fetch(WSP_API_URL, { credentials: "include" });
       const data = await res.json();
@@ -44,24 +40,26 @@ export default function WarehousePaymentsDisplayPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   return (
     <div className="max-w-6xl mx-auto mt-6 space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={() => router.push("/diredawa/accounting")}>
+        <Button variant="outline" onClick={() => router.push("/diredawa/accounting/expense-payments/display")}>
           Back to Accounting
         </Button>
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold">Warehouse Storage Payments</h1>
         </div>
-        <Button onClick={() => router.push("/diredawa/accounting/warehouse-payments/create")}>
-          + New Payment
-        </Button>
+        {canManageFinance && (
+          <Button onClick={() => router.push("/diredawa/accounting/warehouse-payments/create")}>
+            + New Payment
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -79,8 +77,8 @@ export default function WarehousePaymentsDisplayPage() {
                 <th className="px-4 py-2 text-left">Date</th>
                 <th className="px-4 py-2 text-right">Amount</th>
                 <th className="px-4 py-2 text-left">Type</th>
-                <th className="px-4 py-2 text-left">Status</th>
                 <th className="px-4 py-2 text-right">Remaining</th>
+                <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -90,10 +88,24 @@ export default function WarehousePaymentsDisplayPage() {
                   <td className="px-4 py-2 font-mono text-xs">{p.wsn_no}</td>
                   <td className="px-4 py-2">{p.customer_name}</td>
                   <td className="px-4 py-2">{formatDate(p.payment_date)}</td>
-                  <td className="px-4 py-2 text-right">{money(p.amount)}</td>
+                  <td className="px-4 py-2 text-right">{money(p.amount, p.currency)}</td>
                   <td className="px-4 py-2 capitalize">{p.payment_type}</td>
-                  <td className="px-4 py-2"><StatusBadge status={p.status} /></td>
-                  <td className="px-4 py-2 text-right">{money(p.remaining_amount)}</td>
+                  <td className="px-4 py-2 text-right">{money(p.remaining_amount, p.currency)}</td>
+                  <td className="px-4 py-2 text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        router.push(
+                          `/diredawa/accounting/warehouse-payments/${p.payment_number}/voucher`
+                        )
+                      }
+                      title="Print invoice"
+                    >
+                      <Printer className="w-4 h-4 mr-1" />
+                      Print Invoice
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>

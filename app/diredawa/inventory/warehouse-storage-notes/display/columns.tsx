@@ -53,7 +53,7 @@ export function ExpiryBanner({ note }: { note: WarehouseStorageNote }) {
         : "Past expiry."}{" "}
       {note.current_expiration_fee != null && (
         <span>
-          Current fee: <span className="font-semibold">{money(note.current_expiration_fee)}</span>
+          Current fee: <span className="font-semibold">{money(note.current_expiration_fee, note.currency)}</span>
         </span>
       )}
     </div>
@@ -114,7 +114,7 @@ export function getStorageNoteColumns(
       header: "Current Fee",
       cell: ({ row }) => (
         <div>
-          {money(row.original.current_expiration_fee)}
+          {money(row.original.current_expiration_fee, row.original.currency)}
           <ExpiryBanner note={row.original} />
         </div>
       ),

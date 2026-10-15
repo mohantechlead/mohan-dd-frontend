@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/components/authProvider";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import { WSP_API_URL, WSN_API_URL, money } from "@/lib/warehouse";
 
@@ -26,10 +27,16 @@ interface ExistingPayment {
 export default function CreateWarehousePaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const auth = useAuth();
   const { showToast } = useToast();
+  const canManageFinance = Boolean(auth?.isAdmin || auth?.isAccounting);
   const [submitting, setSubmitting] = useState(false);
   const [wsnOptions, setWsnOptions] = useState<WSNOption[]>([]);
   const [existingPayments, setExistingPayments] = useState<ExistingPayment[]>([]);
+
+  useEffect(() => {
+    if (auth && !canManageFinance) router.replace("/");
+  }, [auth, canManageFinance, router]);
 
   const [form, setForm] = useState({
     payment_number: "",

@@ -184,25 +184,29 @@ const baseNavMain = [
     title: "In-Warehouse",
     url: "#",
     icon: Package,
+    accountingVisible: true,
     items: [
       {
         title: "Storage Notes",
         url: "#",
+        accountingVisible: true,
         items: [
           { title: "New Storage Note", url: "/diredawa/inventory/warehouse-storage-notes/create" },
-          { title: "Display Storage Notes", url: "/diredawa/inventory/warehouse-storage-notes/display" },
+          { title: "Display Storage Notes", url: "/diredawa/inventory/warehouse-storage-notes/display", storeVisible: true },
         ],
       },
       {
         title: "Release Notes",
         url: "#",
+        accountingVisible: true,
+        storeVisible: true,
         items: [
-          { title: "New Release Note", url: "/diredawa/inventory/warehouse-release-notes/create" },
-          { title: "Display Release Notes", url: "/diredawa/inventory/warehouse-release-notes/display" },
+          { title: "New Release Note", url: "/diredawa/inventory/warehouse-release-notes/create", storeVisible: true },
+          { title: "Display Release Notes", url: "/diredawa/inventory/warehouse-release-notes/display", storeVisible: true },
         ],
       },
-      { title: "Expired / Expiring", url: "/diredawa/inventory/warehouse-expiry" },
-      { title: "Item Inventory", url: "/diredawa/inventory/warehouse-item-inventory" },
+      { title: "Expired / Expiring", url: "/diredawa/inventory/warehouse-expiry", accountingVisible: true, storeVisible: true },
+      { title: "Item Inventory", url: "/diredawa/inventory/warehouse-item-inventory", accountingVisible: true, storeVisible: true },
     ],
   },
   {
@@ -214,6 +218,7 @@ const baseNavMain = [
     items: [
       { title: "Order Approval", url: "/diredawa/approvals/orders" },
       { title: "Purchase Approval", url: "/diredawa/approvals/purchases" },
+      { title: "Warehouse Settings Approval", url: "/diredawa/approvals/warehouse-settings", accountingVisible: true },
       {
         title: "Payment Approvals",
         url: "#",
@@ -222,7 +227,6 @@ const baseNavMain = [
           { title: "Received Payment Approval", url: "/diredawa/approvals/received-payments" },
           { title: "Vendor Payment Approval", url: "/diredawa/approvals/vendor-payments" },
           { title: "Expense Payment Approval", url: "/diredawa/approvals/expense-payments" },
-          { title: "Warehouse Payment Approval", url: "/diredawa/approvals/warehouse-payments" },
         ],
       },
     ],
@@ -272,57 +276,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isAccounting = mounted ? (auth?.isAccounting ?? false) : false;
 
   const navMain = React.useMemo(() => {
-    const filterAccountingItems = (
-      items: Array<Record<string, unknown>>,
-      inheritVisible = false
-    ): Array<Record<string, unknown>> =>
-      items
-        .filter((item) => inheritVisible || Boolean(item.accountingVisible))
-        .map((item) => {
-          const children = Array.isArray(item.items)
-            ? filterAccountingItems(
-                item.items as Array<Record<string, unknown>>,
-                inheritVisible || Boolean(item.accountingVisible)
-              )
-            : undefined;
-          return {
-            ...item,
-            ...(children ? { items: children } : {}),
-          };
-        })
-        .filter((item) => !Array.isArray(item.items) || item.items.length > 0);
-
     let items = baseNavMain.filter((item) => {
       const adminOnly = Boolean((item as { adminOnly?: boolean }).adminOnly);
       if (!adminOnly) return true;
       return isAdmin || isAccounting;
     });
     if (isStore) {
+      // Recursively keep only items flagged storeVisible (and their ancestors).
+      const filterStoreItems = <T extends { storeVisible?: boolean; items?: T[] }>(
+        list: T[],
+      ): T[] =>
+        list
+          .map((item) => {
+            const children = Array.isArray(item.items)
+              ? filterStoreItems(item.items)
+              : undefined;
+            const hasVisibleChildren = (children?.length ?? 0) > 0;
+            if (!item.storeVisible && !hasVisibleChildren) return null;
+            return {
+              ...item,
+              ...(children ? { items: children } : {}),
+            };
+          })
+          .filter((item): item is T => item !== null);
+
       items = items
         .filter((section) => {
-          const sectionItems = (section as { items?: { storeVisible?: boolean }[] }).items ?? [];
-          return sectionItems.some((sub) => (sub as { storeVisible?: boolean }).storeVisible);
+          const sectionItems = (section as { items?: { storeVisible?: boolean; items?: unknown[] }[] }).items ?? [];
+          return sectionItems.some(
+            (sub) =>
+              Boolean((sub as { storeVisible?: boolean }).storeVisible) ||
+              (Array.isArray((sub as { items?: unknown[] }).items) &&
+                ((sub as { items?: { storeVisible?: boolean }[] }).items ?? []).some(
+                  (nested) => Boolean((nested as { storeVisible?: boolean }).storeVisible),
+                )),
+          );
         })
         .map((section) => ({
           ...section,
-          items: ((section as { items?: { storeVisible?: boolean; title: string; url: string }[] }).items ?? []).filter(
-            (sub) => (sub as { storeVisible?: boolean }).storeVisible
+          items: filterStoreItems(
+            (section as { items?: { storeVisible?: boolean; title: string; url: string; items?: never[] }[] }).items ?? [],
           ),
         })) as typeof baseNavMain;
     } else if (isAccounting && !isAdmin) {
-      items = items.filter((section) => section.title === "Accounting") as typeof baseNavMain;
-      // items = items
-      //   .filter((section) => {
-      //     if (section.title === "Accounting") return true;
-      //     const sectionItems = ((section as { items?: { accountingVisible?: boolean }[] }).items ?? []);
-      //     return sectionItems.some((sub) => Boolean((sub as { accountingVisible?: boolean }).accountingVisible));
-      //   })
-      //   .map((section) => ({
-      //     ...section,
-      //     items: ((section as { items?: { accountingVisible?: boolean; title: string; url: string }[] }).items ?? []).filter(
-      //       (sub) => Boolean((sub as { accountingVisible?: boolean }).accountingVisible)
-      //     ),
-      //   })) as typeof baseNavMain;
+      // Accounting sees Accounting, In-Warehouse, and Approvals sections.
+      items = items.filter(
+        (section) =>
+          section.title === "Accounting" ||
+          section.title === "In-Warehouse" ||
+          section.title === "Approvals",
+      ) as typeof baseNavMain;
     } else {
       // Admin and logistics: hide items with adminLogisticsHidden
       items = items.map((section) => ({

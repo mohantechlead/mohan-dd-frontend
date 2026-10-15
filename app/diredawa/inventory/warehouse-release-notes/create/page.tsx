@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/authProvider";
 import { SearchableDropdown, type DropdownOption } from "@/components/searchable-dropdown";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import { parseDecimalQuantity, formatQuantityDisplay } from "@/lib/inventoryQuantity";
@@ -30,7 +31,15 @@ interface ReleaseLine {
 
 export default function CreateReleaseNotePage() {
   const router = useRouter();
+  const auth = useAuth();
   const { showToast } = useToast();
+  const canCreateRelease =
+    Boolean(auth) &&
+    (auth!.isAdmin || auth!.isLogistics || auth!.isStore);
+
+  useEffect(() => {
+    if (auth && !canCreateRelease) router.replace("/");
+  }, [auth, canCreateRelease, router]);
 
   const [form, setForm] = useState({
     wrn_no: "",
@@ -178,14 +187,14 @@ export default function CreateReleaseNotePage() {
       wrn_no: String(form.wrn_no).trim(),
       storage_note_id: form.storage_note_id,
       customer_name: String(form.customer_name).trim(),
-      date: form.date || null,
+      date: form.date || new Date().toISOString().slice(0, 10),
       remark: String(form.remark).trim() || null,
       items: selectedLines.map((l) => ({
         storage_item_id: l.storage_item_id,
         item_name: l.item_name,
         code: l.code || null,
         quantity: parseDecimalQuantity(l.quantity),
-        unit_measurement: l.unit_measurement || null,
+        unit_measurement: l.unit_measurement || "",
         bags: l.bags ?? null,
         internal_code: l.internal_code ?? null,
       })),

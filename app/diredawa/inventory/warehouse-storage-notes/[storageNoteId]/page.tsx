@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
+import { useAuth } from "@/components/authProvider";
 import {
   WSN_API_URL,
   PERIOD_UNITS,
@@ -51,7 +52,9 @@ export default function WarehouseStorageNoteDetailPage() {
   const params = useParams<{ storageNoteId: string }>();
   const router = useRouter();
   const { showToast } = useToast();
+  const auth = useAuth();
   const id = params.storageNoteId;
+  const canManageFinance = Boolean(auth?.isAdmin || auth?.isAccounting);
 
   const [note, setNote] = useState<WarehouseStorageNote | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,7 +114,8 @@ export default function WarehouseStorageNoteDetailPage() {
           top_up_date: topUpDate || null,
           additional_period_value: Number(topUpValue),
           additional_period_unit: topUpUnit,
-          price: Number(topUpPrice),
+          // Price may only be set by accounting/admin; omit for other roles.
+          ...(canManageFinance ? { price: Number(topUpPrice) } : {}),
           remark: topUpRemark.trim() || null,
         }),
       });
@@ -203,7 +207,7 @@ export default function WarehouseStorageNoteDetailPage() {
           {note.current_expiration_fee != null && (
             <span>
               Current applicable fee:{" "}
-              <span className="font-semibold">{money(note.current_expiration_fee)}</span>
+              <span className="font-semibold">{money(note.current_expiration_fee, note.currency)}</span>
             </span>
           )}
         </div>
@@ -231,7 +235,7 @@ export default function WarehouseStorageNoteDetailPage() {
             </tr>
             <tr className="border-t">
               <td className="px-4 py-2 text-muted-foreground">Storage Price</td>
-              <td className="px-4 py-2">{money(note.storage_price)}</td>
+              <td className="px-4 py-2">{money(note.storage_price, note.currency)}</td>
             </tr>
             <tr className="border-t">
               <td className="px-4 py-2 text-muted-foreground">Grace Period</td>
@@ -329,7 +333,7 @@ export default function WarehouseStorageNoteDetailPage() {
                   <td className="px-4 py-2">
                     {periodLabel(t.period_value, t.period_unit)}
                   </td>
-                  <td className="px-4 py-2 text-right">{money(t.fee_amount)}</td>
+                  <td className="px-4 py-2 text-right">{money(t.fee_amount, note.currency)}</td>
                 </tr>
               ))
             )}
@@ -358,7 +362,7 @@ export default function WarehouseStorageNoteDetailPage() {
                   <td className="px-4 py-2">
                     {periodLabel(tu.additional_period_value, tu.additional_period_unit)}
                   </td>
-                  <td className="px-4 py-2 text-right">{money(tu.price)}</td>
+                  <td className="px-4 py-2 text-right">{money(tu.price, note.currency)}</td>
                   <td className="px-4 py-2">{tu.remark?.trim() || "—"}</td>
                 </tr>
               ))}
@@ -427,7 +431,7 @@ export default function WarehouseStorageNoteDetailPage() {
           <tbody>
             <tr>
               <td className="px-4 py-2 text-muted-foreground w-52">Storage Price</td>
-              <td className="px-4 py-2">{money(note.storage_price)}</td>
+              <td className="px-4 py-2">{money(note.storage_price, note.currency)}</td>
             </tr>
             {note.price_entered_by && (
               <tr className="border-t">
@@ -439,24 +443,26 @@ export default function WarehouseStorageNoteDetailPage() {
             )}
             <tr className="border-t">
               <td className="px-4 py-2 text-muted-foreground">Total Paid</td>
-              <td className="px-4 py-2">{money(note.total_paid)}</td>
+              <td className="px-4 py-2">{money(note.total_paid, note.currency)}</td>
             </tr>
             <tr className="border-t">
               <td className="px-4 py-2 text-muted-foreground">Remaining</td>
-              <td className="px-4 py-2">{money(note.payment_remaining)}</td>
+              <td className="px-4 py-2">{money(note.payment_remaining, note.currency)}</td>
             </tr>
           </tbody>
         </table>
         <div className="px-4 py-2 border-t flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              router.push(`/diredawa/accounting/warehouse-payments/create?wsn_no=${note.wsn_no}`)
-            }
-          >
-            + Record Payment
-          </Button>
+          {canManageFinance && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                router.push(`/diredawa/accounting/warehouse-payments/create?wsn_no=${note.wsn_no}`)
+              }
+            >
+              + Record Payment
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -520,16 +526,18 @@ export default function WarehouseStorageNoteDetailPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <Label>Price</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={topUpPrice}
-                  onChange={(e) => setTopUpPrice(e.target.value)}
-                />
-              </div>
+              {canManageFinance && (
+                <div>
+                  <Label>Price</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={topUpPrice}
+                    onChange={(e) => setTopUpPrice(e.target.value)}
+                  />
+                </div>
+              )}
               <div className="md:col-span-2">
                 <Label>Remark</Label>
                 <textarea

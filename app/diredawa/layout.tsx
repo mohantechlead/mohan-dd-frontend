@@ -19,6 +19,11 @@ const STORE_ALLOWED_PATHS = [
   "/diredawa/inventory/dn/display",
   "/diredawa/inventory/dn", // allows /dn/[dnNo] detail
   "/diredawa/inventory/stock",
+  // In-Warehouse operations (entries, releases, view). Prices/payments stay finance-only.
+  "/diredawa/inventory/warehouse-storage-notes",
+  "/diredawa/inventory/warehouse-release-notes",
+  "/diredawa/inventory/warehouse-expiry",
+  "/diredawa/inventory/warehouse-item-inventory",
 ];
 
 function isStorePathAllowed(pathname: string | null): boolean {

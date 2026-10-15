@@ -9,6 +9,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { data, status } = await ApiProxy.get(`${DJANGO_API_WRN}/${id}`, false);
+  const { data, status } = await ApiProxy.get(`${DJANGO_API_WRN}/${id}`, true);
   return NextResponse.json(data, { status });
 }
