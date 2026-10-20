@@ -42,10 +42,10 @@ export default function CreateWarehouseStorageNotePage() {
 
   // Accounting-only users should not create WSNs
   useEffect(() => {
-    if (auth && !auth.isAdmin && auth.role !== "logistics") {
+    if (auth && !auth.isAdmin && auth.role !== "logistics" && auth.role !== "store") {
       showToast({
         title: "Access denied",
-        description: "Only admin and logistics users can create storage notes.",
+        description: "Only admin, logistics, and store users can create storage notes.",
         variant: "error",
       });
       router.push("/diredawa/inventory/warehouse-storage-notes/display");
