@@ -209,7 +209,7 @@ const baseNavMain = [
         url: "#",
         accountingVisible: true,
         items: [
-          { title: "New Storage Note", url: "/diredawa/inventory/warehouse-storage-notes/create" },
+          { title: "New Storage Note", url: "/diredawa/inventory/warehouse-storage-notes/create", storeVisible: true },
           { title: "Display Storage Notes", url: "/diredawa/inventory/warehouse-storage-notes/display", storeVisible: true },
         ],
       },
