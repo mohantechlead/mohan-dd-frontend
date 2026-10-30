@@ -4,8 +4,20 @@ import { DataTable } from "@/components/data-table";
 import { getStockColumns, Items } from "./columns";
 import useSWR from "swr";
 import { useAuth } from "@/components/authProvider";
+import { useToast } from "@/components/ui/toast";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
 
 const GRN_API_URL = "/api/inventory/stock";
 
@@ -28,12 +40,21 @@ async function stockFetcher(url: string): Promise<Items[]> {
 export default function DemoPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { showToast } = useToast();
   const [code, setCode] = useState("");
   const [item, setItem] = useState("");
   const [asOfDate, setAsOfDate] = useState("");
   const [minQuantity, setMinQuantity] = useState("");
   const [grnNo, setGrnNo] = useState("");
   const [dnNo, setDnNo] = useState("");
+
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustRow, setAdjustRow] = useState<Items | null>(null);
+  const [adjustReason, setAdjustReason] = useState("lost");
+  const [adjustQuantity, setAdjustQuantity] = useState("");
+  const [adjustBags, setAdjustBags] = useState("");
+  const [adjustNote, setAdjustNote] = useState("");
+  const [adjusting, setAdjusting] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState({
     code: "",
     item: "",
@@ -57,7 +78,7 @@ export default function DemoPage() {
     return query ? `${GRN_API_URL}?${query}` : GRN_API_URL;
   }, [appliedFilters]);
 
-  const { data, error, isLoading } = useSWR<Items[]>(swrKey, stockFetcher);
+  const { data, error, isLoading, mutate } = useSWR<Items[]>(swrKey, stockFetcher);
 
   useEffect(() => {
     if (error?.status === 401) {
@@ -104,7 +125,81 @@ export default function DemoPage() {
     router.push(`/diredawa/inventory/stock/ledger?${params.toString()}`);
   };
 
-  const columns = getStockColumns(openLedgerPage);
+  const openAdjust = (row: Items) => {
+    setAdjustRow(row);
+    setAdjustReason("lost");
+    setAdjustQuantity("");
+    setAdjustBags("");
+    setAdjustNote("");
+    setAdjustOpen(true);
+  };
+
+  const submitAdjustment = async () => {
+    if (!adjustRow) return;
+    const quantity = Number(adjustQuantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      showToast({
+        title: "Invalid quantity",
+        description: "Enter an adjustment quantity greater than zero.",
+        variant: "error",
+      });
+      return;
+    }
+    const bags = adjustBags.trim() ? Number(adjustBags) : null;
+    if (bags !== null && (!Number.isFinite(bags) || bags < 0)) {
+      showToast({
+        title: "Invalid bags",
+        description: "Bags must be zero or greater.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setAdjusting(true);
+    try {
+      const res = await fetch("/api/inventory/stock/adjustments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          code: adjustRow.code || adjustRow.item_name,
+          item_name: adjustRow.item_name,
+          quantity,
+          bags,
+          reason: adjustReason,
+          note: adjustNote.trim() || null,
+          user_id: auth?.userId ?? null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to adjust stock",
+          description: (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        return;
+      }
+      showToast({
+        title: "Stock adjusted",
+        description: `${quantity} ${adjustRow.item_name} marked as ${adjustReason}.`,
+        variant: "success",
+      });
+      setAdjustOpen(false);
+      setAdjustRow(null);
+      await mutate();
+    } catch {
+      showToast({
+        title: "Failed to adjust stock",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setAdjusting(false);
+    }
+  };
+
+  const columns = getStockColumns(openLedgerPage, openAdjust);
 
   const exportToExcel = async () => {
     if (!data || data.length === 0) return;
@@ -206,6 +301,90 @@ export default function DemoPage() {
         </p>
       )}
       <DataTable columns={columns} data={data || []} />
+
+      <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Stock — {adjustRow?.item_name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">Code</p>
+                <p>{adjustRow?.code || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Current Quantity
+                </p>
+                <p>{adjustRow ? formatQuantityDisplay(adjustRow.quantity) : "—"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="adjust-reason">Reason</Label>
+              <select
+                id="adjust-reason"
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+              >
+                <option value="lost">Lost</option>
+                <option value="contaminated">Contaminated</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="adjust-quantity">Quantity to deduct</Label>
+                <Input
+                  id="adjust-quantity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={adjustQuantity}
+                  onChange={(e) => setAdjustQuantity(e.target.value)}
+                  placeholder="e.g. 25"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="adjust-bags">Bags to deduct (optional)</Label>
+                <Input
+                  id="adjust-bags"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={adjustBags}
+                  onChange={(e) => setAdjustBags(e.target.value)}
+                  placeholder="e.g. 1"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="adjust-note">Note (optional)</Label>
+              <Input
+                id="adjust-note"
+                value={adjustNote}
+                onChange={(e) => setAdjustNote(e.target.value)}
+                placeholder="Reason details / reference"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAdjustOpen(false)}
+              disabled={adjusting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={submitAdjustment} disabled={adjusting}>
+              {adjusting ? "Adjusting..." : "Save Adjustment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

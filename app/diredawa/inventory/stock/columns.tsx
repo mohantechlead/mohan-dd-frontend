@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, PackageMinus } from "lucide-react";
 import { formatQuantityDisplay } from "@/lib/inventoryQuantity";
 
 export type Items = {
@@ -16,6 +16,7 @@ export type Items = {
 
 export function getStockColumns(
   onView?: (row: Items) => void,
+  onAdjust?: (row: Items) => void,
 ): ColumnDef<Items>[] {
   const cols: ColumnDef<Items>[] = [
     {
@@ -50,19 +51,33 @@ export function getStockColumns(
     },
   ];
 
-  if (onView) {
+  if (onView || onAdjust) {
     cols.push({
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onView(row.original)}
-          title="View stock transactions"
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {onView && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onView(row.original)}
+              title="View stock transactions"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
+          {onAdjust && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onAdjust(row.original)}
+              title="Adjust stock (lost / contaminated)"
+            >
+              <PackageMinus className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       ),
     });
   }

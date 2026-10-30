@@ -22,6 +22,47 @@ interface Purchase {
   status: string;
 }
 
+interface PurchaseDetailItem {
+  item_name: string;
+  price: number;
+  quantity: number;
+  remaining: number;
+  total_price: number;
+  before_vat?: number;
+  hscode?: string | null;
+  measurement: string;
+}
+
+interface PurchaseDetail {
+  id: string;
+  purchase_number: string;
+  order_date: string;
+  buyer: string;
+  buyer_address?: string | null;
+  proforma_ref_no: string;
+  status?: string | null;
+  approved_by?: string | null;
+  approval_date?: string | null;
+  completed_by?: string | null;
+  completed_date?: string | null;
+  cancelled_by?: string | null;
+  cancelled_date?: string | null;
+  status_remark?: string | null;
+  shipper?: string | null;
+  port_of_loading?: string | null;
+  port_of_discharge?: string | null;
+  mode_of_transport?: string | null;
+  payment_type?: string | null;
+  payment_terms?: string | null;
+  shipment_type?: string | null;
+  country_of_origin?: string | null;
+  final_destination?: string | null;
+  before_vat?: number;
+  total_quantity?: number;
+  remaining?: number;
+  items: PurchaseDetailItem[];
+}
+
 const PURCHASES_API_URL = "/api/purchases";
 
 export default function PurchaseStatusPage() {
@@ -42,6 +83,10 @@ export default function PurchaseStatusPage() {
   const [popupAction, setPopupAction] = useState<"completed" | "cancelled">("completed");
   const [remarking, setRemarking] = useState(false);
   const [remark, setRemark] = useState("");
+
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detail, setDetail] = useState<PurchaseDetail | null>(null);
 
   useEffect(() => {
     const fetchPurchases = async () => {
@@ -106,6 +151,63 @@ export default function PurchaseStatusPage() {
     setPopupAction(action);
     setRemark("");
     setPopupOpen(true);
+  };
+
+  const openDetails = async (purchaseNumber: string) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetail(null);
+    try {
+      const res = await fetch(
+        `/api/purchases/${encodeURIComponent(purchaseNumber)}`,
+        { credentials: "include" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to load purchase details",
+          description:
+            (data as { detail?: string })?.detail || "Please try again.",
+          variant: "error",
+        });
+        setDetailOpen(false);
+        return;
+      }
+      setDetail(data as PurchaseDetail);
+    } catch {
+      showToast({
+        title: "Failed to load purchase details",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const formatDetailDate = (value?: string | null) => {
+    if (!value) return "—";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatDetailDateTime = (value?: string | null) => {
+    if (!value) return "—";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const handleSubmitRemark = async () => {
@@ -201,7 +303,16 @@ export default function PurchaseStatusPage() {
                   <td className="px-4 py-2">
                     <input type="checkbox" />
                   </td>
-                  <td className="px-4 py-2">{purchase.purchase_number}</td>
+                  <td className="px-4 py-2">
+                    <button
+                      type="button"
+                      onClick={() => openDetails(purchase.purchase_number)}
+                      className="text-blue-600 hover:underline"
+                      title="View purchase details"
+                    >
+                      {purchase.purchase_number}
+                    </button>
+                  </td>
                   <td className="px-4 py-2 capitalize">{purchase.status}</td>
                   <td className="px-4 py-2 flex gap-2 items-center">
                     <Button
@@ -238,6 +349,219 @@ export default function PurchaseStatusPage() {
           </tbody>
         </table>
       </div>
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Purchase {detail?.purchase_number ?? ""}
+              {detail?.status && (
+                <span className="ml-2 text-sm font-normal capitalize text-muted-foreground">
+                  ({detail.status})
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {detailLoading ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Loading purchase details...
+            </p>
+          ) : !detail ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Purchase details are not available.
+            </p>
+          ) : (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Order Date</p>
+                  <p>{formatDetailDate(detail.order_date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Buyer</p>
+                  <p>{detail.buyer || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Supplier</p>
+                  <p>{detail.shipper || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Proforma Ref. No.</p>
+                  <p>{detail.proforma_ref_no || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Port of Loading</p>
+                  <p>{detail.port_of_loading || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Port of Discharge</p>
+                  <p>{detail.port_of_discharge || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Mode of Transport</p>
+                  <p>{detail.mode_of_transport || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Payment Type</p>
+                  <p>{detail.payment_type || detail.payment_terms || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Shipment Type</p>
+                  <p>{detail.shipment_type || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Country of Origin</p>
+                  <p>{detail.country_of_origin || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Final Destination</p>
+                  <p>{detail.final_destination || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Before VAT</p>
+                  <p>
+                    {Number(detail.before_vat ?? 0).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-md border overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/60">
+                    <tr>
+                      <th className="px-2 py-2 text-left">No.</th>
+                      <th className="px-2 py-2 text-left">Item</th>
+                      <th className="px-2 py-2 text-left">HS Code</th>
+                      <th className="px-2 py-2 text-right">Price</th>
+                      <th className="px-2 py-2 text-right">Quantity</th>
+                      <th className="px-2 py-2 text-right">Remaining</th>
+                      <th className="px-2 py-2 text-left">Unit</th>
+                      <th className="px-2 py-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(detail.items ?? []).map((item, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="px-2 py-2">{idx + 1}</td>
+                        <td className="px-2 py-2">{item.item_name}</td>
+                        <td className="px-2 py-2 font-mono">{item.hscode || "—"}</td>
+                        <td className="px-2 py-2 text-right">
+                          {Number(item.price ?? 0).toLocaleString(undefined, {
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          {Number(item.quantity ?? 0).toLocaleString()}
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          {Number(item.remaining ?? 0).toLocaleString()}
+                        </td>
+                        <td className="px-2 py-2">{item.measurement || "—"}</td>
+                        <td className="px-2 py-2 text-right">
+                          {Number(item.total_price ?? 0).toLocaleString(undefined, {
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                    {(detail.items ?? []).length === 0 && (
+                      <tr>
+                        <td className="px-2 py-3 text-center text-muted-foreground" colSpan={8}>
+                          No items on this purchase.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t font-semibold">
+                      <td className="px-2 py-2 text-right" colSpan={7}>
+                        Total
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {Number(detail.before_vat ?? 0).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div className="rounded-md border p-3 space-y-1 text-xs">
+                <p className="font-semibold">Approval &amp; status</p>
+                <p>
+                  <span className="text-muted-foreground">Status: </span>
+                  <span className="capitalize">{detail.status || "pending"}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Approved by: </span>
+                  {detail.approved_by || "—"}
+                  {detail.approval_date
+                    ? ` on ${formatDetailDateTime(detail.approval_date)}`
+                    : ""}
+                </p>
+                {detail.completed_by && (
+                  <p>
+                    <span className="text-muted-foreground">Completed by: </span>
+                    {detail.completed_by}
+                    {detail.completed_date
+                      ? ` on ${formatDetailDateTime(detail.completed_date)}`
+                      : ""}
+                  </p>
+                )}
+                {detail.cancelled_by && (
+                  <p>
+                    <span className="text-muted-foreground">Cancelled by: </span>
+                    {detail.cancelled_by}
+                    {detail.cancelled_date
+                      ? ` on ${formatDetailDateTime(detail.cancelled_date)}`
+                      : ""}
+                  </p>
+                )}
+                {detail.status_remark && (
+                  <p>
+                    <span className="text-muted-foreground">Remark: </span>
+                    {detail.status_remark}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row sm:justify-end gap-2">
+            <Button variant="outline" onClick={() => setDetailOpen(false)}>
+              Close
+            </Button>
+            {detail && (
+              <>
+                <Button
+                  style={{ backgroundColor: "#16a34a", color: "white" }}
+                  className="hover:opacity-90"
+                  onClick={() => {
+                    setDetailOpen(false);
+                    openRemarkPopup(detail.purchase_number, "completed");
+                  }}
+                >
+                  Mark Completed
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setDetailOpen(false);
+                    openRemarkPopup(detail.purchase_number, "cancelled");
+                  }}
+                >
+                  Mark Cancelled
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={popupOpen} onOpenChange={setPopupOpen}>
         <DialogContent>

@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Pencil, ShieldAlert, Trash2, UserCog, X } from "lucide-react";
+import { Pencil, ShieldAlert, Trash2, UserCog, X, Download } from "lucide-react";
 import { TableSearch } from "@/components/table-search";
 import {
   STAGE_OPTIONS,
@@ -73,6 +73,8 @@ export default function DisplayPurchasesPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -142,8 +144,11 @@ export default function DisplayPurchasesPage() {
 
   const filteredPurchases = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return purchases;
     return purchases.filter((p) => {
+      const orderDate = (p.order_date ?? "").slice(0, 10);
+      if (fromDate && orderDate && orderDate < fromDate) return false;
+      if (toDate && orderDate && orderDate > toDate) return false;
+      if (!q) return true;
       const items = Array.isArray(p.items) ? p.items : [];
       return (
         (p.purchase_number ?? "").toLowerCase().includes(q) ||
@@ -155,11 +160,11 @@ export default function DisplayPurchasesPage() {
         items.some((i) => (i?.item_name ?? "").toLowerCase().includes(q))
       );
     });
-  }, [purchases, search]);
+  }, [purchases, search, fromDate, toDate]);
 
   useEffect(() => {
     setPageIndex(0);
-  }, [search]);
+  }, [search, fromDate, toDate]);
 
   const pagedPurchases = useMemo(
     () => slicePage(filteredPurchases, pageIndex, pageSize),
@@ -256,6 +261,64 @@ export default function DisplayPurchasesPage() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const exportToExcel = async () => {
+    if (filteredPurchases.length === 0) {
+      showToast({
+        title: "Nothing to export",
+        description: "No purchase orders match the current filters.",
+        variant: "error",
+      });
+      return;
+    }
+    const XLSX = await import("xlsx");
+    const rows = filteredPurchases.map((purchase) => {
+      const beforeVat =
+        purchase.before_vat ??
+        (Array.isArray(purchase.items)
+          ? purchase.items.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
+          : 0);
+      const itemsText = (purchase.items ?? [])
+        .map((item) => {
+          const measurement = item.measurement ? ` ${item.measurement}` : "";
+          return `${item.item_name} (${item.quantity}${measurement})`;
+        })
+        .join("; ");
+      return {
+        "Purchase Number": purchase.purchase_number,
+        Date: (purchase.order_date ?? "").slice(0, 10),
+        Supplier: purchase.shipper ?? purchase.buyer ?? "",
+        Buyer: purchase.buyer ?? "",
+        "Proforma Ref. No.": purchase.proforma_ref_no ?? "",
+        "Before VAT": beforeVat,
+        Status: purchase.status ?? "pending",
+        Checkpoint: stageLabel(purchase.stage),
+        "Assigned Transitor": purchase.assigned_transitor ?? "",
+        Items: itemsText,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 18 },
+      { wch: 12 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 60 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Purchase Orders");
+    const range =
+      fromDate || toDate
+        ? `${fromDate || "start"}_to_${toDate || "end"}`
+        : new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `purchase_orders_${range}.xlsx`);
   };
 
   const showBanner = !bannerDismissed && missingMarineInsurance.length > 0;
@@ -396,7 +459,50 @@ export default function DisplayPurchasesPage() {
         </p>
       ) : (
         <>
-          <div className="flex justify-end mb-4">
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium" htmlFor="purchase-from-date">
+                  From date
+                </label>
+                <input
+                  id="purchase-from-date"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="h-9 rounded-md border px-2 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium" htmlFor="purchase-to-date">
+                  To date
+                </label>
+                <input
+                  id="purchase-to-date"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="h-9 rounded-md border px-2 text-sm"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+                className="h-9 rounded-md border px-3 text-sm font-medium"
+              >
+                Clear dates
+              </button>
+              <button
+                type="button"
+                onClick={exportToExcel}
+                className="h-9 rounded-md border px-3 text-sm font-medium inline-flex items-center gap-1"
+              >
+                <Download className="h-4 w-4" /> Export to Excel
+              </button>
+            </div>
             <TableSearch value={search} onChange={setSearch} placeholder="Search purchases, supplier, items..." />
           </div>
           <div className="border rounded-md overflow-hidden bg-white">
@@ -503,6 +609,16 @@ export default function DisplayPurchasesPage() {
                     </tr>
                   );
                 })}
+                {pagedPurchases.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={canManageRecords || canManageCheckpoints ? 7 : 6}
+                      className="px-4 py-6 text-center text-sm text-muted-foreground"
+                    >
+                      No purchase orders match the selected filters.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
