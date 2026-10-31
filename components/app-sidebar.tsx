@@ -237,6 +237,7 @@ const baseNavMain = [
       { title: "Order Approval", url: "/diredawa/approvals/orders" },
       { title: "Purchase Approval", url: "/diredawa/approvals/purchases" },
       { title: "Warehouse Settings Approval", url: "/diredawa/approvals/warehouse-settings", accountingVisible: true },
+      { title: "Stock Adjustment Approval", url: "/diredawa/approvals/stock-adjustments", accountingVisible: true },
       {
         title: "Payment Approvals",
         url: "#",

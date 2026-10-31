@@ -174,15 +174,15 @@ export default function DemoPage() {
       const data = await res.json();
       if (!res.ok) {
         showToast({
-          title: "Failed to adjust stock",
+          title: "Failed to submit adjustment",
           description: (data as { detail?: string })?.detail || "Please try again.",
           variant: "error",
         });
         return;
       }
       showToast({
-        title: "Stock adjusted",
-        description: `${quantity} ${adjustRow.item_name} marked as ${adjustReason}.`,
+        title: "Submitted for approval",
+        description: `${quantity} ${adjustRow.item_name} marked as ${adjustReason}. It will reduce stock once approved.`,
         variant: "success",
       });
       setAdjustOpen(false);
@@ -190,7 +190,7 @@ export default function DemoPage() {
       await mutate();
     } catch {
       showToast({
-        title: "Failed to adjust stock",
+        title: "Failed to submit adjustment",
         description: "Something went wrong. Please try again.",
         variant: "error",
       });
@@ -308,6 +308,10 @@ export default function DemoPage() {
             <DialogTitle>Adjust Stock — {adjustRow?.item_name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+              This request goes to Approvals → Stock Adjustment Approval. Stock is
+              only reduced after it is approved.
+            </p>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground">Code</p>
@@ -380,7 +384,7 @@ export default function DemoPage() {
               Cancel
             </Button>
             <Button onClick={submitAdjustment} disabled={adjusting}>
-              {adjusting ? "Adjusting..." : "Save Adjustment"}
+              {adjusting ? "Submitting..." : "Submit for Approval"}
             </Button>
           </DialogFooter>
         </DialogContent>
