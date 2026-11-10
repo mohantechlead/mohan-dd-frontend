@@ -262,7 +262,7 @@ export default function CreateWarehouseStorageNotePage() {
         <p className="text-xs text-center text-muted-foreground mb-2">
           Add at least one item line received into storage.
         </p>
-        <ItemsForm hideCode />
+        <ItemsForm hideCode editableInternalCode />
       </Form>
     </div>
   );
