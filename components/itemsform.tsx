@@ -17,7 +17,18 @@ type ItemDropdownOption = DropdownOption & {
   itemId?: string;
 };
 
-export function ItemsForm({ hideCode = false }: { hideCode?: boolean }) {
+export function ItemsForm({
+  hideCode = false,
+  editableInternalCode = false,
+}: {
+  hideCode?: boolean;
+  /**
+   * Allow typing the internal code. GRN/DN keep it locked so it stays in sync with
+   * the selected inventory item; storage notes need manual entry when the inventory
+   * item has no internal code.
+   */
+  editableInternalCode?: boolean;
+}) {
   const { control, register, setValue, watch } = useFormContext();
   const [itemOptions, setItemOptions] = useState<ItemDropdownOption[]>([]);
 
@@ -166,9 +177,11 @@ export function ItemsForm({ hideCode = false }: { hideCode?: boolean }) {
                 <Input
                   type="text"
                   {...field}
-                  readOnly
-                  tabIndex={-1}
-                  className="bg-muted cursor-default"
+                  readOnly={!editableInternalCode}
+                  tabIndex={editableInternalCode ? undefined : -1}
+                  className={
+                    editableInternalCode ? undefined : "bg-muted cursor-default"
+                  }
                   value={field.value ?? ""}
                 />
               )}
