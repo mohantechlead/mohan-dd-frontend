@@ -36,8 +36,14 @@ function isStorePathAllowed(pathname: string | null): boolean {
 
 const TRANSITOR_ALLOWED_PATHS = ["/diredawa/transit"];
 
+// Transitors trigger the guarantee letters, so they must be able to open the
+// print view for a purchase they are working on.
+const TRANSITOR_PRINT_PATTERN =
+  /^\/diredawa\/purchase\/[^/]+\/guarantee\/print\/?$/;
+
 function isTransitorPathAllowed(pathname: string | null): boolean {
   if (!pathname) return true;
+  if (TRANSITOR_PRINT_PATTERN.test(pathname)) return true;
   return TRANSITOR_ALLOWED_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 

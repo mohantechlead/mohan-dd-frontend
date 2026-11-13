@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Truck } from "lucide-react";
+import { ArrowRight, Printer, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
@@ -20,6 +21,30 @@ import {
   nextTransitorStage,
   stageLabel,
 } from "@/components/stage-display";
+import {
+  TRANSIT_DOCUMENTS_FOR_STAGE,
+  TransitDocument,
+  formatOrdinalDate,
+  guaranteePrintUrl,
+  transitDocumentLabel,
+} from "@/lib/transit-documents";
+
+interface TransitContainer {
+  container_number?: string;
+  size?: string;
+  cargo_type?: string;
+}
+
+interface TransitBl {
+  bl_number: string;
+  bl_date: string;
+  container_count: number;
+  shipping_company_name?: string | null;
+  vessel_name?: string | null;
+  transit_status: string;
+  transit_status_label?: string | null;
+  containers?: TransitContainer[];
+}
 
 interface TransitPurchase {
   id: string;
@@ -33,6 +58,8 @@ interface TransitPurchase {
   stage_updated_at?: string | null;
   stage_updated_by?: string | null;
   assigned_transitor?: string | null;
+  bill_of_lading?: TransitBl | null;
+  transit_documents?: TransitDocument[];
   items?: Array<{ item_name?: string; total_price?: number }>;
 }
 
@@ -102,6 +129,12 @@ export default function TransitPage() {
 
   const handleAdvance = async () => {
     if (!confirmRow || !confirmRowNextStage) return;
+    const letterTypes = TRANSIT_DOCUMENTS_FOR_STAGE[confirmRowNextStage] ?? [];
+    // Open the print tab while we are still inside the click gesture, then
+    // point it at the letters once the backend has generated them.
+    const printWindow =
+      letterTypes.length > 0 ? window.open("", "_blank") : null;
+
     setSubmitting(true);
     try {
       const res = await fetch(
@@ -118,6 +151,7 @@ export default function TransitPage() {
       );
       const data = await res.json();
       if (!res.ok) {
+        printWindow?.close();
         showToast({
           title: "Failed to update checkpoint",
           description: (data as { detail?: string })?.detail || "Please try again.",
@@ -125,13 +159,29 @@ export default function TransitPage() {
         });
         return;
       }
+      const printUrl =
+        letterTypes.length > 0
+          ? guaranteePrintUrl(confirmRow.purchase_number, letterTypes, true)
+          : null;
+      if (printUrl) {
+        if (printWindow) {
+          printWindow.location.href = printUrl;
+        } else {
+          window.open(printUrl, "_blank");
+        }
+      }
       showToast({
         title: `Checkpoint updated to ${stageLabel(confirmRowNextStage)}`,
+        description:
+          letterTypes.length > 0
+            ? `${letterTypes.map(transitDocumentLabel).join(" and ")} ready to print.`
+            : undefined,
         variant: "success",
       });
       setConfirmRow(null);
       await fetchRows();
     } catch {
+      printWindow?.close();
       showToast({
         title: "Failed to update checkpoint",
         description: "Something went wrong. Please try again.",
@@ -218,6 +268,72 @@ export default function TransitPage() {
                 </div>
 
                 <StageStepper stage={row.stage} />
+
+                {row.bill_of_lading && (
+                  <div className="space-y-1 rounded-md border bg-slate-50 px-3 py-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-800">
+                        BL {row.bill_of_lading.bl_number}
+                      </span>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
+                        {row.bill_of_lading.transit_status_label ||
+                          row.bill_of_lading.transit_status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-slate-600">
+                      <span>
+                        Date:{" "}
+                        {formatOrdinalDate(row.bill_of_lading.bl_date)}
+                      </span>
+                      <span>
+                        Containers: {row.bill_of_lading.container_count}
+                      </span>
+                      <span>
+                        Shipping:{" "}
+                        {row.bill_of_lading.shipping_company_name || "—"}
+                      </span>
+                      <span>
+                        Vessel: {row.bill_of_lading.vessel_name || "—"}
+                      </span>
+                    </div>
+                    {(row.bill_of_lading.containers ?? []).length > 0 && (
+                      <p className="break-words text-slate-600">
+                        Container No.:{" "}
+                        {(row.bill_of_lading.containers ?? [])
+                          .map(
+                            (container) =>
+                              `${container.container_number ?? "—"}${
+                                container.size ? ` (${container.size}ft)` : ""
+                              }`
+                          )
+                          .join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {(row.transit_documents ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {(row.transit_documents ?? []).map((document) => (
+                      <Link
+                        key={document.id}
+                        href={guaranteePrintUrl(
+                          row.purchase_number,
+                          [document.document_type],
+                          false
+                        )}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <Printer className="h-3 w-3" />
+                        {transitDocumentLabel(document.document_type)}
+                        <span className="text-slate-400">
+                          {document.reference_number}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-auto flex items-center justify-between gap-2 border-t pt-3">
                   <span className="text-xs text-muted-foreground">

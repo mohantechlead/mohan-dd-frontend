@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 import { StagePill } from "@/components/stage-display";
+import { Ship } from "lucide-react";
 
 interface PurchaseItem {
   purchase_number: string;
@@ -254,7 +255,14 @@ export default function PurchaseDetailPage() {
         <h1 className="text-2xl font-bold flex-1 text-center">
           Purchase Detail
         </h1>
-        <div className="w-[140px]" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push(`/diredawa/purchase/${purchaseNumber}/bl`)}
+          title="Bill of Lading / transit check"
+        >
+          <Ship className="mr-1 h-4 w-4" /> Bill of Lading
+        </Button>
       </div>
 
       {loading ? (

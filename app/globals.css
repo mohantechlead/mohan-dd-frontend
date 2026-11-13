@@ -171,4 +171,38 @@
   [data-print-doc="compact"] .text-\[10px\] {
     font-size: 10pt !important;
   }
+
+  /* Guarantee letters: one A4 page per letter, no scale transform. */
+  html:has([data-print-doc="guarantee"]),
+  html:has([data-print-doc="guarantee"]) body {
+    transform: none !important;
+  }
+
+  /* Remove the app shell's page padding so the 210mm letter fills the sheet. */
+  html:has([data-print-doc="guarantee"]) main,
+  html:has([data-print-doc="guarantee"]) main > div,
+  html:has([data-print-doc="guarantee"]) [data-print-doc="guarantee"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    background: #fff !important;
+  }
+
+  [data-print-doc="guarantee"] .guarantee-letter {
+    break-after: page;
+    page-break-after: always;
+    min-height: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 18mm !important;
+    width: 210mm !important;
+    min-width: 210mm !important;
+    max-width: 210mm !important;
+  }
+
+  [data-print-doc="guarantee"] .guarantee-letter:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
 }
