@@ -7,7 +7,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 interface AuthContextType {
     isAuthenticated: boolean;
     login: (username: string | undefined, redirectPath?: string, role?: string, userId?: number) => void | Promise<void>;
-    logout: () => void;
+    logout: () => void | Promise<void>;
     loginRequiredRedirect: () => void;
     username: string;
     role: string;
@@ -157,7 +157,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     };
 
-    const logout = () => {
+    const logout = async () => {
+        // Clear the server-side session cookies as well, otherwise "logging
+        // out" would leave a session that stays valid until it expires.
+        try {
+            await fetch("/api/logout", {
+                method: "POST",
+                credentials: "include",
+            });
+        } catch (_) {}
         setIsAuthenticated(false);
         setRole("logistics");
         setUserId(null);
