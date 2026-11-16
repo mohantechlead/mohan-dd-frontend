@@ -222,7 +222,7 @@ type ExportRow = {
   "Item Name": string;
   Quantity: number | null;
   "Unit Price": number | null;
-  "Total Price": number | null;
+  "Total Price": string | null;
   Buyer: string;
   "Approved By": string;
   Status: string;
@@ -249,13 +249,11 @@ const rows: ExportRow[] = filteredOrders.flatMap((order): ExportRow[] => {
     "Item Name": item.item_name,
     Quantity: Number(item.quantity),
     "Unit Price": Number(item.price),
-    "Total Price": Number(
-      formatMultipliedTotal(
+    "Total Price": formatMultipliedTotal(
         item.total_price,
         item.price,
         item.quantity
-      )
-    ),
+      ),
     Buyer: order.buyer ?? "",
     "Approved By": order.approved_by ?? "",
     Status: order.status ?? "pending",
