@@ -287,7 +287,7 @@ export default function DisplayOrdersPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setExportOpen(true)}
+          onClick={exportToExcel}
         >
           <Download className="h-4 w-4" /> Export to Excel
         </Button>
