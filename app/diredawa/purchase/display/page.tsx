@@ -299,7 +299,21 @@ export default function DisplayPurchasesPage() {
       };
     });
 
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: [
+        "Purchase Number",
+        "Date",
+        "Supplier",
+        "Buyer",
+        "Proforma Ref. No.",
+        "Before VAT",
+        "Status",
+        "Checkpoint",
+        "Assigned Transitor",
+        "Items",
+      ],
+    });
+
     ws["!cols"] = [
       { wch: 18 },
       { wch: 12 },
@@ -312,13 +326,17 @@ export default function DisplayPurchasesPage() {
       { wch: 18 },
       { wch: 60 },
     ];
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Purchase Orders");
-    const range =
-      fromDate || toDate
-        ? `${fromDate || "start"}_to_${toDate || "end"}`
-        : new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `purchase_orders_${range}.xlsx`);
+
+    // Dynamic file name with month‑year folder so files don't clash
+    const now = new Date();
+    const folderName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const fileName = `purchase_orders_${folderName}.xlsx`;
+
+    // Use the standard writeFile path (works in Node & CRA create‑react‑app)
+    XLSX.writeFile(wb, fileName);
   };
 
   const showBanner = !bannerDismissed && missingMarineInsurance.length > 0;
