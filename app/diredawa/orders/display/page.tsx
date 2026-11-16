@@ -202,64 +202,161 @@ export default function DisplayOrdersPage() {
     }
   };
 
-  const exportToExcel = async () => {
-    if (filteredOrders.length === 0) {
-      showToast({
-        title: "Nothing to export",
-        description: "No orders match the current filters.",
-        variant: "error",
-      });
-      return;
-    }
-    const XLSX = await import("xlsx");
-    const rows = filteredOrders.map((order) => {
-      const itemsText = order.items
-        .map((item) => {
-          const measurement = item.measurement ? ` ${item.measurement}` : "";
-          return `${item.item_name} (${item.quantity}${measurement})`;
-        })
-        .join("; ");
-      return {
-        "Order Number": order.order_number,
-        Date: (order.order_date ?? "").slice(0, 10),
-        Buyer: order.buyer ?? "",
-        "Proforma Ref.": order.proforma_ref_no ?? "",
-        Status: order.status ?? "pending",
-        Items: itemsText,
-      };
+ 
+const exportToExcel = async () => {
+  if (filteredOrders.length === 0) {
+    showToast({
+      title: "Nothing to export",
+      description: "No orders match the current filters.",
+      variant: "error",
     });
+    return;
+  }
 
-    const ws = XLSX.utils.json_to_sheet(rows, {
-      header: [
-        "Order Number",
-        "Date",
-        "Buyer",
-        "Proforma Ref.",
-        "Status",
-        "Items",
-      ],
-    });
+  const XLSX = await import("xlsx");
 
-    ws["!cols"] = [
-      { wch: 18 },
-      { wch: 12 },
-      { wch: 24 },
-      { wch: 24 },
-      { wch: 14 },
-      { wch: 60 },
-    ];
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sales Orders");
+type ExportRow = {
+  "Order Number": string;
+  Date: string;
+  "Item Name": string;
+  Quantity: number | null;
+  "Unit Price": number | null;
+  "Total Price": number | null;
+  Buyer: string;
+  "Approved By": string;
+  Status: string;
+};
 
-    // Dynamic file name with month‑year folder so files don't clash
-    const now = new Date();
-    const folderName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const fileName = `sales_orders_${folderName}.xlsx`;
+const rows: ExportRow[] = filteredOrders.flatMap((order): ExportRow[] => {
+  if (order.items.length === 0) {
+    return [{
+      "Order Number": order.order_number,
+      Date: (order.order_date ?? "").slice(0, 10),
+      "Item Name": "",
+      Quantity: null,
+      "Unit Price": null,
+      "Total Price": null,
+      Buyer: order.buyer ?? "",
+      "Approved By": order.approved_by ?? "",
+      Status: order.status ?? "pending",
+    }];
+  }
 
-    // Use the standard writeFile path (works in Node & CRA create‑react‑app)
-    XLSX.writeFile(wb, fileName);
-  };
+  return order.items.map((item) => ({
+    "Order Number": order.order_number,
+    Date: (order.order_date ?? "").slice(0, 10),
+    "Item Name": item.item_name,
+    Quantity: Number(item.quantity),
+    "Unit Price": Number(item.price),
+    "Total Price": Number(
+      formatMultipliedTotal(
+        item.total_price,
+        item.price,
+        item.quantity
+      )
+    ),
+    Buyer: order.buyer ?? "",
+    "Approved By": order.approved_by ?? "",
+    Status: order.status ?? "pending",
+  }));
+});
+
+
+  // const rows = filteredOrders.flatMap((order) => {
+  //   if (order.items.length === 0) {
+  //     return [{
+  //       "Order Number": order.order_number,
+  //       Date: (order.order_date ?? "").slice(0, 10),
+  //       "Item Name": "",
+  //       Quantity: "",
+  //       "Unit Price": "",
+  //       "Total Price": "",
+  //       Buyer: order.buyer ?? "",
+  //       "Approved By": order.approved_by ?? "",
+  //       Status: order.status ?? "pending",
+  //     }];
+  //   }
+
+  //   return order.items.map((item) => ({
+  //     "Order Number": order.order_number,
+  //     Date: (order.order_date ?? "").slice(0, 10),
+  //     "Item Name": item.item_name,
+  //     Quantity: Number(item.quantity),
+  //     "Unit Price": Number(item.price),
+  //     "Total Price": Number(
+  //       formatMultipliedTotal(
+  //         item.total_price,
+  //         item.price,
+  //         item.quantity
+  //       )
+  //     ),
+  //     Buyer: order.buyer ?? "",
+  //     "Approved By": order.approved_by ?? "",
+  //     Status: order.status ?? "pending",
+  //   }));
+  // });
+
+  const ws = XLSX.utils.json_to_sheet(rows, {
+    header: [
+      "Order Number",
+      "Date",
+      "Item Name",
+      "Quantity",
+      "Unit Price",
+      "Total Price",
+      "Buyer",
+      "Approved By",
+      "Status",
+    ],
+  });
+
+  ws["!cols"] = [
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 30 },
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 24 },
+    { wch: 24 },
+    { wch: 14 },
+  ];
+
+  // Apply number formats
+  const rangeRef = ws["!ref"];
+
+if (rangeRef) {
+  const range = XLSX.utils.decode_range(rangeRef);
+
+  for (let row = 1; row <= range.e.r; row++) {
+    // Quantity
+    const quantityCell = ws[XLSX.utils.encode_cell({ r: row, c: 3 })];
+    if (quantityCell) quantityCell.z = "#,##0.####";
+
+    // Unit Price
+    const unitPriceCell = ws[XLSX.utils.encode_cell({ r: row, c: 4 })];
+    if (unitPriceCell) unitPriceCell.z = "#,##0.00";
+
+    // Total Price
+    const totalPriceCell = ws[XLSX.utils.encode_cell({ r: row, c: 5 })];
+    if (totalPriceCell) totalPriceCell.z = "#,##0.00";
+  }
+}
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sales Orders");
+
+  const now = new Date();
+  const folderName = `${now.getFullYear()}-${String(
+    now.getMonth() + 1
+  ).padStart(2, "0")}`;
+
+  const fileName = `sales_orders_${folderName}.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+};
+
 
   const getStatusClasses = (status?: string | null) => {
     const value = (status || "").toLowerCase();
