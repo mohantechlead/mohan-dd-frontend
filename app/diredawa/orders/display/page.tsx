@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Download } from "lucide-react";
 import { TableSearch } from "@/components/table-search";
 import { formatExactNumber, formatMultipliedTotal, formatUnitPrice } from "@/lib/utils";
 
@@ -54,6 +54,7 @@ export default function DisplayOrdersPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const filteredOrders = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -201,6 +202,65 @@ export default function DisplayOrdersPage() {
     }
   };
 
+  const exportToExcel = async () => {
+    if (filteredOrders.length === 0) {
+      showToast({
+        title: "Nothing to export",
+        description: "No orders match the current filters.",
+        variant: "error",
+      });
+      return;
+    }
+    const XLSX = await import("xlsx");
+    const rows = filteredOrders.map((order) => {
+      const itemsText = order.items
+        .map((item) => {
+          const measurement = item.measurement ? ` ${item.measurement}` : "";
+          return `${item.item_name} (${item.quantity}${measurement})`;
+        })
+        .join("; ");
+      return {
+        "Order Number": order.order_number,
+        Date: (order.order_date ?? "").slice(0, 10),
+        Buyer: order.buyer ?? "",
+        "Proforma Ref.": order.proforma_ref_no ?? "",
+        Status: order.status ?? "pending",
+        Items: itemsText,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: [
+        "Order Number",
+        "Date",
+        "Buyer",
+        "Proforma Ref.",
+        "Status",
+        "Items",
+      ],
+    });
+
+    ws["!cols"] = [
+      { wch: 18 },
+      { wch: 12 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 14 },
+      { wch: 60 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sales Orders");
+
+    // Dynamic file name with month‑year folder so files don't clash
+    const now = new Date();
+    const folderName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const fileName = `sales_orders_${folderName}.xlsx`;
+
+    // Use the standard writeFile path (works in Node & CRA create‑react‑app)
+    XLSX.writeFile(wb, fileName);
+  };
+
   const getStatusClasses = (status?: string | null) => {
     const value = (status || "").toLowerCase();
     if (value === "pending") {
@@ -223,6 +283,13 @@ export default function DisplayOrdersPage() {
       <div className="flex justify-between items-center">
         <Button className="rounded-lg shadow-sm" onClick={() => router.push("/diredawa/orders/create")}>
           Create Sales
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setExportOpen(true)}
+        >
+          <Download className="h-4 w-4" /> Export to Excel
         </Button>
         <h1 className="text-2xl font-bold text-center flex-1">
           Sales Orders
