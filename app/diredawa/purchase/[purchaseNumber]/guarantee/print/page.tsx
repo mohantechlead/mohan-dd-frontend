@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
 import GuaranteeLetter from "@/components/guarantee-letter";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/authProvider";
 import {
   TransitDocument,
   TransitDocumentType,
@@ -15,6 +16,7 @@ import {
 interface PurchaseWithDocuments {
   purchase_number: string;
   transit_documents?: TransitDocument[];
+  advance?: { status?: string | null } | null;
 }
 
 function PrintContent() {
@@ -28,6 +30,11 @@ function PrintContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const auth = useAuth();
+
+  // The backend hides letters from transitors until the advance is approved.
+  const lettersLocked =
+    Boolean(auth?.isTransitor) && purchase?.advance?.status !== "approved";
 
   useEffect(() => {
     let cancelled = false;
@@ -156,10 +163,18 @@ function PrintContent() {
       ) : error ? (
         <p className="text-center text-sm text-red-600">{error}</p>
       ) : documents.length === 0 ? (
-        <p className="mx-auto max-w-[210mm] rounded-md border bg-white px-6 py-10 text-center text-sm text-slate-600">
-          No guarantee letters have been generated for this purchase yet.
-          Advance the checkpoint to create them.
-        </p>
+        lettersLocked ? (
+          <p className="mx-auto max-w-[210mm] rounded-md border border-amber-300 bg-amber-50 px-6 py-10 text-center text-sm text-amber-800">
+            These guarantee letters are locked until the admin approves this
+            transit&apos;s advance. Once approved, they will appear here for
+            printing.
+          </p>
+        ) : (
+          <p className="mx-auto max-w-[210mm] rounded-md border bg-white px-6 py-10 text-center text-sm text-slate-600">
+            No guarantee letters have been generated for this purchase yet.
+            Advance the checkpoint to create them.
+          </p>
+        )
       ) : (
         <div className="space-y-6 print:space-y-0">
           {missingTypes.length > 0 && (

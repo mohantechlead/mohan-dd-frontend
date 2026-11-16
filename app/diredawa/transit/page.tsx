@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Printer, Truck } from "lucide-react";
+import { ArrowRight, Banknote, Lock, Printer, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
+import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,14 @@ import {
   guaranteePrintUrl,
   transitDocumentLabel,
 } from "@/lib/transit-documents";
+import {
+  advanceMoney,
+  formatAdvanceDate,
+  purchaseAdvanceUrl,
+  transitAdvanceStatusClass,
+  transitAdvanceStatusLabel,
+  type TransitAdvance,
+} from "@/lib/transit-advances";
 
 interface TransitContainer {
   container_number?: string;
@@ -60,6 +70,7 @@ interface TransitPurchase {
   assigned_transitor?: string | null;
   bill_of_lading?: TransitBl | null;
   transit_documents?: TransitDocument[];
+  advance?: TransitAdvance | null;
   items?: Array<{ item_name?: string; total_price?: number }>;
 }
 
@@ -73,6 +84,13 @@ export default function TransitPage() {
   const [search, setSearch] = useState("");
   const [confirmRow, setConfirmRow] = useState<TransitPurchase | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Advance request dialog (transitor asks the admin for an advance).
+  const [advanceRow, setAdvanceRow] = useState<TransitPurchase | null>(null);
+  const [advanceAmount, setAdvanceAmount] = useState("");
+  const [advanceCurrency, setAdvanceCurrency] = useState("USD");
+  const [advanceNote, setAdvanceNote] = useState("");
+  const [savingAdvance, setSavingAdvance] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -127,13 +145,77 @@ export default function TransitPage() {
 
   const confirmRowNextStage = confirmRow ? nextTransitorStage(confirmRow.stage) : null;
 
+  /** Letters unlock only after the admin approves the advance (admins always see them). */
+  const lettersUnlocked = (row: TransitPurchase) =>
+    !auth?.isTransitor || row.advance?.status === "approved";
+
+  const openAdvanceDialog = (row: TransitPurchase) => {
+    setAdvanceRow(row);
+    setAdvanceAmount(row.advance?.amount ? String(row.advance.amount) : "");
+    setAdvanceCurrency(row.advance?.currency || "USD");
+    setAdvanceNote(row.advance?.note ?? "");
+  };
+
+  const submitAdvance = async () => {
+    if (!advanceRow) return;
+    const amount = Number(advanceAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast({
+        title: "Invalid amount",
+        description: "Enter an advance amount greater than zero.",
+        variant: "error",
+      });
+      return;
+    }
+    setSavingAdvance(true);
+    try {
+      const res = await fetch(purchaseAdvanceUrl(advanceRow.purchase_number), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          amount,
+          currency: advanceCurrency,
+          note: advanceNote.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast({
+          title: "Failed to send advance request",
+          description: formatApiErrorMessage(data),
+          variant: "error",
+        });
+        return;
+      }
+      showToast({
+        title: "Advance requested",
+        description:
+          "The admin will review it. Letters unlock once it is approved.",
+        variant: "success",
+      });
+      setAdvanceRow(null);
+      await fetchRows();
+    } catch {
+      showToast({
+        title: "Failed to send advance request",
+        description: "Something went wrong. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setSavingAdvance(false);
+    }
+  };
+
   const handleAdvance = async () => {
     if (!confirmRow || !confirmRowNextStage) return;
     const letterTypes = TRANSIT_DOCUMENTS_FOR_STAGE[confirmRowNextStage] ?? [];
+    // Letters stay locked until the admin approves this transit's advance.
+    const canPrint = lettersUnlocked(confirmRow);
+    const willPrint = letterTypes.length > 0 && canPrint;
     // Open the print tab while we are still inside the click gesture, then
     // point it at the letters once the backend has generated them.
-    const printWindow =
-      letterTypes.length > 0 ? window.open("", "_blank") : null;
+    const printWindow = willPrint ? window.open("", "_blank") : null;
 
     setSubmitting(true);
     try {
@@ -159,10 +241,9 @@ export default function TransitPage() {
         });
         return;
       }
-      const printUrl =
-        letterTypes.length > 0
-          ? guaranteePrintUrl(confirmRow.purchase_number, letterTypes, true)
-          : null;
+      const printUrl = willPrint
+        ? guaranteePrintUrl(confirmRow.purchase_number, letterTypes, true)
+        : null;
       if (printUrl) {
         if (printWindow) {
           printWindow.location.href = printUrl;
@@ -170,13 +251,17 @@ export default function TransitPage() {
           window.open(printUrl, "_blank");
         }
       }
+      const lettersLocked = letterTypes.length > 0 && !canPrint;
       showToast({
         title: `Checkpoint updated to ${stageLabel(confirmRowNextStage)}`,
-        description:
-          letterTypes.length > 0
+        description: lettersLocked
+          ? `${letterTypes
+              .map(transitDocumentLabel)
+              .join(" and ")} generated, but locked until the admin approves the advance.`
+          : letterTypes.length > 0
             ? `${letterTypes.map(transitDocumentLabel).join(" and ")} ready to print.`
             : undefined,
-        variant: "success",
+        variant: lettersLocked ? "warning" : "success",
       });
       setConfirmRow(null);
       await fetchRows();
@@ -312,6 +397,79 @@ export default function TransitPage() {
                   </div>
                 )}
 
+                {/* Transit advance: requested by transitor, approved by admin */}
+                <div className="space-y-2 rounded-md border bg-slate-50 px-3 py-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="flex items-center gap-1 font-semibold text-slate-800">
+                      <Banknote className="h-3.5 w-3.5" />
+                      Transit Advance
+                    </span>
+                    {row.advance ? (
+                      <span className={transitAdvanceStatusClass(row.advance.status)}>
+                        {transitAdvanceStatusLabel(
+                          row.advance.status,
+                          row.advance.status_label
+                        )}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                        Not requested
+                      </span>
+                    )}
+                  </div>
+
+                  {row.advance ? (
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-slate-600">
+                      <span>
+                        Amount:{" "}
+                        <strong className="text-slate-800">
+                          {advanceMoney(row.advance.amount, row.advance.currency)}
+                        </strong>
+                      </span>
+                      <span>
+                        Requested: {formatAdvanceDate(row.advance.requested_at)}
+                      </span>
+                      {row.advance.reviewed_by && (
+                        <span className="col-span-2">
+                          Reviewed by {row.advance.reviewed_by} on{" "}
+                          {formatAdvanceDate(row.advance.reviewed_at)}
+                        </span>
+                      )}
+                      {row.advance.note && (
+                        <span className="col-span-2 break-words">
+                          Note: {row.advance.note}
+                        </span>
+                      )}
+                      {row.advance.review_remark && (
+                        <span className="col-span-2 break-words text-red-600">
+                          Remark: {row.advance.review_remark}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500">
+                      Request an advance before the guarantee letters can be
+                      printed.
+                    </p>
+                  )}
+
+                  {row.advance?.status !== "approved" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 text-xs"
+                      onClick={() => openAdvanceDialog(row)}
+                    >
+                      <Banknote className="h-3 w-3" />
+                      {row.advance?.status === "rejected"
+                        ? "Revise & Resubmit Advance"
+                        : row.advance
+                          ? "Update Advance Request"
+                          : "Request Advance"}
+                    </Button>
+                  )}
+                </div>
+
                 {(row.transit_documents ?? []).length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {(row.transit_documents ?? []).map((document) => (
@@ -333,6 +491,14 @@ export default function TransitPage() {
                       </Link>
                     ))}
                   </div>
+                )}
+
+                {auth?.isTransitor && !lettersUnlocked(row) && (
+                  <p className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-800">
+                    <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+                    Guarantee letters are locked until the admin approves this
+                    transit&apos;s advance.
+                  </p>
                 )}
 
                 <div className="mt-auto flex items-center justify-between gap-2 border-t pt-3">
@@ -393,6 +559,91 @@ export default function TransitPage() {
             </Button>
             <Button onClick={handleAdvance} disabled={submitting}>
               {submitting ? "Updating…" : "Advance"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request / update the transit advance */}
+      <Dialog
+        open={advanceRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setAdvanceRow(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {advanceRow?.advance?.status === "rejected"
+                ? "Revise & Resubmit Advance"
+                : advanceRow?.advance
+                  ? "Update Advance Request"
+                  : "Request Advance"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600">
+            Advance for purchase <strong>{advanceRow?.purchase_number}</strong>.
+            The admin reviews it, and the guarantee letters unlock once it is
+            approved.
+          </p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label htmlFor="advance-amount" className="text-sm font-medium">
+                Amount *
+              </label>
+              <Input
+                id="advance-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={advanceAmount}
+                onChange={(e) => setAdvanceAmount(e.target.value)}
+                placeholder="e.g. 1500"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="advance-currency" className="text-sm font-medium">
+                Currency
+              </label>
+              <select
+                id="advance-currency"
+                value={advanceCurrency}
+                onChange={(e) => setAdvanceCurrency(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {["USD", "EUR", "ETB", "GBP"].map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="advance-note" className="text-sm font-medium">
+                Note
+              </label>
+              <textarea
+                id="advance-note"
+                rows={3}
+                value={advanceNote}
+                onChange={(e) => setAdvanceNote(e.target.value)}
+                placeholder="What is the advance for?"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAdvanceRow(null)}
+              disabled={savingAdvance}
+            >
+              Cancel
+            </Button>
+            <Button onClick={submitAdvance} disabled={savingAdvance}>
+              {savingAdvance ? "Sending…" : "Send Request"}
             </Button>
           </DialogFooter>
         </DialogContent>
