@@ -236,6 +236,7 @@ const baseNavMain = [
     items: [
       { title: "Order Approval", url: "/diredawa/approvals/orders" },
       { title: "Purchase Approval", url: "/diredawa/approvals/purchases" },
+      { title: "Transit Advance Approval", url: "/diredawa/approvals/transit-advances" },
       { title: "Warehouse Settings Approval", url: "/diredawa/approvals/warehouse-settings", accountingVisible: true },
       { title: "Stock Adjustment Approval", url: "/diredawa/approvals/stock-adjustments", accountingVisible: true },
       {

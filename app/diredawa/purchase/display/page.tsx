@@ -13,7 +13,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Pencil, ShieldAlert, Trash2, UserCog, X, Download } from "lucide-react";
+import {
+  Pencil,
+  ShieldAlert,
+  Trash2,
+  UserCog,
+  X,
+  Download,
+  Ship,
+} from "lucide-react";
 import { TableSearch } from "@/components/table-search";
 import {
   STAGE_OPTIONS,
@@ -70,6 +78,11 @@ export default function DisplayPurchasesPage() {
   const auth = useAuth();
   const canManageRecords = auth?.canManageRecords ?? false;
   const canManageCheckpoints = auth?.isAdmin === true || auth?.isSales === true;
+  const canManageBl =
+    auth?.isAdmin === true ||
+    auth?.isLogistics === true ||
+    auth?.isSales === true ||
+    auth?.isTransitor === true;
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -533,7 +546,7 @@ export default function DisplayPurchasesPage() {
                   <th className="text-left px-4 py-2">Supplier Name</th>
                   <th className="text-left px-4 py-2">Status</th>
                   <th className="text-left px-4 py-2">Checkpoint</th>
-                  {(canManageRecords || canManageCheckpoints) && (
+                  {(canManageRecords || canManageCheckpoints || canManageBl) && (
                     <th className="text-right px-4 py-2">Actions</th>
                   )}
                 </tr>
@@ -588,7 +601,7 @@ export default function DisplayPurchasesPage() {
                           </div>
                         )}
                       </td>
-                      {(canManageRecords || canManageCheckpoints) && (
+                      {(canManageRecords || canManageCheckpoints || canManageBl) && (
                         <td className="px-4 py-2 text-right">
                           <div className="flex justify-end gap-2">
                             {canManageCheckpoints && (
@@ -599,6 +612,20 @@ export default function DisplayPurchasesPage() {
                                 onClick={() => openCheckpoint(purchase)}
                               >
                                 <UserCog className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {canManageBl && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Bill of Lading / transit check"
+                                onClick={() =>
+                                  router.push(
+                                    `/diredawa/purchase/${purchase.purchase_number}/bl`
+                                  )
+                                }
+                              >
+                                <Ship className="w-4 h-4" />
                               </Button>
                             )}
                             {canManageRecords && (
