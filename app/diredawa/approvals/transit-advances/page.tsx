@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Banknote, CheckCircle2, Eye, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Eye, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -21,7 +21,6 @@ import {
   TRANSIT_ADVANCES_URL,
   TRANSIT_ADVANCE_APPROVE_URL,
   TRANSIT_ADVANCE_REJECT_URL,
-  advanceMoney,
   formatAdvanceDate,
   transitAdvanceStatusClass,
   transitAdvanceStatusLabel,
@@ -34,7 +33,8 @@ function AdvanceSummary({ advance }: { advance: TransitAdvance }) {
     <div className="space-y-2 rounded-md border bg-slate-50 px-3 py-2 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold text-slate-800">
-          {advanceMoney(advance.amount, advance.currency)}
+          Advance to{" "}
+          {advance.target_stage_label || stageLabel(advance.target_stage)}
         </span>
         <span className={transitAdvanceStatusClass(advance.status)}>
           {transitAdvanceStatusLabel(advance.status, advance.status_label)}
@@ -66,12 +66,6 @@ function AdvanceSummary({ advance }: { advance: TransitAdvance }) {
           </div>
         )}
       </dl>
-      {advance.note && (
-        <p className="text-slate-600">
-          <span className="font-medium text-slate-700">Note: </span>
-          {advance.note}
-        </p>
-      )}
       {advance.review_remark && (
         <p className="text-slate-600">
           <span className="font-medium text-slate-700">Remark: </span>
@@ -275,10 +269,10 @@ export default function TransitAdvancesPage() {
       const detail = data as TransitAdvanceDetail;
       showToast({
         title: "Advance approved",
-        description: `${detail.advance.purchase_number} · ${advanceMoney(
-          detail.advance.amount,
-          detail.advance.currency,
-        )}`,
+        description: `${detail.advance.purchase_number} · Advancing to ${
+          detail.advance.target_stage_label ||
+          stageLabel(detail.advance.target_stage)
+        }`,
         variant: "success",
       });
       // Show the advance + purchase detail to the admin right after approving.
@@ -343,7 +337,7 @@ export default function TransitAdvancesPage() {
       <tr key={advance.id} className="border-t hover:bg-muted/30">
         <td className="px-4 py-2 font-medium">{advance.purchase_number}</td>
         <td className="px-4 py-2">
-          {advanceMoney(advance.amount, advance.currency)}
+          {advance.target_stage_label || stageLabel(advance.target_stage)}
         </td>
         <td className="px-4 py-2">{purchase.assigned_transitor || "—"}</td>
         <td className="px-4 py-2 text-muted-foreground">
@@ -406,13 +400,14 @@ export default function TransitAdvancesPage() {
   return (
     <div className="p-6 max-w-6xl space-y-6">
       <div className="flex items-center gap-2">
-        <Banknote className="h-6 w-6 text-primary" />
+        <ArrowRight className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Transit Advance Approval</h1>
       </div>
       <p className="text-sm text-muted-foreground">
-        Transitors request an advance for each transit. Letters of guarantee stay
-        locked for the transitor until the advance is approved here. Approving
-        shows the advance together with the full purchase detail.
+        Transitors ask to advance each transit one stage at a time. Until the
+        request is approved here they cannot move the stage, and the guarantee
+        letters it generates stay locked. Approving shows the request together
+        with the full purchase detail.
       </p>
 
       <section className="space-y-3">
@@ -429,7 +424,7 @@ export default function TransitAdvancesPage() {
               <thead>
                 <tr className="bg-muted/60 border-b">
                   <th className="px-4 py-2 text-left">Purchase</th>
-                  <th className="px-4 py-2 text-left">Advance</th>
+                  <th className="px-4 py-2 text-left">Advance To</th>
                   <th className="px-4 py-2 text-left">Transitor</th>
                   <th className="px-4 py-2 text-left">Requested By</th>
                   <th className="px-4 py-2 text-left">Status</th>
@@ -454,7 +449,7 @@ export default function TransitAdvancesPage() {
               <thead>
                 <tr className="bg-muted/60 border-b">
                   <th className="px-4 py-2 text-left">Purchase</th>
-                  <th className="px-4 py-2 text-left">Advance</th>
+                  <th className="px-4 py-2 text-left">Advance To</th>
                   <th className="px-4 py-2 text-left">Transitor</th>
                   <th className="px-4 py-2 text-left">Requested By</th>
                   <th className="px-4 py-2 text-left">Status</th>
@@ -520,13 +515,15 @@ export default function TransitAdvancesPage() {
             <DialogTitle>Reject Advance</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-slate-600">
-            Reject the advance for{" "}
-            <strong>{rejecting?.advance.purchase_number}</strong> (
-            {advanceMoney(
-              rejecting?.advance.amount,
-              rejecting?.advance.currency,
-            )}
-            )? The transitor can revise and resubmit it.
+            Reject the request from{" "}
+            <strong>{rejecting?.advance.purchase_number}</strong> to advance to{" "}
+            <strong>
+              {rejecting
+                ? rejecting.advance.target_stage_label ||
+                  stageLabel(rejecting.advance.target_stage)
+                : ""}
+            </strong>
+            ? The transitor can send it again.
           </p>
           <div className="space-y-1.5">
             <label htmlFor="reject-remark" className="text-sm font-medium">
@@ -536,7 +533,7 @@ export default function TransitAdvancesPage() {
               id="reject-remark"
               value={rejectRemark}
               onChange={(e) => setRejectRemark(e.target.value)}
-              placeholder="e.g. amount too high"
+              placeholder="e.g. not yet"
             />
           </div>
           <DialogFooter>

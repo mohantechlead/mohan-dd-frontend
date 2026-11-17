@@ -1,13 +1,13 @@
-/** Transit advance: the transitor's advance request, approved by an admin. */
+/** Transit advance: the transitor's request to move to the next stage. */
 
 export type TransitAdvanceStatus = "pending" | "approved" | "rejected";
 
 export interface TransitAdvance {
   id: string;
   purchase_number: string;
-  amount: number;
-  currency: string;
-  note?: string | null;
+  /** Stage being asked for, e.g. "transit_permit". No money is involved. */
+  target_stage?: string | null;
+  target_stage_label?: string | null;
   status: TransitAdvanceStatus;
   status_label?: string | null;
   requested_by?: string | null;
@@ -107,20 +107,6 @@ export function transitAdvanceStatusClass(status?: string | null): string {
     return "inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800";
   }
   return "inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800";
-}
-
-export function advanceMoney(
-  amount?: number | null,
-  currency?: string | null
-): string {
-  if (amount === null || amount === undefined || Number.isNaN(amount)) {
-    return "—";
-  }
-  const value = amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return currency ? `${value} ${currency}` : value;
 }
 
 export function formatAdvanceDate(value?: string | null): string {

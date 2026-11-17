@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Banknote, Lock, Printer, Truck } from "lucide-react";
+import { ArrowRight, Lock, Printer, Send, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/authProvider";
 import { formatApiErrorMessage } from "@/lib/apiErrorMessage";
@@ -31,7 +30,6 @@ import {
   transitDocumentLabel,
 } from "@/lib/transit-documents";
 import {
-  advanceMoney,
   formatAdvanceDate,
   purchaseAdvanceUrl,
   transitAdvanceStatusClass,
@@ -85,11 +83,8 @@ export default function TransitPage() {
   const [confirmRow, setConfirmRow] = useState<TransitPurchase | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Advance request dialog (transitor asks the admin for an advance).
+  // Advance request dialog: a plain ask to move to the next stage, no fields.
   const [advanceRow, setAdvanceRow] = useState<TransitPurchase | null>(null);
-  const [advanceAmount, setAdvanceAmount] = useState("");
-  const [advanceCurrency, setAdvanceCurrency] = useState("USD");
-  const [advanceNote, setAdvanceNote] = useState("");
   const [savingAdvance, setSavingAdvance] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -149,35 +144,25 @@ export default function TransitPage() {
   const lettersUnlocked = (row: TransitPurchase) =>
     !auth?.isTransitor || row.advance?.status === "approved";
 
-  const openAdvanceDialog = (row: TransitPurchase) => {
-    setAdvanceRow(row);
-    setAdvanceAmount(row.advance?.amount ? String(row.advance.amount) : "");
-    setAdvanceCurrency(row.advance?.currency || "USD");
-    setAdvanceNote(row.advance?.note ?? "");
+  /** A transitor may only take the next step once the admin approved that step. */
+  const needsApproval = (row: TransitPurchase, next: string | null) => {
+    if (!next || !auth?.isTransitor) return false;
+    return !(
+      row.advance?.status === "approved" && row.advance.target_stage === next
+    );
   };
+
+  const openAdvanceDialog = (row: TransitPurchase) => setAdvanceRow(row);
 
   const submitAdvance = async () => {
     if (!advanceRow) return;
-    const amount = Number(advanceAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      showToast({
-        title: "Invalid amount",
-        description: "Enter an advance amount greater than zero.",
-        variant: "error",
-      });
-      return;
-    }
     setSavingAdvance(true);
     try {
       const res = await fetch(purchaseAdvanceUrl(advanceRow.purchase_number), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          amount,
-          currency: advanceCurrency,
-          note: advanceNote.trim() || null,
-        }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -188,10 +173,12 @@ export default function TransitPage() {
         });
         return;
       }
+      const stage = nextTransitorStage(advanceRow.stage);
       showToast({
         title: "Advance requested",
-        description:
-          "The admin will review it. Letters unlock once it is approved.",
+        description: stage
+          ? `The admin will review the move to ${stageLabel(stage)}.`
+          : "The admin will review it.",
         variant: "success",
       });
       setAdvanceRow(null);
@@ -251,17 +238,13 @@ export default function TransitPage() {
           window.open(printUrl, "_blank");
         }
       }
-      const lettersLocked = letterTypes.length > 0 && !canPrint;
       showToast({
         title: `Checkpoint updated to ${stageLabel(confirmRowNextStage)}`,
-        description: lettersLocked
-          ? `${letterTypes
-              .map(transitDocumentLabel)
-              .join(" and ")} generated, but locked until the admin approves the advance.`
-          : letterTypes.length > 0
+        description:
+          letterTypes.length > 0
             ? `${letterTypes.map(transitDocumentLabel).join(" and ")} ready to print.`
             : undefined,
-        variant: lettersLocked ? "warning" : "success",
+        variant: "success",
       });
       setConfirmRow(null);
       await fetchRows();
@@ -397,12 +380,12 @@ export default function TransitPage() {
                   </div>
                 )}
 
-                {/* Transit advance: requested by transitor, approved by admin */}
+                {/* Stage advance: requested by transitor, approved by admin */}
                 <div className="space-y-2 rounded-md border bg-slate-50 px-3 py-2 text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="flex items-center gap-1 font-semibold text-slate-800">
-                      <Banknote className="h-3.5 w-3.5" />
-                      Transit Advance
+                      <ArrowRight className="h-3.5 w-3.5" />
+                      Stage Advance
                     </span>
                     {row.advance ? (
                       <span className={transitAdvanceStatusClass(row.advance.status)}>
@@ -420,24 +403,21 @@ export default function TransitPage() {
 
                   {row.advance ? (
                     <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-slate-600">
-                      <span>
-                        Amount:{" "}
+                      <span className="col-span-2">
+                        Advancing to:{" "}
                         <strong className="text-slate-800">
-                          {advanceMoney(row.advance.amount, row.advance.currency)}
+                          {row.advance.target_stage_label ||
+                            stageLabel(row.advance.target_stage)}
                         </strong>
                       </span>
                       <span>
                         Requested: {formatAdvanceDate(row.advance.requested_at)}
                       </span>
+                      <span>By: {row.advance.requested_by || "—"}</span>
                       {row.advance.reviewed_by && (
                         <span className="col-span-2">
                           Reviewed by {row.advance.reviewed_by} on{" "}
                           {formatAdvanceDate(row.advance.reviewed_at)}
-                        </span>
-                      )}
-                      {row.advance.note && (
-                        <span className="col-span-2 break-words">
-                          Note: {row.advance.note}
                         </span>
                       )}
                       {row.advance.review_remark && (
@@ -448,25 +428,9 @@ export default function TransitPage() {
                     </div>
                   ) : (
                     <p className="text-slate-500">
-                      Request an advance before the guarantee letters can be
-                      printed.
+                      Send an advance request before moving this transit to the
+                      next stage.
                     </p>
-                  )}
-
-                  {row.advance?.status !== "approved" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 gap-1 text-xs"
-                      onClick={() => openAdvanceDialog(row)}
-                    >
-                      <Banknote className="h-3 w-3" />
-                      {row.advance?.status === "rejected"
-                        ? "Revise & Resubmit Advance"
-                        : row.advance
-                          ? "Update Advance Request"
-                          : "Request Advance"}
-                    </Button>
                   )}
                 </div>
 
@@ -496,8 +460,8 @@ export default function TransitPage() {
                 {auth?.isTransitor && !lettersUnlocked(row) && (
                   <p className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-800">
                     <Lock className="mt-0.5 h-3 w-3 shrink-0" />
-                    Guarantee letters are locked until the admin approves this
-                    transit&apos;s advance.
+                    This transit is held until the admin approves its advance —
+                    the stage cannot move and its guarantee letters stay locked.
                   </p>
                 )}
 
@@ -510,14 +474,26 @@ export default function TransitPage() {
                       : "Not started"}
                   </span>
                   {next ? (
-                    <Button
-                      size="sm"
-                      onClick={() => setConfirmRow(row)}
-                      className="gap-1"
-                    >
-                      Advance to {stageLabel(next)}
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    needsApproval(row, next) ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openAdvanceDialog(row)}
+                        className="gap-1"
+                      >
+                        <Send className="h-4 w-4" />
+                        Request {stageLabel(next)}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => setConfirmRow(row)}
+                        className="gap-1"
+                      >
+                        Advance to {stageLabel(next)}
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    )
                   ) : isTerminal ? (
                     <span className="text-xs font-medium text-slate-500">
                       {stage === "done" ? "Done" : "Cancelled"}
@@ -548,6 +524,11 @@ export default function TransitPage() {
             Move purchase <strong>{confirmRow?.purchase_number}</strong> to{" "}
             <strong>{confirmRowNextStage ? stageLabel(confirmRowNextStage) : ""}</strong>?
           </p>
+          {confirmRow && !needsApproval(confirmRow, confirmRowNextStage) && (
+            <p className="text-sm text-green-700">
+              The admin has approved this advance.
+            </p>
+          )}
           <DialogFooter className="mt-4">
             <Button
               type="button"
@@ -564,7 +545,7 @@ export default function TransitPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Request / update the transit advance */}
+      {/* Request the stage advance — a plain request with nothing to fill in */}
       <Dialog
         open={advanceRow !== null}
         onOpenChange={(open) => {
@@ -575,63 +556,33 @@ export default function TransitPage() {
           <DialogHeader>
             <DialogTitle>
               {advanceRow?.advance?.status === "rejected"
-                ? "Revise & Resubmit Advance"
+                ? "Resubmit Advance Request"
                 : advanceRow?.advance
-                  ? "Update Advance Request"
+                  ? "Send Advance Request Again"
                   : "Request Advance"}
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-600">
-            Advance for purchase <strong>{advanceRow?.purchase_number}</strong>.
-            The admin reviews it, and the guarantee letters unlock once it is
-            approved.
-          </p>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label htmlFor="advance-amount" className="text-sm font-medium">
-                Amount *
-              </label>
-              <Input
-                id="advance-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={advanceAmount}
-                onChange={(e) => setAdvanceAmount(e.target.value)}
-                placeholder="e.g. 1500"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="advance-currency" className="text-sm font-medium">
-                Currency
-              </label>
-              <select
-                id="advance-currency"
-                value={advanceCurrency}
-                onChange={(e) => setAdvanceCurrency(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                {["USD", "EUR", "ETB", "GBP"].map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="advance-note" className="text-sm font-medium">
-                Note
-              </label>
-              <textarea
-                id="advance-note"
-                rows={3}
-                value={advanceNote}
-                onChange={(e) => setAdvanceNote(e.target.value)}
-                placeholder="What is the advance for?"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
+          <div className="space-y-3 text-sm text-slate-600">
+            <p>
+              Ask the admin to advance purchase{" "}
+              <strong>{advanceRow?.purchase_number}</strong> to{" "}
+              <strong>
+                {advanceRow
+                  ? stageLabel(nextTransitorStage(advanceRow.stage))
+                  : ""}
+              </strong>
+              .
+            </p>
+            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+              There is nothing to fill in. Once the admin approves, you can move
+              the stage — and the guarantee letters it generates become
+              printable.
+            </p>
+            {advanceRow?.advance?.review_remark && (
+              <p className="text-xs text-red-600">
+                Last remark: {advanceRow.advance.review_remark}
+              </p>
+            )}
           </div>
           <DialogFooter className="mt-2">
             <Button
